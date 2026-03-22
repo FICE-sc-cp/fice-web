@@ -27,8 +27,25 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
   onModuleInit() {
     this.logger.log('Initializing Telegram Bot...');
 
+    const miniAppUrl = this.configService.get<string>('MINI_APP_URL');
+
     this.bot.command('start', (ctx) =>
-      ctx.reply('Bot is running inside NestJS.'),
+      ctx.reply('Welcome! Open the admin panel below.', {
+        reply_markup: miniAppUrl
+          ? {
+              inline_keyboard: [
+                [
+                  { 
+                    text: 'Open Admin', 
+                    web_app: { 
+                      url: miniAppUrl 
+                    } 
+                  }
+                ],
+              ],
+            }
+          : undefined,
+      }),
     );
 
     this.bot

@@ -28,6 +28,7 @@
     "@prisma/adapter-pg": "^7.4.2",
     "@prisma/client": "^7.4.2",
     "@scalar/nestjs-api-reference": "^1.1.1",
+    "@tma.js/init-data-node": "^2.0.6",
     "grammy": "^1.41.1",
     "pg": "^8.20.0",
     "prisma": "^7.4.2",
