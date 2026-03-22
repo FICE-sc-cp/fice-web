@@ -35,12 +35,12 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
           ? {
               inline_keyboard: [
                 [
-                  { 
-                    text: 'Open Admin', 
-                    web_app: { 
-                      url: miniAppUrl 
-                    } 
-                  }
+                  {
+                    text: 'Open Admin',
+                    web_app: {
+                      url: miniAppUrl,
+                    },
+                  },
                 ],
               ],
             }
