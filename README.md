@@ -1,86 +1,192 @@
 # FICE Web
 
-Web application for the student council built with **Next.js (client)** and **NestJS (server)**.
+Web application for the student council built with **Next.js** and **NestJS**.
+
+| Category | Technology |
+|----------|-----------|
+| **Frontend (Web)** | Next.js |
+| **Frontend (Admin)** | Next.js + Telegram Mini App SDK |
+| **Backend** | NestJS |
+| **Database** | PostgreSQL (via Docker) |
+| **ORM** | Prisma |
+| **Language** | TypeScript |
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Project Structure](#project-structure)
 - [Getting Started](#getting-started)
-- [Client (Next.js)](#client-nextjs)
-- [Server (NestJS)](#server-nestjs)
-- [Database Setup](#database-setup)
-- [Prisma ORM](#prisma-orm)
-- [Tech Stack](#tech-stack)
-- [Documentation](#documentation)
+  - [Prerequisites](#prerequisites)
+  - [Quick Start](#quick-start)
+- [Development](#development)
+  - [Client — Web](#client--web)
+  - [Client — Admin Telegram Mini App](#client--admin-telegram-mini-app)
+  - [Server](#server)
+- [Database](#database)
+  - [Docker (PostgreSQL)](#docker-postgresql)
+  - [Environment Configuration](#environment-configuration)
+  - [Prisma ORM](#prisma-orm)
+- [Links](#links)
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 fice-web
 │
-├── client/    # Next.js frontend
-└── server/    # NestJS backend
+├── client/
+│   ├── web/      # Public-facing Next.js frontend
+│   └── admin/    # Admin Telegram Mini App (Next.js)
+└── server/       # NestJS backend (API + Telegram bot)
 ```
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
-1. Clone the repository
-2. Install dependencies for both client and server (see sections below)
-3. Set up the database (see [Database Setup](#database-setup))
-4. Run the development servers
+### Prerequisites
+
+- **Node.js** (v18+) and **npm**
+- **Docker** — for the PostgreSQL database
+- **ngrok** — only needed for admin mini app development ([ngrok.com](https://ngrok.com/))
+- **Telegram bot token** — only needed for admin mini app (from [@BotFather](https://t.me/BotFather))
+
+### Quick Start
+
+```bash
+# 1. Clone the repository
+git clone <repo-url>
+cd fice-web
+
+# 2. Start the database
+cd server
+docker compose up -d
+
+# 3. Configure environment
+#    Create server/.env (see "Environment Configuration" below)
+
+# 4. Install dependencies & run migrations
+npm install
+npx prisma migrate dev
+npx prisma generate
+
+# 5. Start the backend
+npm run start:dev
+
+# 6. In a new terminal — start the web client
+cd client/web
+npm install
+npm run dev
+```
+
+The web client opens at [http://localhost:3000](http://localhost:3000).
 
 ---
 
-## 💻 Client (Next.js)
+## Development
 
-### Installation
+### Client — Web
 
 ```bash
-cd client
+cd client/web
 npm install
 ```
 
-### Development
+**Dev server:**
 
 ```bash
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Opens at [http://localhost:3000](http://localhost:3000).
 
-### Production Build
+**Production build:**
 
 ```bash
 npm run build
 npm run start
 ```
 
----
+### Client — Admin Telegram Mini App
 
-## 🔧 Server (NestJS)
+The admin panel runs as a **Telegram Mini App** inside a bot. Telegram requires a public HTTPS URL, so you need an **ngrok** tunnel for local development.
 
-### Installation
+#### 1. Install dependencies
+
+```bash
+cd client/admin
+npm install
+```
+
+#### 2. Start an ngrok tunnel
+
+In a separate terminal, expose the dev server port:
+
+```bash
+ngrok http 3000
+```
+
+Copy the generated `https://` URL (e.g. `https://xxxx-xxxx.ngrok-free.app`).
+
+#### 3. Configure the ngrok URL
+
+**`client/admin/next.config.ts`** — set your ngrok hostname:
+
+```typescript
+const nextConfig: NextConfig = {
+  allowedDevOrigins: [
+    'your-subdomain.ngrok-free.app',
+  ],
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'your-subdomain.ngrok-free.app',
+      },
+    ],
+  },
+};
+```
+
+**`server/.env`** — set the mini app URL:
+
+```env
+MINI_APP_URL="https://your-subdomain.ngrok-free.app/"
+```
+
+#### 4. Start the dev server
+
+```bash
+npm run dev
+```
+
+#### 5. Open the Mini App
+
+Send any message to your bot in Telegram — it will reply with a button that opens the admin panel via the ngrok URL.
+
+**Production build:**
+
+```bash
+npm run build
+npm run start
+```
+
+### Server
 
 ```bash
 cd server
 npm install
 ```
 
-### Development
-
-Run the development server in watch mode:
+**Dev server (watch mode):**
 
 ```bash
 npm run start:dev
 ```
 
-### Production Build
+**Production build:**
 
 ```bash
 npm run build
@@ -89,22 +195,20 @@ npm run start:prod
 
 ---
 
-## 🗄️ Database Setup
+## Database
 
-### Using Docker (PostgreSQL)
+### Docker (PostgreSQL)
 
-#### Start PostgreSQL Container
+**Start** the container:
 
 ```bash
 cd server
 docker compose up -d
 ```
 
-This will start a PostgreSQL container.
+Port mapping: `5433:5432` (host:container).
 
-**Port mapping:** `5433:5432` (host:container)
-
-#### Stop Containers
+**Stop** the container:
 
 ```bash
 docker compose down
@@ -112,103 +216,42 @@ docker compose down
 
 ### Environment Configuration
 
-Create a `.env` file in the `server/` directory:
+Create a `.env` file in `server/`:
 
-```local env example
+```env
 DATABASE_URL="postgresql://postgres:postgres@localhost:5433/fice?schema=public"
+TELEGRAM_BOT_TOKEN="<your-bot-token>"
+MINI_APP_URL="<your-ngrok-url>"
 ```
 
----
+### Prisma ORM
 
-## 🗃️ Prisma ORM
+All Prisma commands run from the `server/` directory.
 
-### Prisma Commands
+| Command | Description |
+|---------|-------------|
+| `npx prisma migrate dev --name <name>` | Create and apply a migration |
+| `npx prisma generate` | Regenerate the TypeScript client |
+| `npx prisma studio` | Open the database GUI |
 
-#### Run Migrations
+**Typical workflow:**
 
-Update the database schema:
-
-```bash
-cd server
-npx prisma migrate dev --name init
-```
-
-#### Generate Prisma Client
-
-Update the TypeScript client:
-
-```bash
-npx prisma generate
-```
-
-#### View Database (Prisma Studio)
-
-Open Prisma Studio in your browser:
-
-```bash
-npx prisma studio
-```
-
-### Workflow Guide
-
-1. Change `schema.prisma` → Run `migrate dev` to update the database
-2. Run `generate` → Update Prisma Client for TypeScript
-
-### Example Workflow
-
-**1. Add a new model in `schema.prisma`:**
-
-```prisma
-model Post {
-  id       Int    @id @default(autoincrement())
-  title    String
-  content  String?
-  authorId Int
-  author   User   @relation(fields: [authorId], references: [id])
-}
-```
-
-**2. Run migrate** → Creates `Post` table in the database:
-
-```bash
-npx prisma migrate dev --name add_post_model
-```
-
-**3. Run generate** → Updates Prisma Client for TypeScript:
-
-```bash
-npx prisma generate
-```
-
-**4. Use in code:**
+1. Edit `prisma/schema.prisma`
+2. Run `npx prisma migrate dev --name <describe_change>` to create the migration
+3. Run `npx prisma generate` to update the TypeScript client
+4. Use the generated client in code:
 
 ```typescript
-const newPost = await prisma.post.create({
-  data: { 
-    title: "Hello", 
-    authorId: 1 
-  }
-})
+const post = await prisma.post.create({
+  data: { title: "Hello", authorId: 1 },
+});
 ```
 
 ---
 
-## 🛠️ Tech Stack
+## Links
 
-| Category | Technology |
-|----------|-----------|
-| **Frontend** | Next.js |
-| **Backend** | NestJS |
-| **Database** | PostgreSQL (via Docker) |
-| **ORM** | Prisma |
-| **Language** | TypeScript |
-
----
-
-## 📚 Documentation
-
-- **Next.js:** [https://nextjs.org/docs](https://nextjs.org/docs)
-- **NestJS:** [https://docs.nestjs.com](https://docs.nestjs.com)
-- **Prisma:** [https://www.prisma.io/docs](https://www.prisma.io/docs)
-
----
+- [Next.js Documentation](https://nextjs.org/docs)
+- [NestJS Documentation](https://docs.nestjs.com)
+- [Prisma Documentation](https://www.prisma.io/docs)
+- [Telegram Mini Apps](https://core.telegram.org/bots/webapps)
