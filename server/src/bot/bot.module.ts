@@ -6,10 +6,11 @@ import { APP_GUARD } from '@nestjs/core';
 @Module({
   providers: [
     BotService,
-    {
-      provide: APP_GUARD,
-      useClass: TelegramAuthGuard,
-    },
+    // Temporary disabled for development
+    // {
+    //   provide: APP_GUARD,
+    //   useClass: TelegramAuthGuard,
+    // },
   ],
   exports: [BotService],
 })

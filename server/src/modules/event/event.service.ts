@@ -5,20 +5,18 @@ import { Event } from './entities/event.entity';
 
 @Injectable()
 export class EventService {
-  // ZAGLUSHKA
   private events: Event[] = [
     {
-      id: 1,
+      id: '1',
       title: '����� �������',
       description: '���� ������',
       date: new Date(),
     },
   ];
-  private idCounter = 2; // new id Counter
 
   create(createEventDto: CreateEventDto) {
     const newEvent = {
-      id: this.idCounter++,
+      id: crypto.randomUUID(),
       ...createEventDto,
     };
     this.events.push(newEvent);
@@ -29,23 +27,22 @@ export class EventService {
     return this.events; //Returns all events
   }
 
-  findOne(id: number) {
+  findOne(id: string) {
     const event = this.events.find((e) => e.id === id);
     if (!event) throw new NotFoundException(`���� � ID ${id} �� ��������`);
     return event;
   }
 
-  update(id: number, updateEventDto: UpdateEventDto) {
+  update(id: string, updateEventDto: UpdateEventDto) {
     const eventIndex = this.events.findIndex((e) => e.id === id);
     if (eventIndex === -1)
       throw new NotFoundException(`���� � ID ${id} �� ��������`);
 
-    // Data refresh
     this.events[eventIndex] = { ...this.events[eventIndex], ...updateEventDto };
     return this.events[eventIndex];
   }
 
-  remove(id: number) {
+  remove(id: string) {
     const eventIndex = this.events.findIndex((e) => e.id === id);
     if (eventIndex === -1)
       throw new NotFoundException(`���� � ID ${id} �� ��������`);

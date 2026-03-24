@@ -27,16 +27,16 @@ export class PartnerController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.partnerService.findOne(+id);
+    return this.partnerService.findOne(id);
   }
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updatePartnerDto: UpdatePartnerDto) {
-    return this.partnerService.update(+id, updatePartnerDto);
+    return this.partnerService.update(id, updatePartnerDto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.partnerService.remove(+id);
+    return this.partnerService.remove(id);
   }
 }

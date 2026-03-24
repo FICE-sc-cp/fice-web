@@ -1,6 +1,6 @@
 export class EventDetail {
-  id: number;
-  eventId: number;
+  id: string;
+  eventId: string;
   location: string;
   agenda?: string;
 }
