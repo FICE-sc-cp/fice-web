@@ -12,15 +12,15 @@ export class PartnerService {
     return `This action returns all partner`;
   }
 
-  findOne(id: number) {
+  findOne(id: string) {
     return `This action returns a #${id} partner`;
   }
 
-  update(id: number, updatePartnerDto: UpdatePartnerDto) {
+  update(id: string, updatePartnerDto: UpdatePartnerDto) {
     return `This action updates a #${id} partner`;
   }
 
-  remove(id: number) {
+  remove(id: string) {
     return `This action removes a #${id} partner`;
   }
 }

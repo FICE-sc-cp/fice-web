@@ -1,5 +1,5 @@
 export class Partner {
-  id: number;
+  id: string;
   name: string;
   website?: string;
 }
