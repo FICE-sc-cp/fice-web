@@ -1,0 +1,55 @@
+version: "3.8"
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: fice-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: fice
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - fice_pg_data:/var/lib/postgresql/data
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: fice-server
+    restart: always
+    environment:
+      # Use postgres service name from docker-compose network
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/fice?schema=public
+      PORT: 3001
+    ports:
+      - "3001:3001"
+    depends_on:
+      - postgres
+
+  admin:
+    build:
+      context: ./client/admin
+      dockerfile: Dockerfile
+    container_name: fice-admin
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+
+  web:
+    build:
+      context: ./client/web
+      dockerfile: Dockerfile
+    container_name: fice-web
+    restart: always
+    ports:
+      - "3002:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+
+volumes:
+  fice_pg_data:
