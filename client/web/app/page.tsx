@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useStore } from '@/store/useStore';
 import { EventCard, CharityCard, MemberCard } from '@/components/Cards';
+import { FormSandbox } from '@/components/ui/FormSandbox';
 
 export default function HomePage() {
   const { events, charity, members } = useStore();
@@ -62,7 +63,10 @@ export default function HomePage() {
           ))}
         </div>
       </section>
-      
+
+      <section>
+        <FormSandbox></FormSandbox>
+      </section>
     </main>
   );
 }
