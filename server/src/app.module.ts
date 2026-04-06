@@ -8,6 +8,10 @@ import { PartnerModule } from './modules/partner/partner.module';
 import { EventDetailsModule } from './modules/event-details/event-details.module';
 import { FundraiserModule } from './modules/fundraiser/fundraiser.module';
 import { UserModule } from './modules/user/user.module';
+import { DepartmentModule } from './modules/department/department.module';
+import { DepartmentMemberModule } from './modules/department_member/department_member.module';
+import { DepartmentDetailsModule } from './modules/department_details/department_details.module';
+import { DepartmentHeadModule } from './modules/department_head/department_head.module';
 
 @Module({
   imports: [
@@ -20,6 +24,10 @@ import { UserModule } from './modules/user/user.module';
     EventDetailsModule,
     FundraiserModule,
     UserModule,
+    DepartmentModule,
+    DepartmentMemberModule,
+    DepartmentDetailsModule,
+    DepartmentHeadModule,
   ],
   controllers: [AppController],
   providers: [AppService],
