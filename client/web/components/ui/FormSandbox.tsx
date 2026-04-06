@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Input } from "./Input";
 import { Select } from "./Select";
 import { Textarea } from "./Textarea";
-import { testSchema, TestFormValues } from "./form-schema";
+import { testSchema, TestFormValues } from "../../schemas/form-schema";
 
 export const FormSandbox = () => {
     const {
