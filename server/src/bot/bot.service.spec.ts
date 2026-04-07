@@ -29,4 +29,24 @@ describe('BotService', () => {
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
+
+  it('should skip bot startup when the token is missing', async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        BotService,
+        {
+          provide: ConfigService,
+          useValue: {
+            get: jest.fn(() => null),
+          },
+        },
+      ],
+    }).compile();
+
+    const missingTokenService = module.get<BotService>(BotService);
+
+    expect(missingTokenService).toBeDefined();
+    expect(() => missingTokenService.onModuleInit()).not.toThrow();
+    await expect(missingTokenService.onModuleDestroy()).resolves.toBeUndefined();
+  });
 });

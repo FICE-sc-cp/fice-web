@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   postgres:
     image: postgres:15
@@ -20,6 +18,8 @@ services:
       dockerfile: Dockerfile
     container_name: fice-server
     restart: always
+    env_file:
+      - ./server/.env
     environment:
       # Use postgres service name from docker-compose network
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/fice?schema=public

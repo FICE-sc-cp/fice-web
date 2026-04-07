@@ -9,22 +9,22 @@ import { Bot } from 'grammy';
 
 @Injectable()
 export class BotService implements OnModuleInit, OnModuleDestroy {
-  private readonly bot: Bot;
+  private readonly bot?: Bot;
   private readonly logger = new Logger(BotService.name);
 
   constructor(private readonly configService: ConfigService) {
     const token = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
-
-    if (!token) {
-      throw new Error(
-        'TELEGRAM_BOT_TOKEN was not found in the environment variables.',
-      );
-    }
-
-    this.bot = new Bot(token);
+    this.bot = token ? new Bot(token) : undefined;
   }
 
   onModuleInit() {
+    if (!this.bot) {
+      this.logger.warn(
+        'TELEGRAM_BOT_TOKEN is not set. Telegram bot startup is skipped.',
+      );
+      return;
+    }
+
     this.logger.log('Initializing Telegram Bot...');
 
     const miniAppUrl = this.configService.get<string>('MINI_APP_URL');
@@ -60,6 +60,10 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy() {
+    if (!this.bot) {
+      return;
+    }
+
     this.logger.log('Stopping Telegram Bot...');
     await this.bot.stop();
   }
