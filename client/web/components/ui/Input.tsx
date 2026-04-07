@@ -1,12 +1,14 @@
 import { forwardRef, InputHTMLAttributes } from "react";
+import { cn } from "@/lib/utils";
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement>{
     label: string;
     error?: string;
+    className?: string;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-    ({ label, error, ...props }, ref )=>{
+    ({ label, error, className, ...props }, ref )=>{
         return(
             <div className="flex flex-col gap-1.5 w-full">
                 <label className="text-sm font-semibold text-slate-700">
@@ -15,11 +17,12 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
                 <input 
                     ref={ref} 
                     {...props} 
-                    className={`px-4 py-3 rounded-xl border transition-all outline-none
-                        ${error
+                    className={cn("px-4 py-3 rounded-xl border transition-all outline-none" , 
+                        error
                             ? 'border-red-500 focus:ring-red-100'
-                            : 'border-slate-500 focus:border-blue-500 focus:ring-4 focus:ring-blue-50'
-                        }`} 
+                            : 'border-slate-500 focus:border-blue-500 focus:ring-4 focus:ring-blue-50',
+                        className
+                        )} 
                 />
 
                 {error && (

@@ -1,23 +1,27 @@
 import { forwardRef, SelectHTMLAttributes } from "react";
+import { cn } from "@/lib/utils";
 
 interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement>{
     label: string;
     options: { value: string; label: string;} [];
     error?: string;
+    className?: string;
 }
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-    ({ label, options, error, ...props}, ref)=>{
+    ({ label, options, error, className, ...props}, ref)=>{
         return(
             <div className="flex flex-col gap-1.5 w-full text-left">
                 <label className="text-sm font-semibold text-slate-700">{label}</label>
                 <select 
                     ref={ref}
                     {...props}
-                    className={`px-4 py-3 rounded-xl border bg-white transition-all outline-none appearance-none
-                        ${error
+                    className={cn("px-4 py-3 rounded-xl border bg-white transition-all outline-none appearance-none",
+                        error
                             ? 'border-red-500 focus:ring-red-100'
-                            : 'border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-50'}`}
+                            : 'border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-50',
+                        className
+                        )}
                 >
                     <option value="" disabled>Оберіть варіант...</option>
                     {options.map((opt) =>(
