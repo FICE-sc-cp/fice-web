@@ -6,9 +6,169 @@ datasource db {
   provider = "postgresql"
 }
 
+// tables without relations
+
 model User {
-  id    Int    @id @default(autoincrement())
-  email String @unique
-  name  String?
-  lastName String?
+    id String @id @default(uuid()) @db.Uuid
+    telegramTag String @unique @db.VarChar(50)
+}
+
+model News {
+    id String @id @default(uuid()) @db.Uuid
+    title String @db.VarChar(50)
+    publishDate DateTime @default(now())
+    details String? @db.Text
+    image String?
+}
+
+enum FundraiserStatus {
+    ACTIVE
+    CLOSED
+}
+model Fundraiser {
+    id String @id @default(uuid()) @db.Uuid
+    name String @db.VarChar(30)
+    status FundraiserStatus 
+    description String @db.VarChar(255)
+    goalAmount Decimal @db.Decimal(10, 2)
+    currentAmount Decimal @db.Decimal(10, 2)
+    startDate DateTime 
+    endDate DateTime
+    detailsLink String?
+}
+
+// departments and members
+
+model DepartmentHead { 
+    id String @id @default(uuid()) @db.Uuid 
+    firstName String @db.VarChar(30)
+    lastName String @db.VarChar(30)
+    photo String?
+    jobDescription String? @db.VarChar(100)
+    telegramTag String @db.VarChar(50)
+
+    department Department?
+}
+
+model DepartmentDetails {
+    id String @id @default(uuid()) @db.Uuid
+    about String @db.Text
+    detailedDescription String? @db.Text
+    exampleOfWork String? @db.Text
+
+    department Department? 
+}
+
+model Department {
+    id String @id @default(uuid()) @db.Uuid
+    name String @db.VarChar(50)
+    shortDescription String @db.VarChar(100)
+
+    headId String? @unique @db.Uuid
+    head DepartmentHead? @relation(fields: [headId], references: [id])
+
+    detailsId String? @unique @db.Uuid
+    details DepartmentDetails? @relation(fields: [detailsId], references: [id])
+
+    applicantDepartments ApplicantDepartment[]
+    departmentMemberAssignments DepartmentMemberAssignment[]
+    eventDetails EventDetails[]
+}
+
+enum DepartmentMemberRole {
+    DEPUTY
+    HR
+    HEAD
+    MEMBER
+}
+model DepartmentMember {
+    id String @id @default(uuid()) @db.Uuid
+    role DepartmentMemberRole
+    firstName String @db.VarChar(30)
+    lastName String @db.VarChar(30)
+
+    assignments DepartmentMemberAssignment[] 
+}
+
+model DepartmentMemberAssignment {
+    id String @id @default(uuid()) @db.Uuid
+    departmentId String @db.Uuid
+    memberId String @db.Uuid
+
+    department Department @relation(fields: [departmentId], references: [id])
+    member DepartmentMember @relation(fields: [memberId], references: [id])
+}
+
+// applicants
+
+model Applicant {
+    id String @id @default(uuid()) @db.Uuid
+    firstName String @db.VarChar(30)
+    middleName String @db.VarChar(30)
+    lastName String @db.VarChar(30)
+    telegramTag String @db.VarChar(50)
+    group String @db.VarChar(5)
+    phoneNumber String @db.VarChar(20)
+    motivation String? @db.Text
+    experience String? @db.Text
+    createdAt DateTime @default(now())
+
+    applicantDepartments ApplicantDepartment[]
+}
+
+model ApplicantDepartment {
+    id String @id @default(uuid()) @db.Uuid
+    applicantId String @db.Uuid
+    departmentId String @db.Uuid
+    question String? @db.Text
+
+    applicant Applicant @relation(fields: [applicantId], references: [id])
+    department Department @relation(fields: [departmentId], references: [id])
+}
+
+// events and partners
+
+model EventDetails {
+    id String @id @default(uuid()) @db.Uuid
+    description String @db.VarChar(255)
+    moneyCollected Decimal @db.Decimal(10, 2)
+    charityAmount Decimal @db.Decimal(10, 2)
+    visitorsAmount Int?
+
+    departmentId String? @db.Uuid
+    department Department? @relation(fields: [departmentId], references: [id])
+
+    event Event?
+}
+
+model Event {
+    id String @id @default(uuid()) @db.Uuid
+    name String @db.VarChar(50)
+    date DateTime
+    photoUrl String?
+
+    detailsId String? @unique @db.Uuid
+    details EventDetails? @relation(fields: [detailsId], references: [id])
+
+    eventPartners EventPartner[]
+}
+
+model Partner {
+    id String @id @default(uuid()) @db.Uuid
+    name String @db.VarChar(30)
+    logoImage String?
+    websiteLink String?
+    shortDescription String? @db.VarChar(150)
+    isApproved Boolean @default(false)
+
+    eventPartners EventPartner[]
+}
+
+model EventPartner {
+    id  String @id @default(uuid()) @db.Uuid
+    partnerId String @db.Uuid
+    eventId String @db.Uuid
+
+    partner Partner @relation(fields: [partnerId], references: [id])
+    event Event @relation(fields: [eventId], references: [id])
 }
