@@ -6,16 +6,11 @@ datasource db {
   provider = "postgresql"
 }
 
-// tables without relations
-
 model User {
     id String @id @default(uuid()) @db.Uuid
     telegramTag String @unique @db.VarChar(50)
 }
 
-// Manual overrides for the "facts & results" landing section.
-// Stats are computed from the database by default; an admin can pin a
-// specific value per key, which then takes precedence over the computed one.
 model StatOverride {
     key       String   @id @db.VarChar(50)
     value     Decimal  @db.Decimal(14, 2)
@@ -45,8 +40,6 @@ model Fundraiser {
     endDate DateTime
     detailsLink String?
 }
-
-// departments and members
 
 model DepartmentHead { 
     id String @id @default(uuid()) @db.Uuid 
@@ -108,8 +101,6 @@ model DepartmentMemberAssignment {
     member DepartmentMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
 }
 
-// applicants
-
 model Applicant {
     id String @id @default(uuid()) @db.Uuid
     firstName String @db.VarChar(30)
@@ -134,8 +125,6 @@ model ApplicantDepartment {
     applicant Applicant @relation(fields: [applicantId], references: [id], onDelete: Cascade)
     department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
 }
-
-// events and partners
 
 model EventDetails {
     id String @id @default(uuid()) @db.Uuid

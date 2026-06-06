@@ -6,7 +6,6 @@ export interface Paginated<T> {
   totalPages: number;
 }
 
-/** Wraps a page of results with its pagination metadata. */
 export function paginated<T>(
   items: T[],
   total: number,
@@ -22,7 +21,6 @@ export function paginated<T>(
   };
 }
 
-/** Prisma `skip` value for the given page/limit. */
 export function skipFor(page: number, limit: number): number {
   return (page - 1) * limit;
 }

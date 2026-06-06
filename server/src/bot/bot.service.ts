@@ -59,12 +59,6 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       });
   }
 
-  /**
-   * Whether `userId` is currently a member of `chatId` (creator, administrator
-   * or member). Used to authorize admin actions: only people in the admin
-   * Telegram group may write. Returns false if the bot is not configured or the
-   * lookup fails (e.g. the bot is not in that chat).
-   */
   async isUserInChat(
     chatId: string | number,
     userId: number,

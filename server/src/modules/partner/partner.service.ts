@@ -9,14 +9,12 @@ import { UpdatePartnerDto } from './dto/update-partner.dto';
 export class PartnerService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Public application — starts unapproved. */
   apply(dto: CreatePartnerDto) {
     return this.prisma.partner.create({
       data: { ...dto, isApproved: false },
     });
   }
 
-  /** Admin create — immediately approved. */
   create(dto: CreatePartnerDto) {
     return this.prisma.partner.create({
       data: { ...dto, isApproved: true },

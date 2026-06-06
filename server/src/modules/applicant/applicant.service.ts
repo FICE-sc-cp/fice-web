@@ -54,7 +54,6 @@ export class ApplicantService {
 
   async remove(id: string) {
     await this.findOne(id);
-    // ApplicantDepartment rows are removed via onDelete: Cascade.
     return this.prisma.applicant.delete({ where: { id } });
   }
 }
