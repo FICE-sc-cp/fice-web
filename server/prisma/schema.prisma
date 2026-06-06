@@ -13,6 +13,15 @@ model User {
     telegramTag String @unique @db.VarChar(50)
 }
 
+// Manual overrides for the "facts & results" landing section.
+// Stats are computed from the database by default; an admin can pin a
+// specific value per key, which then takes precedence over the computed one.
+model StatOverride {
+    key       String   @id @db.VarChar(50)
+    value     Decimal  @db.Decimal(14, 2)
+    updatedAt DateTime @default(now()) @updatedAt
+}
+
 model News {
     id String @id @default(uuid()) @db.Uuid
     title String @db.VarChar(50)
@@ -65,10 +74,10 @@ model Department {
     shortDescription String @db.VarChar(100)
 
     headId String? @unique @db.Uuid
-    head DepartmentHead? @relation(fields: [headId], references: [id])
+    head DepartmentHead? @relation(fields: [headId], references: [id], onDelete: SetNull)
 
     detailsId String? @unique @db.Uuid
-    details DepartmentDetails? @relation(fields: [detailsId], references: [id])
+    details DepartmentDetails? @relation(fields: [detailsId], references: [id], onDelete: SetNull)
 
     applicantDepartments ApplicantDepartment[]
     departmentMemberAssignments DepartmentMemberAssignment[]
@@ -95,8 +104,8 @@ model DepartmentMemberAssignment {
     departmentId String @db.Uuid
     memberId String @db.Uuid
 
-    department Department @relation(fields: [departmentId], references: [id])
-    member DepartmentMember @relation(fields: [memberId], references: [id])
+    department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+    member DepartmentMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
 }
 
 // applicants
@@ -122,8 +131,8 @@ model ApplicantDepartment {
     departmentId String @db.Uuid
     question String? @db.Text
 
-    applicant Applicant @relation(fields: [applicantId], references: [id])
-    department Department @relation(fields: [departmentId], references: [id])
+    applicant Applicant @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+    department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
 }
 
 // events and partners
@@ -136,7 +145,7 @@ model EventDetails {
     visitorsAmount Int?
 
     departmentId String? @db.Uuid
-    department Department? @relation(fields: [departmentId], references: [id])
+    department Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
 
     event Event?
 }
@@ -148,7 +157,7 @@ model Event {
     photoUrl String?
 
     detailsId String? @unique @db.Uuid
-    details EventDetails? @relation(fields: [detailsId], references: [id])
+    details EventDetails? @relation(fields: [detailsId], references: [id], onDelete: SetNull)
 
     eventPartners EventPartner[]
 }
@@ -169,6 +178,6 @@ model EventPartner {
     partnerId String @db.Uuid
     eventId String @db.Uuid
 
-    partner Partner @relation(fields: [partnerId], references: [id])
-    event Event @relation(fields: [eventId], references: [id])
+    partner Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+    event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }

@@ -1,11 +1,32 @@
-import { IsString, IsNotEmpty, IsUrl, IsOptional } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUrl,
+  MaxLength,
+} from 'class-validator';
 
 export class CreatePartnerDto {
+  @ApiProperty({ maxLength: 30 })
   @IsString()
   @IsNotEmpty()
+  @MaxLength(30)
   name: string;
 
-  @IsUrl()
+  @ApiPropertyOptional({ description: 'Logo image URL or path' })
   @IsOptional()
-  website?: string;
+  @IsString()
+  logoImage?: string;
+
+  @ApiPropertyOptional({ description: 'Partner website' })
+  @IsOptional()
+  @IsUrl()
+  websiteLink?: string;
+
+  @ApiPropertyOptional({ maxLength: 150 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(150)
+  shortDescription?: string;
 }

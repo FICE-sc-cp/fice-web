@@ -1,41 +1,66 @@
-import { IsDate, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsPositive, IsString, IsUrl } from "class-validator";
-import { FundraiserStatus } from "../enums/fundraiser.status.enum";
-import { Type } from "class-transformer";
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { FundraiserStatus } from '@prisma/client';
+import { Type } from 'class-transformer';
+import {
+  IsDate,
+  IsEnum,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUrl,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class CreateFundraiserDto {
-    @IsString()
-    @IsNotEmpty()
-    name: string;
+  @ApiProperty({ maxLength: 30, example: 'Help the shelter' })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(30)
+  name: string;
 
-    @IsEnum(FundraiserStatus)
-    status: FundraiserStatus;
+  @ApiPropertyOptional({
+    enum: FundraiserStatus,
+    default: FundraiserStatus.ACTIVE,
+  })
+  @IsOptional()
+  @IsEnum(FundraiserStatus)
+  status?: FundraiserStatus;
 
-    @IsString()
-    @IsOptional()
-    description?: string;
+  @ApiProperty({ maxLength: 255 })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(255)
+  description: string;
 
-    @IsNumber()
-    @IsPositive()
-    @Type(() => Number)
-    goalAmount: number;
+  @ApiProperty({ example: 10000, description: 'Target amount' })
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  goalAmount: number;
 
-    @IsNumber()
-    @IsPositive()
-    @Type(() => Number)
-    currentAmount: number;
+  @ApiPropertyOptional({
+    example: 0,
+    default: 0,
+    description: 'Amount collected so far',
+  })
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  currentAmount?: number;
 
-    @IsDate()
-    @Type(() => Date)
-    @IsNotEmpty()
-    startDate: Date;
+  @ApiProperty({ type: String, format: 'date-time' })
+  @Type(() => Date)
+  @IsDate()
+  startDate: Date;
 
-    @IsDate()
-    @Type(() => Date)
-    @IsNotEmpty()
-    endDate: Date;
+  @ApiProperty({ type: String, format: 'date-time' })
+  @Type(() => Date)
+  @IsDate()
+  endDate: Date;
 
-    @IsString()
-    @IsUrl()
-    @IsNotEmpty()
-    detailsLink: string;
+  @ApiPropertyOptional({ description: 'External link with more details' })
+  @IsOptional()
+  @IsUrl()
+  detailsLink?: string;
 }

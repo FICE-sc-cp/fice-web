@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
-import { DepartmentDetailsService } from './department_details.service';
 import { DepartmentDetailsController } from './department_details.controller';
+import { DepartmentDetailsService } from './department_details.service';
 
 @Module({
   controllers: [DepartmentDetailsController],

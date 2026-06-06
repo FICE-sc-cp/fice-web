@@ -1,5 +1,8 @@
-export class Partner {
+export class PartnerEntity {
   id: string;
   name: string;
-  website?: string;
+  logoImage: string | null;
+  websiteLink: string | null;
+  shortDescription: string | null;
+  isApproved: boolean;
 }

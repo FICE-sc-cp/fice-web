@@ -1,49 +1,57 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { CreateEventDetailDto } from './dto/create-event-detail.dto';
-import { UpdateEventDetailDto } from './dto/update-event-detail.dto';
-import { EventDetail } from './entities/event-detail.entity';
+import { PrismaService } from '../../database/prisma.service';
+import { CreateEventDetailsDto } from './dto/create-event-details.dto';
+import { UpdateEventDetailsDto } from './dto/update-event-details.dto';
 
 @Injectable()
 export class EventDetailsService {
-  private details: EventDetail[] = [
-    {
-      id: '1',
-      eventId: '1',
-      location: '˜˜˜˜˜˜˜˜ ˜˜˜',
-      agenda: '?˜˜˜˜˜˜˜ ˜˜ ˜˜˜˜˜˜',
-    },
-  ];
+  constructor(private readonly prisma: PrismaService) {}
 
-  create(createEventDetailDto: CreateEventDetailDto) {
-    const newDetail = { id: crypto.randomUUID(), ...createEventDetailDto };
-    this.details.push(newDetail);
-    return newDetail;
+  create(dto: CreateEventDetailsDto) {
+    const { departmentId, ...rest } = dto;
+    return this.prisma.eventDetails.create({
+      data: {
+        ...rest,
+        department: departmentId
+          ? { connect: { id: departmentId } }
+          : undefined,
+      },
+    });
   }
 
   findAll() {
-    return this.details;
+    return this.prisma.eventDetails.findMany({
+      include: { department: true, event: true },
+    });
   }
 
-  findOne(id: string) {
-    const detail = this.details.find((d) => d.id === id);
-    if (!detail) throw new NotFoundException(`˜˜˜˜˜ ˜ ID ${id} ˜˜ ˜˜˜˜˜˜˜˜`);
-    return detail;
+  async findOne(id: string) {
+    const details = await this.prisma.eventDetails.findUnique({
+      where: { id },
+      include: { department: true, event: true },
+    });
+    if (!details) {
+      throw new NotFoundException(`Event details ${id} not found`);
+    }
+    return details;
   }
 
-  update(id: string, updateEventDetailDto: UpdateEventDetailDto) {
-    const index = this.details.findIndex((d) => d.id === id);
-    if (index === -1)
-      throw new NotFoundException(`˜˜˜˜˜ ˜ ID ${id} ˜˜ ˜˜˜˜˜˜˜˜`);
-
-    this.details[index] = { ...this.details[index], ...updateEventDetailDto };
-    return this.details[index];
+  async update(id: string, dto: UpdateEventDetailsDto) {
+    await this.findOne(id);
+    const { departmentId, ...rest } = dto;
+    return this.prisma.eventDetails.update({
+      where: { id },
+      data: {
+        ...rest,
+        ...(departmentId !== undefined
+          ? { department: { connect: { id: departmentId } } }
+          : {}),
+      },
+    });
   }
 
-  remove(id: string) {
-    const index = this.details.findIndex((d) => d.id === id);
-    if (index === -1)
-      throw new NotFoundException(`˜˜˜˜˜ ˜ ID ${id} ˜˜ ˜˜˜˜˜˜˜˜`);
-
-    return this.details.splice(index, 1)[0];
+  async remove(id: string) {
+    await this.findOne(id);
+    return this.prisma.eventDetails.delete({ where: { id } });
   }
 }

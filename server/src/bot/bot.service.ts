@@ -59,6 +59,36 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       });
   }
 
+  /**
+   * Whether `userId` is currently a member of `chatId` (creator, administrator
+   * or member). Used to authorize admin actions: only people in the admin
+   * Telegram group may write. Returns false if the bot is not configured or the
+   * lookup fails (e.g. the bot is not in that chat).
+   */
+  async isUserInChat(
+    chatId: string | number,
+    userId: number,
+  ): Promise<boolean> {
+    if (!this.bot) {
+      this.logger.warn('Cannot check chat membership: bot is not configured.');
+      return false;
+    }
+    try {
+      const member = await this.bot.api.getChatMember(chatId, userId);
+      return (
+        member.status === 'creator' ||
+        member.status === 'administrator' ||
+        member.status === 'member'
+      );
+    } catch (err) {
+      this.logger.warn(
+        `Failed to check membership of user ${userId} in chat ${chatId}: ` +
+          (err instanceof Error ? err.message : String(err)),
+      );
+      return false;
+    }
+  }
+
   async onModuleDestroy() {
     if (!this.bot) {
       return;
