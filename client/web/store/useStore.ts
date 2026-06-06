@@ -1,4 +1,3 @@
-// web/store/useStore.ts
 import { create } from 'zustand';
 import { TeamMember, AboutSection, Event, CharityCampaign, Partner } from '../app/types'; //
 

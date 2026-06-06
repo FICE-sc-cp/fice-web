@@ -11,19 +11,6 @@ import { parse, validate } from '@tma.js/init-data-node';
 import { Request } from 'express';
 import { BotService } from '../bot/bot.service';
 
-/**
- * Protects admin-only (write) endpoints.
- *
- * The admin panel is a Telegram Mini App: every request from it carries the
- * signed `initData` string in the `x-telegram-init-data` header. The guard:
- *   1. verifies the signature against the bot token (authentication), then
- *   2. checks that the user is a member of the admin Telegram group
- *      (`ADMIN_GROUP_CHAT_ID`) — only those people may change content.
- *
- * For local development, set `AUTH_DISABLED=true` to bypass the check entirely.
- * If `ADMIN_GROUP_CHAT_ID` is not configured, any authenticated Telegram user is
- * allowed (with a warning).
- */
 @Injectable()
 export class TelegramAuthGuard implements CanActivate {
   private readonly logger = new Logger(TelegramAuthGuard.name);

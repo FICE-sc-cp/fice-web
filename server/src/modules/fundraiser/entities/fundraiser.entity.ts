@@ -9,9 +9,7 @@ export class FundraiserEntity {
   status: FundraiserStatus;
 
   description: string;
-  /** Decimal serialized as a string. */
   goalAmount: string;
-  /** Decimal serialized as a string. */
   currentAmount: string;
   startDate: Date;
   endDate: Date;

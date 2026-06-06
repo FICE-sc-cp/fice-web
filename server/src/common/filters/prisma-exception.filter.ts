@@ -8,13 +8,6 @@ import {
 import { Prisma } from '@prisma/client';
 import { Response } from 'express';
 
-/**
- * Translates known Prisma errors into clean HTTP responses so services can rely
- * on the database to enforce invariants instead of pre-checking everything:
- *   - P2025 (record not found)        -> 404
- *   - P2002 (unique constraint)       -> 409
- *   - P2003 (foreign key constraint)  -> 400
- */
 @Catch(Prisma.PrismaClientKnownRequestError)
 export class PrismaExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger(PrismaExceptionFilter.name);

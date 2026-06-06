@@ -6,7 +6,6 @@ import {
   getSchemaPath,
 } from '@nestjs/swagger';
 
-/** Pagination metadata returned alongside a page of items. */
 export class PaginatedDto {
   @ApiProperty({ description: 'Total number of matching records' })
   total: number;
@@ -21,7 +20,6 @@ export class PaginatedDto {
   totalPages: number;
 }
 
-/** Documents a `{ items: Model[], total, page, limit, totalPages }` response. */
 export const ApiPaginatedResponse = <TModel extends Type>(model: TModel) =>
   applyDecorators(
     ApiExtraModels(PaginatedDto, model),

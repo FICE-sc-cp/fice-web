@@ -1,1 +1,59 @@
 @import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-mulish), ui-sans-serif, system-ui, sans-serif;
+
+  --color-bg: #0a0a0c;
+  --color-bg-soft: #111114;
+  --color-surface: #16161b;
+  --color-surface-2: #1d1d24;
+  --color-border: #2a2a33;
+
+  --color-fg: #ffffff;
+  --color-muted: #d3d3d3;
+  --color-subtle: #8a8a93;
+
+  --color-brand-green: #2eff97;
+  --color-brand-teal: #00e3c5;
+  --color-brand-cyan: #36dfff;
+  --color-brand-blue: #2b7fff;
+  --color-brand-purple: #ad46ff;
+  --color-brand-magenta: #f6339a;
+  --color-brand-violet: #9810fa;
+  --color-brand-orange: #ff8904;
+  --color-brand-red: #fb2c36;
+}
+
+:root {
+  color-scheme: dark;
+
+  --gradient-main: linear-gradient(90deg, #2eff97 0%, #36dfff 50%, #ad46ff 100%);
+  --gradient-green: linear-gradient(90deg, #46bf00 0%, #00e3c5 100%);
+  --gradient-blue: linear-gradient(90deg, #00e3f3 0%, #2b7fff 100%);
+  --gradient-magenta: linear-gradient(90deg, #f6339a 0%, #9810fa 100%);
+  --gradient-orange: linear-gradient(90deg, #ff8904 0%, #fb2c36 100%);
+}
+
+@layer base {
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+}
+
+@layer utilities {
+  .text-gradient {
+    background-image: var(--gradient-main);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+  .bg-gradient-main { background-image: var(--gradient-main); }
+  .bg-gradient-green { background-image: var(--gradient-green); }
+  .bg-gradient-blue { background-image: var(--gradient-blue); }
+  .bg-gradient-magenta { background-image: var(--gradient-magenta); }
+  .bg-gradient-orange { background-image: var(--gradient-orange); }
+}

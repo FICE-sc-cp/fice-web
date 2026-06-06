@@ -2,7 +2,6 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 
-/** Canonical set of stats shown in the "facts & results" landing section. */
 export const STAT_KEYS = [
   'eventsHeld',
   'moneyRaised',
@@ -19,7 +18,6 @@ export type StatKey = (typeof STAT_KEYS)[number];
 export class FactsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Computes every stat straight from the database. */
   async computeStats(): Promise<Record<StatKey, number>> {
     const [
       eventsHeld,
@@ -52,7 +50,6 @@ export class FactsService {
     };
   }
 
-  /** Computed stats with any admin overrides applied on top. */
   async getFacts(): Promise<Record<StatKey, number>> {
     const computed = await this.computeStats();
     const overrides = await this.prisma.statOverride.findMany();
@@ -82,7 +79,6 @@ export class FactsService {
   }
 
   async removeOverride(key: string) {
-    // Throws P2025 -> 404 if the override does not exist.
     await this.prisma.statOverride.delete({ where: { key } });
     return { key, removed: true };
   }

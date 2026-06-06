@@ -24,7 +24,6 @@ import { FactsModule } from './modules/facts/facts.module';
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    // Baseline rate limit: 100 requests / minute / IP (tightened on public forms).
     ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
     PrismaModule,
     AuthModule,

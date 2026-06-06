@@ -5,7 +5,6 @@ import { FundraiserStatus, PrismaClient } from '@prisma/client';
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
-/** Wipes content tables so the seed can be re-run to a known state (dev only). */
 async function reset() {
   await prisma.eventPartner.deleteMany();
   await prisma.applicantDepartment.deleteMany();
@@ -26,7 +25,6 @@ async function reset() {
 async function main() {
   await reset();
 
-  // --- Departments (with head + details) ---
   const media = await prisma.department.create({
     data: {
       name: 'Медіа',
@@ -70,7 +68,6 @@ async function main() {
     },
   });
 
-  // --- Members + assignments ---
   const [olena, andrii, dmytro] = await Promise.all([
     prisma.departmentMember.create({
       data: { role: 'HEAD', firstName: 'Олена', lastName: 'Коваль' },
@@ -90,7 +87,6 @@ async function main() {
     ],
   });
 
-  // --- Event + details ---
   const concertDetails = await prisma.eventDetails.create({
     data: {
       description: 'Благодійний концерт на підтримку ЗСУ',
@@ -125,7 +121,6 @@ async function main() {
     },
   });
 
-  // --- Partners (2 approved, 1 pending) + link to concert ---
   const monobank = await prisma.partner.create({
     data: {
       name: 'monobank',
@@ -153,7 +148,6 @@ async function main() {
     data: { eventId: concert.id, partnerId: monobank.id },
   });
 
-  // --- Fundraisers ---
   await prisma.fundraiser.createMany({
     data: [
       {
@@ -177,7 +171,6 @@ async function main() {
     ],
   });
 
-  // --- News ---
   await prisma.news.createMany({
     data: [
       {
@@ -197,7 +190,6 @@ async function main() {
     ],
   });
 
-  // --- One join application ---
   await prisma.applicant.create({
     data: {
       firstName: 'Марія',
