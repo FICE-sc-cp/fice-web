@@ -1,0 +1,12 @@
+node_modules
+dist
+coverage
+.env
+.env.local
+.env.*.local
+*.log
+*.tsbuildinfo
+.git
+.gitignore
+Dockerfile
+.dockerignore

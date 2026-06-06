@@ -1,26 +1,40 @@
-import { Injectable } from '@nestjs/common';
-import { CreateDepartmentDetailDto } from './dto/create-department_detail.dto';
-import { UpdateDepartmentDetailDto } from './dto/update-department_detail.dto';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../../database/prisma.service';
+import { CreateDepartmentDetailsDto } from './dto/create-department-details.dto';
+import { UpdateDepartmentDetailsDto } from './dto/update-department-details.dto';
 
 @Injectable()
 export class DepartmentDetailsService {
-  create(createDepartmentDetailDto: CreateDepartmentDetailDto) {
-    return 'This action adds a new departmentDetail';
+  constructor(private readonly prisma: PrismaService) {}
+
+  create(dto: CreateDepartmentDetailsDto) {
+    return this.prisma.departmentDetails.create({ data: dto });
   }
 
   findAll() {
-    return `This action returns all departmentDetails`;
+    return this.prisma.departmentDetails.findMany({
+      include: { department: true },
+    });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} departmentDetail`;
+  async findOne(id: string) {
+    const details = await this.prisma.departmentDetails.findUnique({
+      where: { id },
+      include: { department: true },
+    });
+    if (!details) {
+      throw new NotFoundException(`Department details ${id} not found`);
+    }
+    return details;
   }
 
-  update(id: number, updateDepartmentDetailDto: UpdateDepartmentDetailDto) {
-    return `This action updates a #${id} departmentDetail`;
+  async update(id: string, dto: UpdateDepartmentDetailsDto) {
+    await this.findOne(id);
+    return this.prisma.departmentDetails.update({ where: { id }, data: dto });
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} departmentDetail`;
+  async remove(id: string) {
+    await this.findOne(id);
+    return this.prisma.departmentDetails.delete({ where: { id } });
   }
 }

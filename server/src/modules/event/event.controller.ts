@@ -1,42 +1,88 @@
 import {
-  Controller,
-  Get,
-  Post,
   Body,
-  Patch,
-  Param,
+  Controller,
   Delete,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  Query,
 } from '@nestjs/common';
-import { EventService } from './event.service';
+import {
+  ApiCreatedResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
+import { Admin } from '../../auth/admin.decorator';
+import { ApiPaginatedResponse } from '../../common/dto/paginated.dto';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { AddEventPartnerDto } from './dto/add-event-partner.dto';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
+import { EventEntity } from './entities/event.entity';
+import { EventService } from './event.service';
 
+@ApiTags('events')
 @Controller('event')
 export class EventController {
   constructor(private readonly eventService: EventService) {}
 
   @Post()
-  create(@Body() createEventDto: CreateEventDto) {
-    return this.eventService.create(createEventDto);
+  @Admin()
+  @ApiOperation({ summary: 'Create an event (admin)' })
+  @ApiCreatedResponse({ type: EventEntity })
+  create(@Body() dto: CreateEventDto) {
+    return this.eventService.create(dto);
   }
 
   @Get()
-  findAll() {
-    return this.eventService.findAll();
+  @ApiOperation({ summary: 'List events with details and partners' })
+  @ApiPaginatedResponse(EventEntity)
+  findAll(@Query() pagination: PaginationQueryDto) {
+    return this.eventService.findAll(pagination);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  @ApiOperation({ summary: 'Get an event by id' })
+  @ApiOkResponse({ type: EventEntity })
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.eventService.findOne(id);
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateEventDto: UpdateEventDto) {
-    return this.eventService.update(id, updateEventDto);
+  @Admin()
+  @ApiOperation({ summary: 'Update an event (admin)' })
+  @ApiOkResponse({ type: EventEntity })
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateEventDto) {
+    return this.eventService.update(id, dto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  @Admin()
+  @ApiOperation({ summary: 'Delete an event (admin)' })
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.eventService.remove(id);
+  }
+
+  @Post(':id/partners')
+  @Admin()
+  @ApiOperation({ summary: 'Attach a partner to an event (admin)' })
+  addPartner(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: AddEventPartnerDto,
+  ) {
+    return this.eventService.addPartner(id, dto.partnerId);
+  }
+
+  @Delete(':id/partners/:partnerId')
+  @Admin()
+  @ApiOperation({ summary: 'Detach a partner from an event (admin)' })
+  removePartner(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('partnerId', ParseUUIDPipe) partnerId: string,
+  ) {
+    return this.eventService.removePartner(id, partnerId);
   }
 }

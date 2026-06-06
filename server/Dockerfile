@@ -2,21 +2,16 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Install dependencies
+# Install dependencies from the lockfile for reproducible builds.
 COPY package.json package-lock.json ./
-# Prisma needs python and build tools for some architectures occasionally, but mostly we are fine on alpine. Let's just run npm install.
-RUN npm install
+RUN npm ci
 
-# Copy source
+# Copy source, generate the Prisma client and build the app.
 COPY . .
-
-# Generate Prisma Client
 RUN npx prisma generate
-
-# Build NestJS
 RUN npm run build
 
 EXPOSE 3001
 
-# Start the server
-CMD ["npm", "run", "start:prod"]
+# Apply any pending migrations, then start the API.
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]

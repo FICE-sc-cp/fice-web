@@ -1,26 +1,65 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../../database/prisma.service';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { paginated, skipFor } from '../../common/pagination';
 import { CreatePartnerDto } from './dto/create-partner.dto';
 import { UpdatePartnerDto } from './dto/update-partner.dto';
 
 @Injectable()
 export class PartnerService {
-  create(createPartnerDto: CreatePartnerDto) {
-    return 'This action adds a new partner';
+  constructor(private readonly prisma: PrismaService) {}
+
+  /** Public application — starts unapproved. */
+  apply(dto: CreatePartnerDto) {
+    return this.prisma.partner.create({
+      data: { ...dto, isApproved: false },
+    });
   }
 
-  findAll() {
-    return `This action returns all partner`;
+  /** Admin create — immediately approved. */
+  create(dto: CreatePartnerDto) {
+    return this.prisma.partner.create({
+      data: { ...dto, isApproved: true },
+    });
   }
 
-  findOne(id: string) {
-    return `This action returns a #${id} partner`;
+  async findAll({ page, limit }: PaginationQueryDto, includePending = false) {
+    const where = includePending ? undefined : { isApproved: true };
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.partner.findMany({
+        where,
+        skip: skipFor(page, limit),
+        take: limit,
+        orderBy: { name: 'asc' },
+      }),
+      this.prisma.partner.count({ where }),
+    ]);
+    return paginated(items, total, page, limit);
   }
 
-  update(id: string, updatePartnerDto: UpdatePartnerDto) {
-    return `This action updates a #${id} partner`;
+  async findOne(id: string) {
+    const partner = await this.prisma.partner.findUnique({ where: { id } });
+    if (!partner) {
+      throw new NotFoundException(`Partner ${id} not found`);
+    }
+    return partner;
   }
 
-  remove(id: string) {
-    return `This action removes a #${id} partner`;
+  async approve(id: string) {
+    await this.findOne(id);
+    return this.prisma.partner.update({
+      where: { id },
+      data: { isApproved: true },
+    });
+  }
+
+  async update(id: string, dto: UpdatePartnerDto) {
+    await this.findOne(id);
+    return this.prisma.partner.update({ where: { id }, data: dto });
+  }
+
+  async remove(id: string) {
+    await this.findOne(id);
+    return this.prisma.partner.delete({ where: { id } });
   }
 }

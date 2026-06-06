@@ -11,6 +11,11 @@ services:
       - "5433:5432"
     volumes:
       - fice_pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d fice"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   server:
     build:
@@ -18,16 +23,32 @@ services:
       dockerfile: Dockerfile
     container_name: fice-server
     restart: always
-    env_file:
-      - ./server/.env
     environment:
-      # Use postgres service name from docker-compose network
+      # `postgres` is the service name on the compose network.
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/fice?schema=public
       PORT: 3001
+      # Optional Telegram admin config — taken from your shell or a root .env if set.
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      MINI_APP_URL: ${MINI_APP_URL:-}
+      # Only members of this Telegram group may change content.
+      ADMIN_GROUP_CHAT_ID: ${ADMIN_GROUP_CHAT_ID:-}
+      # Set to "true" to open write endpoints without Telegram auth (dev only).
+      AUTH_DISABLED: ${AUTH_DISABLED:-false}
+      # Where uploaded images are stored inside the container (persisted via volume).
+      UPLOAD_DIR: /app/uploads
     ports:
       - "3001:3001"
+    volumes:
+      - fice_uploads:/app/uploads
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   admin:
     build:
@@ -39,6 +60,8 @@ services:
       - "3000:3000"
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:3001
+    depends_on:
+      - server
 
   web:
     build:
@@ -50,6 +73,9 @@ services:
       - "3002:3000"
     environment:
       NEXT_PUBLIC_API_URL: http://localhost:3001
+    depends_on:
+      - server
 
 volumes:
   fice_pg_data:
+  fice_uploads:
