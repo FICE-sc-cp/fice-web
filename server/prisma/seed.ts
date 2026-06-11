@@ -73,10 +73,15 @@ async function main() {
       data: { role: 'HEAD', firstName: 'Олена', lastName: 'Коваль' },
     }),
     prisma.departmentMember.create({
-      data: { role: 'HEAD', firstName: 'Андрій', lastName: 'Шевченко' },
+      data: {
+        role: 'FIRST_DEPUTY',
+        firstName: 'Андрій',
+        lastName: 'Шевченко',
+        specialization: 'Зовнішня робота',
+      },
     }),
     prisma.departmentMember.create({
-      data: { role: 'MEMBER', firstName: 'Дмитро', lastName: 'Бондар' },
+      data: { role: 'SECRETARY', firstName: 'Дмитро', lastName: 'Бондар' },
     }),
   ]);
   await prisma.departmentMemberAssignment.createMany({

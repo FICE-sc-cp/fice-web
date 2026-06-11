@@ -1,5 +1,7 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../database/prisma.service';
+import { BotService } from '../../bot/bot.service';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { paginated, skipFor } from '../../common/pagination';
 import { CreatePartnerDto } from './dto/create-partner.dto';
@@ -7,12 +9,51 @@ import { UpdatePartnerDto } from './dto/update-partner.dto';
 
 @Injectable()
 export class PartnerService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(PartnerService.name);
 
-  apply(dto: CreatePartnerDto) {
-    return this.prisma.partner.create({
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly bot: BotService,
+    private readonly config: ConfigService,
+  ) {}
+
+  async apply(dto: CreatePartnerDto) {
+    const partner = await this.prisma.partner.create({
       data: { ...dto, isApproved: false },
     });
+
+    void this.notifyHeads(partner).catch((err) =>
+      this.logger.warn('Partner notification failed: ' + String(err)),
+    );
+
+    return partner;
+  }
+
+  private async notifyHeads(partner: {
+    name: string;
+    websiteLink: string | null;
+    shortDescription: string | null;
+  }) {
+    const mentions = [
+      this.config.get<string>('PARTNERSHIP_HEAD_TG'),
+      this.config.get<string>('COUNCIL_HEAD_TG'),
+    ]
+      .filter((t): t is string => !!t)
+      .map((t) => (t.startsWith('@') ? t : `@${t}`))
+      .join(' ');
+
+    const text = [
+      '🤝 Нова заявка на партнерство',
+      partner.name,
+      partner.websiteLink ? `Сайт: ${partner.websiteLink}` : '',
+      partner.shortDescription || '',
+      'Деталі — в адмінці.',
+      mentions ? `${mentions} — погляньте, будь ласка` : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    await this.bot.notifyGroup(text);
   }
 
   create(dto: CreatePartnerDto) {

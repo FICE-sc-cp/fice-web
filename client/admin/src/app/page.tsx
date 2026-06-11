@@ -1,29 +1,38 @@
-'use client';
-import { useTelegram } from '@/hooks/useTelegram';
+import Link from 'next/link';
+
+const SECTIONS = [
+  { href: '/news', label: 'Новини', emoji: '📰' },
+  { href: '/events', label: 'Заходи', emoji: '🎉' },
+  { href: '/partners', label: 'Партнери', emoji: '🤝' },
+  { href: '/departments', label: 'Відділи', emoji: '🏛️' },
+  { href: '/members', label: 'Президія', emoji: '👥' },
+  { href: '/fundraisers', label: 'Збори', emoji: '💛' },
+  { href: '/applicants', label: 'Заявки', emoji: '📩' },
+  { href: '/facts', label: 'Факти', emoji: '📊' },
+];
 
 export default function Home() {
-  const { webApp, user } = useTelegram();
-
-  if (!webApp) {
-    return (
-      <div className="flex min-h-screen items-center justify-center text-gray-500">
-        Loading Telegram Web App...
-      </div>
-    );
-  }
-
   return (
-    <div className=" flex min-h-screen flex-col items-center justify-center gap-4 p-6">
-      <h1 className="text-2xl font-bold">Admin Panel</h1>
-      {user && (
-        <p className="text-gray-600">
-          Welcome, {user.first_name}
-          {user.username ? ` (@${user.username})` : ''}
-        </p>
-      )}
-      <p className="text-sm text-gray-400">
-        Platform: {webApp.platform} &middot; v{webApp.version}
+    <main className="mx-auto max-w-2xl px-4 py-8">
+      <h1 className="text-2xl font-bold">
+        Адмінка <span className="text-gradient">FICE</span>
+      </h1>
+      <p className="mb-6 mt-1 text-sm text-muted">
+        Керування контентом сайту студради
       </p>
-    </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        {SECTIONS.map((s) => (
+          <Link
+            key={s.href}
+            href={s.href}
+            className="rounded-2xl border border-border bg-surface p-5 transition-colors hover:border-brand-cyan"
+          >
+            <div className="text-2xl">{s.emoji}</div>
+            <div className="mt-2 font-semibold">{s.label}</div>
+          </Link>
+        ))}
+      </div>
+    </main>
   );
 }

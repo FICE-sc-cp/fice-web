@@ -9,4 +9,5 @@ export class DepartmentMemberEntity {
 
   firstName: string;
   lastName: string;
+  specialization: string | null;
 }
