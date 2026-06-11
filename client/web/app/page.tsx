@@ -1,18 +1,23 @@
-import { Container } from '@/components/ui/Container';
-import { GradientText } from '@/components/ui/GradientText';
+import { IconDefs } from '@/components/ui/icons';
+import { Header } from '@/components/layout/Header';
+import { HeroSection } from '@/components/sections/HeroSection';
+import { StatementSection } from '@/components/sections/StatementSection';
+import { AboutSection } from '@/components/sections/AboutSection';
+import { ValuesSection } from '@/components/sections/ValuesSection';
+import { FactsSection } from '@/components/sections/FactsSection';
 
 export default function HomePage() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center text-center">
-      <Container className="py-24">
-        <h1 className="text-4xl font-bold uppercase leading-[1.05] sm:text-6xl md:text-7xl">
-          Студентська рада <GradientText>ФІОТ</GradientText>
-        </h1>
-        <p className="mx-auto mt-6 max-w-xl text-lg text-muted">
-          Ми знайшли баланс між незалежністю та ефективною співпрацею — зі
-          студентами, університетом і партнерами.
-        </p>
-      </Container>
-    </main>
+    <>
+      <IconDefs />
+      <Header />
+      <main id="top" className="overflow-x-clip">
+        <HeroSection />
+        <StatementSection />
+        <AboutSection />
+        <ValuesSection />
+        <FactsSection />
+      </main>
+    </>
   );
 }
