@@ -3,15 +3,15 @@
 @theme {
   --font-sans: var(--font-mulish), ui-sans-serif, system-ui, sans-serif;
 
-  --color-bg: #0a0a0c;
+  --color-bg: #101010;
   --color-bg-soft: #111114;
   --color-surface: #16161b;
   --color-surface-2: #1d1d24;
   --color-border: #2a2a33;
 
   --color-fg: #ffffff;
-  --color-muted: #d3d3d3;
-  --color-subtle: #8a8a93;
+  --color-muted: #cdcdcd;
+  --color-subtle: #b7b7b7;
 
   --color-brand-green: #2eff97;
   --color-brand-teal: #00e3c5;
@@ -27,7 +27,7 @@
 :root {
   color-scheme: dark;
 
-  --gradient-main: linear-gradient(90deg, #2eff97 0%, #36dfff 50%, #ad46ff 100%);
+  --gradient-main: linear-gradient(90deg, #2eff97 -19.71%, #36dfff 48.48%, #ad46ff 116.67%);
   --gradient-green: linear-gradient(90deg, #46bf00 0%, #00e3c5 100%);
   --gradient-blue: linear-gradient(90deg, #00e3f3 0%, #2b7fff 100%);
   --gradient-magenta: linear-gradient(90deg, #f6339a 0%, #9810fa 100%);
