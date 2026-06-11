@@ -32,6 +32,9 @@ services:
       MINI_APP_URL: ${MINI_APP_URL:-}
       # Only members of this Telegram group may change content.
       ADMIN_GROUP_CHAT_ID: ${ADMIN_GROUP_CHAT_ID:-}
+      # Telegram usernames pinged on a new partner application.
+      PARTNERSHIP_HEAD_TG: ${PARTNERSHIP_HEAD_TG:-}
+      COUNCIL_HEAD_TG: ${COUNCIL_HEAD_TG:-}
       # Set to "true" to open write endpoints without Telegram auth (dev only).
       AUTH_DISABLED: ${AUTH_DISABLED:-false}
       # Where uploaded images are stored inside the container (persisted via volume).

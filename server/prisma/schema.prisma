@@ -82,12 +82,15 @@ enum DepartmentMemberRole {
     HR
     HEAD
     MEMBER
+    FIRST_DEPUTY
+    SECRETARY
 }
 model DepartmentMember {
     id String @id @default(uuid()) @db.Uuid
     role DepartmentMemberRole
     firstName String @db.VarChar(30)
     lastName String @db.VarChar(30)
+    specialization String? @db.VarChar(100)
 
     assignments DepartmentMemberAssignment[] 
 }

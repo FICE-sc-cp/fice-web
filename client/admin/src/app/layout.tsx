@@ -1,22 +1,28 @@
-import type { Metadata } from 'next'
-import { TelegramProvider } from '@/components/TelegramProvider'
-import './globals.css'
+import type { Metadata } from 'next';
+import { Mulish } from 'next/font/google';
+import { Providers } from './providers';
+import './globals.css';
+
+const mulish = Mulish({
+  subsets: ['latin', 'cyrillic'],
+  variable: '--font-mulish',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
-  title: 'Admin',
-}
+  title: 'FICE — Адмінка',
+};
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        <script src="https://telegram.org/js/telegram-web-app.js" />
-      </head>
-      <body>
-        <TelegramProvider>
-          {children}
-        </TelegramProvider>
+    <html lang="uk" className={mulish.variable} suppressHydrationWarning>
+      <body className="min-h-screen bg-bg font-sans text-fg antialiased">
+        <Providers>{children}</Providers>
       </body>
     </html>
-  )
+  );
 }

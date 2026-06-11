@@ -83,6 +83,28 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  async notifyGroup(text: string): Promise<void> {
+    if (!this.bot) {
+      this.logger.warn('Cannot send notification: bot is not configured.');
+      return;
+    }
+    const chatId = this.configService.get<string>('ADMIN_GROUP_CHAT_ID');
+    if (!chatId) {
+      this.logger.warn(
+        'ADMIN_GROUP_CHAT_ID is not set — skipping notification.',
+      );
+      return;
+    }
+    try {
+      await this.bot.api.sendMessage(chatId, text);
+    } catch (err) {
+      this.logger.warn(
+        'Failed to send group notification: ' +
+          (err instanceof Error ? err.message : String(err)),
+      );
+    }
+  }
+
   async onModuleDestroy() {
     if (!this.bot) {
       return;

@@ -1,6 +1,12 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { DepartmentMemberRole } from '@prisma/client';
-import { IsEnum, IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateDepartmentMemberDto {
   @ApiProperty({ enum: DepartmentMemberRole })
@@ -18,4 +24,13 @@ export class CreateDepartmentMemberDto {
   @IsNotEmpty()
   @MaxLength(30)
   lastName: string;
+
+  @ApiPropertyOptional({
+    maxLength: 100,
+    description: 'Напрям/спеціалізація (напр. для заступників)',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  specialization?: string;
 }

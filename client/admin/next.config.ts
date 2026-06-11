@@ -1,16 +1,17 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
+
+const backendUrl = process.env.BACKEND_URL ?? 'http://localhost:3001';
+const devOrigin = process.env.NGROK_HOST;
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: [
-    'barographic-unmalevolently-myrna.ngrok-free.dev',
-  ],
-  images: {
-    remotePatterns: [
+  allowedDevOrigins: devOrigin ? [devOrigin] : [],
+  async rewrites() {
+    return [
       {
-        protocol: 'https',
-        hostname: 'barographic-unmalevolently-myrna.ngrok-free.dev',
+        source: '/api-proxy/:path*',
+        destination: `${backendUrl}/:path*`,
       },
-    ],
+    ];
   },
 };
 
