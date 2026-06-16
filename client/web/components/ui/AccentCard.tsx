@@ -31,6 +31,16 @@ export const accentGradient: Record<Accent, IconGradient> = {
   purple: 'magenta',
 };
 
+export const accentText: Record<Accent, string> = {
+  cyan: 'text-brand-cyan',
+  green: 'text-brand-green',
+  orange: 'text-brand-orange',
+  magenta: 'text-brand-magenta',
+  teal: 'text-brand-teal',
+  blue: 'text-brand-blue',
+  purple: 'text-brand-purple',
+};
+
 interface AccentCardProps extends HTMLAttributes<HTMLDivElement> {
   accent: Accent;
 }
