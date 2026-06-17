@@ -1,7 +1,7 @@
-import Image from "next/image";
 import { Container } from "@/components/ui/Container";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { Glow } from "@/components/ui/Glow";
+import { UkraineMap } from "@/components/ui/UkraineMap";
 import {
   AccentCard,
   accentGradient,
@@ -101,12 +101,9 @@ export function FactsSection() {
         </div>
 
         <div className="relative mx-auto mt-16 aspect-[968/671] w-full max-w-4xl">
-          <Image
-            src="/ukraine-map.png"
-            alt="Карта України з містами, з яких походять учасники"
-            fill
-            sizes="(min-width: 1024px) 56rem, 100vw"
-            className="object-contain"
+          <UkraineMap
+            preserveAspectRatio="none"
+            className="absolute inset-0"
           />
           {PINS.map((pin, i) => (
             <span
