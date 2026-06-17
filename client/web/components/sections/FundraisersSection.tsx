@@ -1,16 +1,37 @@
-import Image from 'next/image';
-import { Container } from '@/components/ui/Container';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { Glow } from '@/components/ui/Glow';
-import { cn } from '@/lib/utils';
+import Image from "next/image";
+import { Container } from "@/components/ui/Container";
+import { SectionHeader } from "@/components/ui/SectionHeader";
+import { Glow } from "@/components/ui/Glow";
+import { cn } from "@/lib/utils";
 
 const DESCRIPTION =
-  'Короткий опис події або оновлення для студентів і партнерів. Текст має швидко пояснювати, що відбулося і чому це важливо. Деталі можна знайти за посиланням нижче.';
+  "Короткий опис події або оновлення для студентів і партнерів. Текст має швидко пояснювати, що відбулося і чому це важливо. Деталі можна знайти за посиланням нижче.";
 
 const FUNDRAISERS = [
-  { fill: 'bg-gradient-orange', current: '70 000', goal: '110 000', pct: 64, closed: false, hasImage: false },
-  { fill: 'bg-gradient-blue', current: '70 000', goal: '110 000', pct: 64, closed: false, hasImage: true },
-  { fill: 'bg-gradient-magenta', current: '100 000', goal: '100 000', pct: 100, closed: true, hasImage: true },
+  {
+    fill: "bg-gradient-orange",
+    current: "70 000",
+    goal: "110 000",
+    pct: 64,
+    closed: false,
+    hasImage: false,
+  },
+  {
+    fill: "bg-gradient-blue",
+    current: "70 000",
+    goal: "110 000",
+    pct: 64,
+    closed: false,
+    hasImage: true,
+  },
+  {
+    fill: "bg-gradient-magenta",
+    current: "100 000",
+    goal: "100 000",
+    pct: 100,
+    closed: true,
+    hasImage: true,
+  },
 ];
 
 export function FundraisersSection() {
@@ -21,7 +42,7 @@ export function FundraisersSection() {
     >
       <Glow
         color="#FF791B"
-        className="bottom-0 left-1/2 h-[24rem] w-[40rem] -translate-x-1/2 translate-y-1/2 ml-[16rem]"
+        className="bottom-0 left-1/2 h-[24rem] w-[40rem] -translate-x-1/2 translate-y-1/2 ml-[16rem] -rotate-30"
       />
       <Container>
         <SectionHeader
@@ -48,17 +69,17 @@ export function FundraisersSection() {
                 )}
                 <span
                   className={cn(
-                    'absolute right-4 top-4 inline-flex items-center gap-3 rounded-lg px-5 py-2.5 text-lg font-bold text-black',
-                    item.closed ? 'bg-brand-red/30' : 'bg-brand-green/30',
+                    "absolute right-4 top-4 inline-flex items-center gap-3 rounded-lg px-5 py-2.5 text-lg font-bold text-black",
+                    item.closed ? "bg-brand-red/30" : "bg-brand-green/30",
                   )}
                 >
                   <span
                     className={cn(
-                      'size-3 rounded-full',
-                      item.closed ? 'bg-brand-red' : 'bg-brand-green',
+                      "size-3 rounded-full",
+                      item.closed ? "bg-brand-red" : "bg-brand-green",
                     )}
                   />
-                  {item.closed ? 'Закритий' : 'Активний'}
+                  {item.closed ? "Закритий" : "Активний"}
                 </span>
               </div>
 
@@ -73,7 +94,7 @@ export function FundraisersSection() {
                 <div className="flex flex-col gap-2">
                   <div className="h-2 w-full overflow-hidden rounded-full bg-zinc-700">
                     <div
-                      className={cn('h-full rounded-full', item.fill)}
+                      className={cn("h-full rounded-full", item.fill)}
                       style={{ width: `${item.pct}%` }}
                     />
                   </div>
@@ -91,7 +112,7 @@ export function FundraisersSection() {
                   <a
                     href="#"
                     className={cn(
-                      'rounded-lg px-7 py-3.5 text-center text-xl font-bold text-black transition-opacity hover:opacity-90',
+                      "rounded-lg px-7 py-3.5 text-center text-xl font-bold text-black transition-opacity hover:opacity-90",
                       item.fill,
                     )}
                   >

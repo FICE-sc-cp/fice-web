@@ -1,8 +1,12 @@
-import { Container } from '@/components/ui/Container';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { Glow } from '@/components/ui/Glow';
-import { AccentCard, accentText, type Accent } from '@/components/ui/AccentCard';
-import { cn } from '@/lib/utils';
+import { Container } from "@/components/ui/Container";
+import { SectionHeader } from "@/components/ui/SectionHeader";
+import { Glow } from "@/components/ui/Glow";
+import {
+  AccentCard,
+  accentText,
+  type Accent,
+} from "@/components/ui/AccentCard";
+import { cn } from "@/lib/utils";
 
 const DEPARTMENTS: {
   name: string;
@@ -11,52 +15,52 @@ const DEPARTMENTS: {
   wide?: boolean;
 }[] = [
   {
-    name: 'Президія',
-    accent: 'magenta',
+    name: "Президія",
+    accent: "magenta",
     description:
-      'Керівництво студрадою, формування стратегії та координування ключових процесів. Робота спрямована на забезпечення стабільної та ефективної діяльності організації.',
+      "Керівництво студрадою, формування стратегії та координування ключових процесів. Робота спрямована на забезпечення стабільної та ефективної діяльності організації.",
   },
   {
-    name: 'Секретаріат',
-    accent: 'magenta',
+    name: "Секретаріат",
+    accent: "magenta",
     description:
-      'Організовує комунікацію, документи та внутрішні процеси. Відповідає за порядок та облік важливої інформації.',
+      "Організовує комунікацію, документи та внутрішні процеси. Відповідає за порядок та облік важливої інформації.",
   },
   {
-    name: 'Проєктний департамент',
-    accent: 'cyan',
+    name: "Проєктний департамент",
+    accent: "cyan",
     description:
-      'Департамент реалізує події та ініціативи для студентів факультету. Створюємо події та можливості, що розвивають студспільноту. Робота з партнерами, планування активностей та формування команд.',
+      "Департамент реалізує події та ініціативи для студентів факультету. Створюємо події та можливості, що розвивають студспільноту. Робота з партнерами, планування активностей та формування команд.",
   },
   {
-    name: 'Департамент медіа',
-    accent: 'cyan',
+    name: "Департамент медіа",
+    accent: "cyan",
     description:
-      'Команда працює над контентом студради: фото, відео, дизайн, соцмережі. Ми забезпечуємо актуальну комунікацію, висвітлюємо життя факультету.',
+      "Команда працює над контентом студради: фото, відео, дизайн, соцмережі. Ми забезпечуємо актуальну комунікацію, висвітлюємо життя факультету.",
   },
   {
-    name: 'Департамент партнерств',
-    accent: 'green',
+    name: "Департамент партнерств",
+    accent: "green",
     description:
-      'Співпраця з компаніями та організаціями, пошук можливостей для студентів. Працюємо над проєктами та підтримкою благодійних ініціатив та розширюємо можливості для студспільноти.',
+      "Співпраця з компаніями та організаціями, пошук можливостей для студентів. Працюємо над проєктами та підтримкою благодійних ініціатив та розширюємо можливості для студспільноти.",
   },
   {
-    name: 'Департамент мерчу',
-    accent: 'orange',
+    name: "Департамент мерчу",
+    accent: "orange",
     description:
-      'Команда розробляє дизайн, створює нові продукти. Працюємо над якістю, стилем і впізнаваністю бренду ФІОТ.',
+      "Команда розробляє дизайн, створює нові продукти. Працюємо над якістю, стилем і впізнаваністю бренду ФІОТ.",
   },
   {
-    name: 'Департамент якості освіти',
-    accent: 'green',
+    name: "Департамент якості освіти",
+    accent: "green",
     description:
-      'Аналізує освітній процес, збирає фідбек і допомагає вирішувати академічні питання.',
+      "Аналізує освітній процес, збирає фідбек і допомагає вирішувати академічні питання.",
   },
   {
-    name: 'Департамент по роботі з абітурієнтами',
-    accent: 'orange',
+    name: "Департамент по роботі з абітурієнтами",
+    accent: "orange",
     description:
-      'Проводить заходи для майбутніх студентів, консультує та відповідає на запитання. Займається інформаційною підтримкою вступної кампанії.',
+      "Проводить заходи для майбутніх студентів, консультує та відповідає на запитання. Займається інформаційною підтримкою вступної кампанії.",
     wide: true,
   },
 ];
@@ -69,7 +73,11 @@ export function DepartmentsSection() {
     >
       <Glow
         color="#AD46FF"
-        className="left-1/2 top-1/2 h-[34rem] w-[40rem] -translate-x-1/2 -translate-y-1/2 -ml-[18rem]"
+        className="left-1/2 top-2/5 h-[25rem] w-[30rem] -translate-x-1/5 -translate-y-1/2 -ml-[18rem]"
+      />
+      <Glow
+        color="#AD46FF"
+        className="left-1/2 top-2/3 h-[25rem] w-[30rem] -translate-x-full -translate-y-1/5 -ml-[18rem]"
       />
 
       <Container>
@@ -85,12 +93,12 @@ export function DepartmentsSection() {
               key={dept.name}
               accent={dept.accent}
               className={cn(
-                'flex flex-col gap-4 px-6 py-8',
-                dept.wide && 'lg:col-span-2',
+                "flex flex-col gap-4 px-6 py-8",
+                dept.wide && "lg:col-span-2",
               )}
             >
               <h3 className="text-2xl font-bold text-white">{dept.name}</h3>
-              <p className={cn('text-xl font-bold', accentText[dept.accent])}>
+              <p className={cn("text-xl font-bold", accentText[dept.accent])}>
                 Голова — @user_name
               </p>
               <p className="flex-1 text-xl font-medium leading-6 text-zinc-400">

@@ -1,6 +1,6 @@
-import Image from 'next/image';
-import { Container } from '@/components/ui/Container';
-import { Glow } from '@/components/ui/Glow';
+import Image from "next/image";
+import { Container } from "@/components/ui/Container";
+import { Glow } from "@/components/ui/Glow";
 
 const COLUMNS = [
   [2, 3],
@@ -14,11 +14,11 @@ export function GallerySection() {
     <section className="relative isolate pt-20 pb-40 lg:pt-28 lg:pb-56">
       <Glow
         color="#00E3F3"
-        className="left-1/2 bottom-0 h-[28rem] w-[48rem] -translate-x-1/2 translate-y-1/2 -ml-[14rem]"
+        className="left-1/2 bottom-0 h-[28rem] w-[48rem] -translate-x-1/2 translate-y-1/5 -ml-[14rem] rotate-30"
       />
       <Glow
         color="#FF791B"
-        className="left-1/2 bottom-0 h-[22rem] w-[34rem] -translate-x-1/2 translate-y-1/2 ml-[6rem]"
+        className="left-1/2 bottom-0 h-[22rem] w-[34rem] -translate-x-1/5 -translate-y-1/6 ml-[6rem] -rotate-45"
       />
 
       <Container>

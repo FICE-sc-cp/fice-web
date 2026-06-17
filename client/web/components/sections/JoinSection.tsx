@@ -1,37 +1,40 @@
-import { Container } from '@/components/ui/Container';
-import { Glow } from '@/components/ui/Glow';
-import { SunglassesIcon } from '@/components/ui/icons';
+import { Container } from "@/components/ui/Container";
+import { Glow } from "@/components/ui/Glow";
+import { SunglassesIcon } from "@/components/ui/icons";
 
 const COLUMNS: { title: string; text: string }[][] = [
   [
     {
-      title: 'Розвиток навичок',
-      text: 'Організаторські, лідерські та комунікативні навички',
+      title: "Розвиток навичок",
+      text: "Організаторські, лідерські та комунікативні навички",
     },
     {
-      title: 'Реальний вплив',
-      text: 'Беріть участь у важливих рішеннях та ініціативах',
+      title: "Реальний вплив",
+      text: "Беріть участь у важливих рішеннях та ініціативах",
     },
   ],
   [
     {
-      title: 'Нова знайомства',
-      text: 'Розширюйте коло спілкування з активними студентами',
+      title: "Нова знайомства",
+      text: "Розширюйте коло спілкування з активними студентами",
     },
-    { title: 'Цікаві проєкти', text: 'Реалізуйте свої ідеї та креативність' },
+    { title: "Цікаві проєкти", text: "Реалізуйте свої ідеї та креативність" },
   ],
 ];
 
 export function JoinSection() {
   return (
-    <section id="join-cta" className="relative isolate scroll-mt-28 py-20 lg:py-28">
+    <section
+      id="join-cta"
+      className="relative isolate scroll-mt-28 py-20 lg:py-28"
+    >
       <Glow
         color="#AD46FF"
-        className="left-1/2 top-[18%] h-[20rem] w-[24rem] -translate-x-1/2 -translate-y-1/2 -ml-[32rem]"
+        className="left-1/2 top-[18%] h-[20rem] w-[35rem] -translate-x-1/2 -translate-y-1/3 -ml-[32rem] rotate-30"
       />
       <Glow
         color="#3BCA5B"
-        className="left-1/2 top-[62%] h-[22rem] w-[26rem] -translate-x-1/2 -translate-y-1/2 ml-[32rem]"
+        className="left-1/2 top-[62%] h-[22rem] w-[40rem] -translate-x-1/2 -translate-y-1/2 ml-[32rem] -rotate-45"
       />
 
       <Container>
