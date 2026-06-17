@@ -1,7 +1,6 @@
 import { FC, SVGProps } from "react";
 import Image from "next/image";
 import { Container } from "@/components/ui/Container";
-import { Glow } from "@/components/ui/Glow";
 import {
   TelegramOutlineIcon,
   PhoneIcon,
