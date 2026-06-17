@@ -29,7 +29,7 @@ export function ValuesSection() {
     >
       <Glow
         color="#FF791B"
-        className="left-1/2 top-[6%] h-[22.97094rem] w-[52.03669rem] -translate-x-1/2 -translate-y-1/2 -ml-[12rem] rotate-[29.245deg] opacity-60"
+        className="left-1/2 top-[6%] h-[22.97094rem] w-[52.03669rem] -translate-x-1/2 -translate-y-1/2 -ml-[12rem] rotate-[29.245deg]"
       />
 
       <Container>

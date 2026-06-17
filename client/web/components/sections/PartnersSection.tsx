@@ -1,15 +1,23 @@
-import Image from 'next/image';
-import { Container } from '@/components/ui/Container';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { Glow } from '@/components/ui/Glow';
+import Image from "next/image";
+import { Container } from "@/components/ui/Container";
+import { SectionHeader } from "@/components/ui/SectionHeader";
+import { Glow } from "@/components/ui/Glow";
 
 const LOGO_ROWS = [4, 3, 4];
 
 const STATS: { value: string; label: string; gradient: string }[] = [
-  { value: '1000+', label: 'Активних студентів', gradient: 'bg-gradient-magenta' },
-  { value: '15+', label: 'Діючих партнерів', gradient: 'bg-gradient-green' },
-  { value: '20+', label: 'Заходів щороку', gradient: 'bg-gradient-blue' },
-  { value: '100%', label: 'Прозорість діяльності', gradient: 'bg-gradient-orange' },
+  {
+    value: "1000+",
+    label: "Активних студентів",
+    gradient: "bg-gradient-magenta",
+  },
+  { value: "15+", label: "Діючих партнерів", gradient: "bg-gradient-green" },
+  { value: "20+", label: "Заходів щороку", gradient: "bg-gradient-blue" },
+  {
+    value: "100%",
+    label: "Прозорість діяльності",
+    gradient: "bg-gradient-orange",
+  },
 ];
 
 export function PartnersSection() {
@@ -20,7 +28,7 @@ export function PartnersSection() {
     >
       <Glow
         color="#3BCA5B"
-        className="left-1/2 top-[78%] h-[26rem] w-[40rem] -translate-x-1/2 -translate-y-1/2 ml-[26rem]"
+        className="left-1/2 top-[78%] h-[26rem] w-[40rem] -translate-y-full ml-[26rem] z-0"
       />
 
       <Container>
@@ -55,9 +63,9 @@ export function PartnersSection() {
             <div className="mt-12 flex flex-col gap-12 lg:flex-row lg:gap-24">
               <div className="flex flex-col justify-between gap-8 lg:max-w-[536px]">
                 <p className="text-xl font-medium leading-6 text-stone-300">
-                  Співпраця зі студентською радою ФІОТ — це інвестиція у майбутнє,
-                  можливість підтримати молодь та розвиток освіти, а також вихід
-                  на цільову аудиторію талановитих студентів.
+                  Співпраця зі студентською радою ФІОТ — це інвестиція у
+                  майбутнє, можливість підтримати молодь та розвиток освіти, а
+                  також вихід на цільову аудиторію талановитих студентів.
                 </p>
                 <a
                   href="#"
@@ -69,7 +77,10 @@ export function PartnersSection() {
 
               <div className="grid flex-1 grid-cols-1 gap-4 sm:grid-cols-2">
                 {STATS.map((stat) => (
-                  <div key={stat.label} className={`rounded-lg p-px ${stat.gradient}`}>
+                  <div
+                    key={stat.label}
+                    className={`rounded-lg p-px ${stat.gradient}`}
+                  >
                     <div className="flex h-full flex-col gap-2 rounded-lg bg-bg p-6">
                       <span
                         className={`bg-clip-text text-4xl font-bold text-transparent ${stat.gradient}`}

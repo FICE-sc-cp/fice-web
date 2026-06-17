@@ -1,6 +1,7 @@
-import { Fragment } from 'react';
+import { Fragment } from "react";
 
-const REPEAT = 4;
+const REPEAT = 12;
+const DURATION = `${REPEAT * 7.5}s`;
 
 export function Marquee() {
   const group = (
@@ -18,7 +19,10 @@ export function Marquee() {
 
   return (
     <div className="overflow-hidden bg-gradient-main py-6">
-      <div className="flex w-max animate-marquee">
+      <div
+        className="flex w-max animate-marquee"
+        style={{ animationDuration: DURATION }}
+      >
         {group}
         {group}
       </div>

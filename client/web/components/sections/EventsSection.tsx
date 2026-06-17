@@ -1,23 +1,35 @@
-import Image from 'next/image';
-import { Container } from '@/components/ui/Container';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { Glow } from '@/components/ui/Glow';
-import { CalendarIcon, ClockIcon, PinIcon } from '@/components/ui/icons';
-import { cn } from '@/lib/utils';
+import Image from "next/image";
+import { Container } from "@/components/ui/Container";
+import { SectionHeader } from "@/components/ui/SectionHeader";
+import { Glow } from "@/components/ui/Glow";
+import { CalendarIcon, ClockIcon, PinIcon } from "@/components/ui/icons";
+import { cn } from "@/lib/utils";
 
 const DESCRIPTION =
-  'Короткий опис події або оновлення для студентів і партнерів. Текст має швидко пояснювати, що відбулося і чому це важливо. Деталі можна знайти за посиланням нижче.';
+  "Короткий опис події або оновлення для студентів і партнерів. Текст має швидко пояснювати, що відбулося і чому це важливо. Деталі можна знайти за посиланням нижче.";
 
 const EVENTS = [
-  { category: 'Розваги', badge: 'from-brand-green/40 to-brand-teal/40', open: true },
-  { category: 'Освіта', badge: 'from-brand-orange/40 to-brand-red/40', open: false },
-  { category: 'Культура', badge: 'from-brand-cyan/40 to-brand-blue/40', open: false },
+  {
+    category: "Розваги",
+    badge: "from-brand-green/40 to-brand-teal/40",
+    open: true,
+  },
+  {
+    category: "Освіта",
+    badge: "from-brand-orange/40 to-brand-red/40",
+    open: false,
+  },
+  {
+    category: "Культура",
+    badge: "from-brand-cyan/40 to-brand-blue/40",
+    open: false,
+  },
 ];
 
 const DETAILS = [
-  { Icon: CalendarIcon, text: '14 лютого' },
-  { Icon: ClockIcon, text: '17:00' },
-  { Icon: PinIcon, text: 'Ливарка КПІ' },
+  { Icon: CalendarIcon, text: "14 лютого" },
+  { Icon: ClockIcon, text: "17:00" },
+  { Icon: PinIcon, text: "Ливарка КПІ" },
 ];
 
 export function EventsSection() {
@@ -28,7 +40,7 @@ export function EventsSection() {
     >
       <Glow
         color="#00E3F3"
-        className="bottom-0 left-1/2 h-[26rem] w-[44rem] -translate-x-1/2 translate-y-1/2"
+        className="bottom-0 left-1/2 h-[20rem] w-[36rem] -translate-x-full -translate-y-1/4 rotate-30"
       />
       <Container>
         <SectionHeader
@@ -53,7 +65,7 @@ export function EventsSection() {
                 />
                 <span
                   className={cn(
-                    'absolute right-4 top-4 rounded-lg bg-gradient-to-r px-5 py-2.5 text-lg font-bold text-black',
+                    "absolute right-4 top-4 rounded-lg bg-gradient-to-r px-5 py-2.5 text-lg font-bold text-black",
                     event.badge,
                   )}
                 >

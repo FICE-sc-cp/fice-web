@@ -53,11 +53,6 @@ function LinkColumn({ title, items }: { title: string; items: FooterLink[] }) {
 export function Footer() {
   return (
     <footer className="relative isolate overflow-hidden bg-neutral-700/20">
-      <Glow
-        color="#00E3F3"
-        className="left-1/2 top-0 h-[22rem] w-[42rem] -translate-x-1/2 -translate-y-1/2"
-      />
-
       <Container className="pt-16">
         <div className="grid grid-cols-1 gap-12 sm:grid-cols-2 lg:grid-cols-[auto_1fr_1fr_1fr_auto] lg:items-start lg:gap-8">
           <Image
@@ -70,9 +65,13 @@ export function Footer() {
           <LinkColumn title="Контакти" items={CONTACTS} />
           <LinkColumn title="Наші соцмережі" items={SOCIALS} />
           <LinkColumn title="Абітурієнтам" items={SOCIALS} />
-          <div className="flex size-48 items-center justify-center rounded-lg bg-zinc-600 px-10 py-16 text-center text-3xl font-bold text-white">
-            типу карта
-          </div>
+          <iframe
+            title="Розташування — ФІОТ, корпус 18 КПІ"
+            src="https://maps.google.com/maps?q=%D0%9A%D0%9F%D0%86%20%D0%BA%D0%BE%D1%80%D0%BF%D1%83%D1%81%2018%20%D0%A4%D0%86%D0%9E%D0%A2&z=16&output=embed"
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+            className="size-48 rounded-lg border-0"
+          />
         </div>
 
         <div className="mt-16 border-t border-white/10 py-8">
