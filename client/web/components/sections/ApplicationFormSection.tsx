@@ -41,6 +41,7 @@ export type ApplicationFormValues = z.infer<typeof schema>;
 export function ApplicationFormSection() {
   const [submittedName, setSubmittedName] = useState<string | null>(null);
   const sectionRef = useRef<HTMLElement>(null);
+  const confettiRef = useRef<HTMLCanvasElement>(null);
 
   const {
     register,
@@ -76,6 +77,83 @@ export function ApplicationFormSection() {
     }
   }, [submittedName]);
 
+  // Святковий вибух конфеті після успішного надсилання заявки.
+  useEffect(() => {
+    if (submittedName === null) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const canvas = confettiRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const { width: W, height: H } = canvas.getBoundingClientRect();
+    canvas.width = W * dpr;
+    canvas.height = H * dpr;
+    ctx.scale(dpr, dpr);
+
+    const colors = ['#2eff97', '#36dfff', '#ad46ff', '#f6339a', '#ff8904', '#00e3c5'];
+    const cx = W / 2;
+    const cy = H * 0.34;
+    const parts = Array.from({ length: 130 }, (_, i) => {
+      const ang = (Math.PI * 2 * i) / 130 + (Math.random() - 0.5) * 0.5;
+      const sp = 5 + Math.random() * 9;
+      return {
+        x: cx,
+        y: cy,
+        vx: Math.cos(ang) * sp * (0.6 + Math.random() * 0.8),
+        vy: Math.sin(ang) * sp - (3 + Math.random() * 4),
+        w: 6 + Math.random() * 6,
+        h: 8 + Math.random() * 8,
+        rot: Math.random() * Math.PI,
+        vr: (Math.random() - 0.5) * 0.4,
+        color: colors[(Math.random() * colors.length) | 0],
+        circle: Math.random() < 0.35,
+      };
+    });
+
+    let raf = 0;
+    let stopped = false;
+    const grav = 0.22;
+    const drag = 0.992;
+    const start = performance.now();
+    const tick = (now: number) => {
+      if (stopped) return;
+      const t = now - start;
+      ctx.clearRect(0, 0, W, H);
+      let alive = false;
+      for (const p of parts) {
+        p.vx *= drag;
+        p.vy = p.vy * drag + grav;
+        p.x += p.vx;
+        p.y += p.vy;
+        p.rot += p.vr;
+        const fade = t > 1400 ? Math.max(0, 1 - (t - 1400) / 1100) : 1;
+        if (p.y < H + 30 && fade > 0) alive = true;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rot);
+        ctx.globalAlpha = fade;
+        ctx.fillStyle = p.color;
+        if (p.circle) {
+          ctx.beginPath();
+          ctx.arc(0, 0, p.w / 2, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+        }
+        ctx.restore();
+      }
+      if (alive && t < 3200) raf = requestAnimationFrame(tick);
+      else ctx.clearRect(0, 0, W, H);
+    };
+    raf = requestAnimationFrame(tick);
+
+    return () => {
+      stopped = true;
+      cancelAnimationFrame(raf);
+    };
+  }, [submittedName]);
+
   return (
     <section
       ref={sectionRef}
@@ -88,7 +166,7 @@ export function ApplicationFormSection() {
       />
 
       <Container>
-        <div className="relative mx-auto max-w-3xl rounded-3xl border border-white/5 bg-surface/40 p-6 sm:p-10 lg:p-12">
+        <div className="relative mx-auto max-w-3xl overflow-hidden rounded-3xl border border-white/5 bg-surface/40 p-6 sm:p-10 lg:p-12">
           <div
             className={submittedName !== null ? 'invisible' : undefined}
             aria-hidden={submittedName !== null}
@@ -192,12 +270,71 @@ export function ApplicationFormSection() {
           </div>
 
           {submittedName !== null && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 p-6 text-center">
-              <span className="flex size-20 items-center justify-center rounded-full bg-gradient-green text-4xl font-bold text-black">
-                ✓
-              </span>
-              <h2 className="text-3xl font-bold sm:text-4xl">Заявку надіслано!</h2>
-              <p className="max-w-md text-lg leading-relaxed text-muted">
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 overflow-hidden p-6 text-center">
+              <canvas
+                ref={confettiRef}
+                aria-hidden
+                className="pointer-events-none absolute inset-0 z-[3] h-full w-full"
+              />
+
+              <div className="relative z-[2] flex size-[120px] items-center justify-center">
+                <span
+                  aria-hidden
+                  className="absolute size-[120px] rounded-full"
+                  style={{
+                    background:
+                      'radial-gradient(circle, rgba(46,255,151,0.55), rgba(0,0,0,0) 70%)',
+                    filter: 'blur(6px)',
+                    animation: 'su-glow 2.4s ease-in-out infinite',
+                  }}
+                />
+                <span
+                  aria-hidden
+                  className="absolute size-24 rounded-full border-2 border-brand-green"
+                  style={{ animation: 'su-ring 1.6s ease-out 0.25s infinite' }}
+                />
+                <span
+                  aria-hidden
+                  className="absolute size-24 rounded-full border-2 border-brand-cyan"
+                  style={{ animation: 'su-ring 1.6s ease-out 0.7s infinite' }}
+                />
+                <span
+                  className="relative inline-flex size-[92px] items-center justify-center rounded-full text-black"
+                  style={{
+                    backgroundImage:
+                      'linear-gradient(135deg, var(--color-brand-green) 0%, var(--color-brand-teal) 100%)',
+                    boxShadow: '0 14px 40px rgba(46,255,151,0.35)',
+                    animation: 'su-pop 0.7s cubic-bezier(0.34,1.56,0.64,1) both',
+                  }}
+                >
+                  <svg width="50" height="50" viewBox="0 0 52 52" fill="none" aria-hidden>
+                    <path
+                      d="M14 27 L23 36 L39 18"
+                      stroke="#0a0a0a"
+                      strokeWidth={5}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeDasharray={60}
+                      strokeDashoffset={60}
+                      style={{
+                        animation:
+                          'su-draw 0.45s cubic-bezier(0.65,0,0.45,1) 0.55s forwards',
+                      }}
+                    />
+                  </svg>
+                </span>
+              </div>
+
+              <h2
+                className="z-[2] text-3xl font-bold sm:text-4xl"
+                style={{ animation: 'su-rise 0.6s ease-out 0.5s both' }}
+              >
+                Заявку надіслано!
+              </h2>
+              <p
+                className="z-[2] max-w-md text-lg leading-relaxed text-muted"
+                style={{ animation: 'su-rise 0.6s ease-out 0.66s both' }}
+              >
                 Дякуємо, {submittedName}. Ми розглянемо твою заявку та звʼяжемось у
                 Telegram найближчим часом.
               </p>
@@ -205,7 +342,8 @@ export function ApplicationFormSection() {
                 type="button"
                 variant="outline"
                 onClick={handleReset}
-                className="mt-2"
+                className="z-[2] mt-2"
+                style={{ animation: 'su-rise 0.6s ease-out 0.82s both' }}
               >
                 Надіслати ще одну
               </Button>
