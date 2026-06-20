@@ -1,45 +1,51 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Container } from '@/components/ui/Container';
 import { Glow } from '@/components/ui/Glow';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
+import { fice, safe, type CreateApplicationPayload, type Department } from '@/lib/api';
 
-const DEPARTMENTS = [
-  { value: 'project', label: 'Проєктний департамент' },
-  { value: 'media', label: 'Департамент медіа' },
-  { value: 'partnership', label: 'Департамент партнерств' },
-  { value: 'merch', label: 'Департамент мерчу' },
-  { value: 'quality', label: 'Департамент якості освіти' },
-  { value: 'entrants', label: 'Робота з абітурієнтами' },
-];
+const MAX_DEPARTMENTS = 2;
 
 const schema = z.object({
-  pib: z.string().trim().min(1, 'Вкажіть ПІБ'),
-  group: z.string().trim().min(1, 'Вкажіть групу'),
-  telegram: z.string().trim().min(1, 'Вкажіть Telegram-тег'),
-  department: z.string().min(1, 'Оберіть департамент'),
+  lastName: z.string().trim().min(1, 'Вкажіть прізвище').max(30, 'Занадто довге'),
+  firstName: z.string().trim().min(1, 'Вкажіть імʼя').max(30, 'Занадто довге'),
+  middleName: z.string().trim().min(1, 'Вкажіть по батькові').max(30, 'Занадто довге'),
+  telegram: z.string().trim().min(1, 'Вкажіть Telegram-тег').max(49, 'Занадто довгий'),
+  group: z.string().trim().min(1, 'Вкажіть групу').max(5, 'Не більше 5 символів'),
+  phoneNumber: z
+    .string()
+    .trim()
+    .min(5, 'Вкажіть номер телефону')
+    .max(20, 'Занадто довгий'),
   motivation: z
     .string()
     .trim()
     .min(1, 'Розкажіть про мотивацію')
     .min(10, 'Хоча б кілька речень, будь ласка'),
-  skills: z.string().trim().min(1, 'Вкажіть свій досвід та навички'),
+  experience: z.string().trim().max(2000, 'Занадто довго'),
+  departmentIds: z
+    .array(z.string())
+    .min(1, 'Оберіть хоча б один департамент')
+    .max(MAX_DEPARTMENTS, `Можна обрати щонайбільше ${MAX_DEPARTMENTS}`),
   consent: z.boolean().refine((v) => v === true, 'Потрібна згода на обробку даних'),
 });
 
-export type ApplicationFormValues = z.infer<typeof schema>;
+type FormValues = z.infer<typeof schema>;
 
 export function ApplicationFormSection() {
   const [submittedName, setSubmittedName] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [departmentsFailed, setDepartmentsFailed] = useState(false);
   const sectionRef = useRef<HTMLElement>(null);
   const confettiRef = useRef<HTMLCanvasElement>(null);
 
@@ -47,40 +53,84 @@ export function ApplicationFormSection() {
     register,
     handleSubmit,
     reset,
-    formState: { errors },
-  } = useForm<ApplicationFormValues>({
+    control,
+    setValue,
+    getValues,
+    formState: { errors, isSubmitting },
+  } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
-      pib: '',
-      group: '',
+      lastName: '',
+      firstName: '',
+      middleName: '',
       telegram: '',
-      department: '',
+      group: '',
+      phoneNumber: '',
       motivation: '',
-      skills: '',
+      experience: '',
+      departmentIds: [],
       consent: false,
     },
   });
 
-  const onSubmit = handleSubmit((data) => {
-    const parts = data.pib.trim().split(/\s+/);
-    setSubmittedName(parts[1] || parts[0] || '');
-  });
+  const selectedDepartments = useWatch({ control, name: 'departmentIds' });
 
-  const handleReset = () => {
-    reset();
-    setSubmittedName(null);
+  useEffect(() => {
+    let active = true;
+    void safe(fice.departments(), [] as Department[]).then((list) => {
+      if (!active) return;
+      setDepartments(list);
+      if (!list.length) setDepartmentsFailed(true);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const toggleDepartment = (id: string) => {
+    const current = getValues('departmentIds');
+    const next = current.includes(id)
+      ? current.filter((d) => d !== id)
+      : current.length < MAX_DEPARTMENTS
+        ? [...current, id]
+        : current;
+    setValue('departmentIds', next, { shouldValidate: true });
   };
 
-  useEffect(() => {
-    if (submittedName !== null) {
-      sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const onSubmit = handleSubmit(async (data) => {
+    setSubmitError(null);
+    try {
+      const payload: CreateApplicationPayload = {
+        firstName: data.firstName.trim(),
+        middleName: data.middleName.trim(),
+        lastName: data.lastName.trim(),
+        telegramTag: `@${data.telegram.trim().replace(/^@+/, '')}`,
+        group: data.group.trim(),
+        phoneNumber: data.phoneNumber.trim(),
+        motivation: data.motivation.trim() || undefined,
+        experience: data.experience.trim() || undefined,
+        departments: data.departmentIds.map((departmentId) => ({ departmentId })),
+      };
+      await fice.submitApplication(payload);
+      setSubmittedName(data.firstName.trim());
+    } catch {
+      setSubmitError('Не вдалося надіслати заявку. Спробуй ще раз трохи згодом.');
     }
-  }, [submittedName]);
+  });
 
-  // Святковий вибух конфеті після успішного надсилання заявки.
   useEffect(() => {
     if (submittedName === null) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    sectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const timer = setTimeout(() => {
+      reset();
+      setSubmittedName(null);
+      setSubmitError(null);
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [submittedName, reset]);
+
+  useEffect(() => {
+    if (submittedName === null) return;
     const canvas = confettiRef.current;
     const ctx = canvas?.getContext('2d');
     if (!canvas || !ctx) return;
@@ -179,14 +229,33 @@ export function ApplicationFormSection() {
             <form onSubmit={onSubmit} noValidate className="mt-9 flex flex-col gap-5">
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
                 <Input
-                  label="ПІБ"
-                  placeholder="Шевченко Тарас Григорович"
-                  error={errors.pib?.message}
-                  {...register('pib')}
+                  label="Прізвище"
+                  placeholder="Шевченко"
+                  maxLength={30}
+                  error={errors.lastName?.message}
+                  {...register('lastName')}
+                />
+                <Input
+                  label="Імʼя"
+                  placeholder="Тарас"
+                  maxLength={30}
+                  error={errors.firstName?.message}
+                  {...register('firstName')}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                <Input
+                  label="По батькові"
+                  placeholder="Григорович"
+                  maxLength={30}
+                  error={errors.middleName?.message}
+                  {...register('middleName')}
                 />
                 <Input
                   label="Група"
                   placeholder="ІП-31"
+                  maxLength={5}
                   error={errors.group?.message}
                   {...register('group')}
                 />
@@ -216,13 +285,64 @@ export function ApplicationFormSection() {
                   )}
                 </div>
 
-                <Select
-                  label="Який департамент тобі цікавий?"
-                  placeholder="Оберіть департамент…"
-                  options={DEPARTMENTS}
-                  error={errors.department?.message}
-                  {...register('department')}
+                <Input
+                  label="Номер телефону"
+                  placeholder="+380 99 123 45 67"
+                  inputMode="tel"
+                  maxLength={20}
+                  error={errors.phoneNumber?.message}
+                  {...register('phoneNumber')}
                 />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between gap-3">
+                  <label className="text-sm font-semibold text-muted">
+                    Які департаменти тобі цікаві?
+                  </label>
+                  <span className="shrink-0 text-xs text-subtle">
+                    Обрано {selectedDepartments.length}/{MAX_DEPARTMENTS}
+                  </span>
+                </div>
+
+                {departmentsFailed ? (
+                  <p className="text-sm text-brand-red">
+                    Не вдалося завантажити департаменти. Онови сторінку.
+                  </p>
+                ) : !departments.length ? (
+                  <p className="text-sm text-subtle">Завантаження департаментів…</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {departments.map((d) => {
+                      const active = selectedDepartments.includes(d.id);
+                      const disabled =
+                        !active && selectedDepartments.length >= MAX_DEPARTMENTS;
+                      return (
+                        <button
+                          key={d.id}
+                          type="button"
+                          onClick={() => toggleDepartment(d.id)}
+                          disabled={disabled}
+                          aria-pressed={active}
+                          className={cn(
+                            'rounded-full border px-4 py-2 text-sm font-semibold transition-colors',
+                            active
+                              ? 'border-brand-cyan bg-brand-cyan/15 text-brand-cyan'
+                              : 'border-border bg-surface text-muted hover:border-brand-cyan/60',
+                            disabled && 'cursor-not-allowed opacity-40 hover:border-border',
+                          )}
+                        >
+                          {d.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                {errors.departmentIds && (
+                  <span className="text-xs font-medium text-brand-red">
+                    {errors.departmentIds.message}
+                  </span>
+                )}
               </div>
 
               <Textarea
@@ -233,11 +353,11 @@ export function ApplicationFormSection() {
               />
 
               <Textarea
-                label="Досвід та навички"
+                label="Досвід та навички (необовʼязково)"
                 placeholder="Дизайн, відеомонтаж, SMM, організація подій, програмування, попередній досвід в активностях…"
                 className="min-h-[90px]"
-                error={errors.skills?.message}
-                {...register('skills')}
+                error={errors.experience?.message}
+                {...register('experience')}
               />
 
               <div className="flex flex-col gap-1.5">
@@ -259,12 +379,17 @@ export function ApplicationFormSection() {
                 )}
               </div>
 
+              {submitError && (
+                <p className="text-sm font-medium text-brand-red">{submitError}</p>
+              )}
+
               <Button
                 type="submit"
                 size="lg"
+                disabled={isSubmitting}
                 className="mt-1 w-full rounded-2xl py-4 text-lg"
               >
-                Надіслати заявку
+                {isSubmitting ? 'Надсилання…' : 'Надіслати заявку'}
               </Button>
             </form>
           </div>
@@ -338,15 +463,6 @@ export function ApplicationFormSection() {
                 Дякуємо, {submittedName}. Ми розглянемо твою заявку та звʼяжемось у
                 Telegram найближчим часом.
               </p>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleReset}
-                className="z-[2] mt-2"
-                style={{ animation: 'su-rise 0.6s ease-out 0.82s both' }}
-              >
-                Надіслати ще одну
-              </Button>
             </div>
           )}
         </div>

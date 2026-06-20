@@ -146,6 +146,18 @@ export async function safe<T>(promise: Promise<T>, fallback: T): Promise<T> {
   }
 }
 
+export interface CreateApplicationPayload {
+  firstName: string;
+  middleName: string;
+  lastName: string;
+  telegramTag: string;
+  group: string;
+  phoneNumber: string;
+  motivation?: string;
+  experience?: string;
+  departments: { departmentId: string; question?: string }[];
+}
+
 export const fice = {
   facts: () => request<Facts>('/facts'),
   departments: () => request<Department[]>('/department'),
