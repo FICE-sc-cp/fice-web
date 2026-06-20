@@ -29,24 +29,32 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
 
     const miniAppUrl = this.configService.get<string>('MINI_APP_URL');
 
-    this.bot.command('start', (ctx) =>
-      ctx.reply('Welcome! Open the admin panel below.', {
-        reply_markup: miniAppUrl
-          ? {
-              inline_keyboard: [
-                [
-                  {
-                    text: 'Open Admin',
-                    web_app: {
-                      url: miniAppUrl,
-                    },
-                  },
-                ],
-              ],
-            }
-          : undefined,
-      }),
-    );
+    this.bot.command('start', async (ctx) => {
+      // `web_app` buttons are only valid in private chats — Telegram rejects
+      // them elsewhere with BUTTON_TYPE_INVALID, which would crash the poller.
+      const useWebApp = !!miniAppUrl && ctx.chat?.type === 'private';
+      try {
+        await ctx.reply(
+          useWebApp
+            ? 'Welcome! Open the admin panel below.'
+            : 'Відкрий адмін-панель у приватному чаті зі мною.',
+          useWebApp
+            ? {
+                reply_markup: {
+                  inline_keyboard: [
+                    [{ text: 'Open Admin', web_app: { url: miniAppUrl } }],
+                  ],
+                },
+              }
+            : undefined,
+        );
+      } catch (err) {
+        this.logger.warn(
+          'Failed to reply to /start: ' +
+            (err instanceof Error ? err.message : String(err)),
+        );
+      }
+    });
 
     this.bot
       .start({
@@ -69,11 +77,14 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     }
     try {
       const member = await this.bot.api.getChatMember(chatId, userId);
-      return (
+      const isMember =
         member.status === 'creator' ||
         member.status === 'administrator' ||
-        member.status === 'member'
+        member.status === 'member';
+      this.logger.log(
+        `Membership check: user ${userId} in chat ${chatId} -> status="${member.status}" (allowed=${isMember})`,
       );
+      return isMember;
     } catch (err) {
       this.logger.warn(
         `Failed to check membership of user ${userId} in chat ${chatId}: ` +

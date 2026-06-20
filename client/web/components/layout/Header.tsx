@@ -2,18 +2,20 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Container } from '@/components/ui/Container';
 import { MenuIcon, CloseIcon } from '@/components/ui/icons';
 import { JoinModal } from '@/components/sections/JoinModal';
 
 const NAV = [
-  { label: 'Про нас', href: '#about' },
-  { label: 'Команда', href: '#team' },
-  { label: 'Партнери', href: '#partners' },
-  { label: 'Благодійність', href: '#charity' },
-  { label: 'Заходи', href: '#events' },
-  { label: 'FAQ', href: '#faq' },
-  { label: 'Новини', href: '#news' },
+  { label: 'Про нас', href: '/#about' },
+  { label: 'Команда', href: '/#team' },
+  { label: 'Партнери', href: '/#partners' },
+  { label: 'Благодійність', href: '/#charity' },
+  { label: 'Заходи', href: '/#events' },
+  { label: 'FAQ', href: '/#faq' },
+  { label: 'Новини', href: '/news' },
 ];
 
 export function Header() {
@@ -38,61 +40,25 @@ export function Header() {
 
             <nav className="hidden items-center gap-5 lg:flex xl:gap-7">
               {NAV.map((item) => (
-                <a
+                <Link
                   key={item.href}
                   href={item.href}
                   className="text-sm font-bold text-stone-950 transition-opacity hover:opacity-70"
                 >
                   {item.label}
-                </a>
+                </Link>
               ))}
-            </nav>
-
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="hidden shrink-0 rounded-lg bg-stone-950 px-4 py-2 text-sm font-bold text-white transition-opacity hover:opacity-80 sm:inline-flex"
-            >
-              Приєднатись до нас
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setOpen((v) => !v)}
-              aria-label={open ? 'Закрити меню' : 'Відкрити меню'}
-              aria-expanded={open}
-              className="inline-flex size-9 items-center justify-center rounded-lg p-1.5 text-stone-950 lg:hidden"
-            >
-              {open ? <CloseIcon /> : <MenuIcon />}
-            </button>
-
-            {open && (
-              <div className="absolute inset-x-0 top-full z-50 mt-2 flex flex-col gap-1 rounded-2xl border border-border bg-bg-soft p-3 shadow-xl shadow-black/40 lg:hidden">
-                {NAV.map((item) => (
-                  <a
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setOpen(false)}
-                    className="rounded-lg px-4 py-3 font-semibold text-fg transition-colors hover:bg-surface"
-                  >
-                    {item.label}
-                  </a>
-                ))}
-                <button
-                  onClick={() => {
-                    setOpen(false);
-                    setIsModalOpen(true);
-                  }}
-                  className="mt-1 rounded-lg bg-gradient-main px-4 py-3 text-center font-bold text-black"
-                >
-                  Приєднатись до нас
-                </button>
-              </div>
-            )}
-          </div>
-        </Container>
-      </header>
-
-      <JoinModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
-    </>
+              <Link
+                href={ctaHref}
+                onClick={() => setOpen(false)}
+                className="mt-1 rounded-lg bg-gradient-main px-4 py-3 text-center font-bold text-black"
+              >
+                {ctaLabel}
+              </Link>
+            </div>
+          )}
+        </div>
+      </Container>
+    </header>
   );
 }

@@ -22,12 +22,28 @@
   --color-brand-violet: #9810fa;
   --color-brand-orange: #ff8904;
   --color-brand-red: #fb2c36;
+
+  --animate-marquee: marquee 30s linear infinite;
+}
+
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
 }
 
 :root {
   color-scheme: dark;
 
-  --gradient-main: linear-gradient(90deg, #2eff97 -19.71%, #36dfff 48.48%, #ad46ff 116.67%);
+  --gradient-main: linear-gradient(
+    90deg,
+    #2eff97 -19.71%,
+    #36dfff 48.48%,
+    #ad46ff 116.67%
+  );
   --gradient-green: linear-gradient(90deg, #46bf00 0%, #00e3c5 100%);
   --gradient-blue: linear-gradient(90deg, #00e3f3 0%, #2b7fff 100%);
   --gradient-magenta: linear-gradient(90deg, #f6339a 0%, #9810fa 100%);
@@ -51,11 +67,21 @@
     -webkit-background-clip: text;
     color: transparent;
   }
-  .bg-gradient-main { background-image: var(--gradient-main); }
-  .bg-gradient-green { background-image: var(--gradient-green); }
-  .bg-gradient-blue { background-image: var(--gradient-blue); }
-  .bg-gradient-magenta { background-image: var(--gradient-magenta); }
-  .bg-gradient-orange { background-image: var(--gradient-orange); }
+  .bg-gradient-main {
+    background-image: var(--gradient-main);
+  }
+  .bg-gradient-green {
+    background-image: var(--gradient-green);
+  }
+  .bg-gradient-blue {
+    background-image: var(--gradient-blue);
+  }
+  .bg-gradient-magenta {
+    background-image: var(--gradient-magenta);
+  }
+  .bg-gradient-orange {
+    background-image: var(--gradient-orange);
+  }
 }
 
 /* Анімація екрана підтвердження після надсилання заявки */

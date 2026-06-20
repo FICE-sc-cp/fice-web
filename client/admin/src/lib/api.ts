@@ -117,12 +117,22 @@ export interface Fundraiser {
   detailsLink: string | null;
 }
 
+export type NewsCategory =
+  | 'EVENTS'
+  | 'EDUCATION'
+  | 'PARTNERS'
+  | 'CHARITY'
+  | 'ACHIEVEMENTS';
+
 export interface News {
   id: string;
   title: string;
   publishDate: string;
   details: string | null;
   image: string | null;
+  category: NewsCategory | null;
+  eventDate: string | null;
+  eventLocation: string | null;
 }
 
 export interface Applicant {
@@ -173,6 +183,9 @@ export interface NewsInput {
   details?: string;
   image?: string;
   publishDate?: string;
+  category?: NewsCategory | null;
+  eventDate?: string | null;
+  eventLocation?: string | null;
 }
 
 export interface EventInput {

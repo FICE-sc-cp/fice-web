@@ -30,7 +30,7 @@ export function AboutSection() {
     >
       <Glow
         color="#3BCA5B"
-        className="left-1/2 top-[34%] h-[30.41706rem] w-[61.75rem] -translate-x-1/2 -translate-y-1/2 ml-[32rem] opacity-60"
+        className="left-1/2 top-[34%] h-[30.41706rem] w-[61.75rem] -translate-x-1/2 -translate-y-1/2 ml-[32rem]"
       />
 
       <Container>

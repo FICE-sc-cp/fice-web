@@ -1,7 +1,7 @@
-import Image from "next/image";
 import { Container } from "@/components/ui/Container";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { Glow } from "@/components/ui/Glow";
+import { UkraineMap } from "@/components/ui/UkraineMap";
 import {
   AccentCard,
   accentGradient,
@@ -44,19 +44,19 @@ const STATS: {
 ];
 
 const PINS = [
-  { left: "20%", top: "21.5%" },
-  { left: "24%", top: "26.5%" },
-  { left: "44%", top: "32.5%" },
-  { left: "50%", top: "14.5%" },
-  { left: "64%", top: "24.5%" },
-  { left: "73%", top: "63.5%" },
-  { left: "53%", top: "39.5%" },
-  { left: "49%", top: "26.5%" },
-  { left: "66%", top: "48.5%" },
-  { left: "80%", top: "31.5%" },
-  { left: "62%", top: "69.5%" },
-  { left: "9%", top: "48.5%" },
-  { left: "39%", top: "79.5%" },
+  { left: "19%", top: "19.5%" },
+  { left: "24%", top: "24.5%" },
+  { left: "45%", top: "30.5%" },
+  { left: "53%", top: "10.5%" },
+  { left: "68%", top: "20.5%" },
+  { left: "75%", top: "63.5%" },
+  { left: "54%", top: "38.5%" },
+  { left: "49%", top: "23.5%" },
+  { left: "68%", top: "48.5%" },
+  { left: "84%", top: "31.5%" },
+  { left: "65%", top: "69.5%" },
+  { left: "9%", top: "49.5%" },
+  { left: "40%", top: "80.5%" },
 ];
 
 export function FactsSection() {
@@ -67,7 +67,7 @@ export function FactsSection() {
     >
       <Glow
         color="#00E3F3"
-        className="bottom-0 left-1/2 h-[34.93106rem] w-[70.75rem] -translate-x-1/2 -translate-y-2/3 ml-[16rem] opacity-60"
+        className="bottom-0 left-1/2 h-[34.93106rem] w-[70.75rem] -translate-x-1/2 -translate-y-2/3 ml-[16rem]"
       />
 
       <Container>
@@ -101,17 +101,19 @@ export function FactsSection() {
         </div>
 
         <div className="relative mx-auto mt-16 aspect-[968/671] w-full max-w-4xl">
-          <Image
-            src="/ukraine-map.png"
-            alt="Карта України з містами, з яких походять учасники"
-            fill
-            sizes="(min-width: 1024px) 56rem, 100vw"
-            className="object-contain"
+          <UkraineMap
+            preserveAspectRatio="none"
+            className="absolute inset-0"
+            oblastFill="rgba(13,46,53,0.88)"
+            oblastStroke="rgba(0,227,243,0.5)"
           />
           {PINS.map((pin, i) => (
             <span
               key={i}
-              style={{ left: pin.left, top: pin.top }}
+              style={{
+                left: `calc(${pin.left} - 2%)`,
+                top: `calc(${pin.top} + 3%)`,
+              }}
               className="absolute -translate-x-1/2 -translate-y-full"
             >
               <MapPinIcon className="h-10 w-auto drop-shadow-[0_2px_6px_rgba(0,0,0,0.5)]" />
