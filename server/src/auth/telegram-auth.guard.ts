@@ -7,9 +7,10 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { parse, validate } from '@tma.js/init-data-node';
+import { validate } from '@tma.js/init-data-node';
 import { Request } from 'express';
 import { BotService } from '../bot/bot.service';
+import { extractTelegramUser } from './init-data.util';
 
 @Injectable()
 export class TelegramAuthGuard implements CanActivate {
@@ -56,7 +57,7 @@ export class TelegramAuthGuard implements CanActivate {
       return true;
     }
 
-    const userId = parse(initData).user?.id;
+    const userId = extractTelegramUser(initData)?.id;
     if (!userId) {
       throw new UnauthorizedException(
         'Telegram init data does not contain a user',

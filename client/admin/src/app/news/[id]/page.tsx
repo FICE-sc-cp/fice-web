@@ -8,6 +8,15 @@ import { NewsForm, type NewsFormValues } from '@/components/forms/NewsForm';
 import { Spinner } from '@/components/ui/Spinner';
 import { hapticNotify } from '@/lib/telegram';
 
+/** ISO string -> "YYYY-MM-DDTHH:mm" in local time for <input type="datetime-local">. */
+function toLocalInput(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+    d.getHours(),
+  )}:${pad(d.getMinutes())}`;
+}
+
 export default function EditNewsPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -32,6 +41,10 @@ export default function EditNewsPage() {
       title: v.title,
       details: v.details?.trim() ? v.details : undefined,
       image: v.image ?? undefined,
+      category: v.category ? v.category : null,
+      eventDate: v.isEvent && v.eventDate ? new Date(v.eventDate).toISOString() : null,
+      eventLocation:
+        v.isEvent && v.eventLocation?.trim() ? v.eventLocation.trim() : null,
     });
   }
 
@@ -55,7 +68,15 @@ export default function EditNewsPage() {
             onSubmit={handleSubmit}
             defaultValues={
               data
-                ? { title: data.title, details: data.details ?? '', image: data.image }
+                ? {
+                    title: data.title,
+                    details: data.details ?? '',
+                    image: data.image,
+                    category: data.category ?? '',
+                    isEvent: !!data.eventDate,
+                    eventDate: data.eventDate ? toLocalInput(data.eventDate) : '',
+                    eventLocation: data.eventLocation ?? '',
+                  }
                 : undefined
             }
           />

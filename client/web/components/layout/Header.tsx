@@ -14,7 +14,7 @@ const NAV = [
   { label: 'Благодійність', href: '/#charity' },
   { label: 'Заходи', href: '/#events' },
   { label: 'FAQ', href: '/#faq' },
-  { label: 'Новини', href: '/#news' },
+  { label: 'Новини', href: '/news' },
 ];
 
 export function Header() {
