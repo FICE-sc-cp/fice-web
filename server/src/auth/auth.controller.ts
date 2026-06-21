@@ -6,8 +6,9 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiOperation, ApiSecurity, ApiTags } from '@nestjs/swagger';
-import { parse, validate } from '@tma.js/init-data-node';
+import { validate } from '@tma.js/init-data-node';
 import { BotService } from '../bot/bot.service';
+import { extractTelegramUser } from './init-data.util';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -24,7 +25,12 @@ export class AuthController {
   })
   async me(@Headers('x-telegram-init-data') initData?: string) {
     const token = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
-    if (!token || !initData) {
+    if (!token) {
+      throw new UnauthorizedException(
+        'Admin authentication is not configured (TELEGRAM_BOT_TOKEN missing)',
+      );
+    }
+    if (!initData) {
       throw new UnauthorizedException('Missing Telegram init data');
     }
 
@@ -34,7 +40,7 @@ export class AuthController {
       throw new UnauthorizedException('Invalid Telegram init data');
     }
 
-    const user = parse(initData).user;
+    const user = extractTelegramUser(initData);
     if (!user) {
       throw new UnauthorizedException(
         'Telegram init data does not contain a user',
@@ -49,8 +55,8 @@ export class AuthController {
     return {
       id: user.id,
       username: user.username,
-      firstName: user.first_name,
-      lastName: user.last_name,
+      firstName: user.firstName,
+      lastName: user.lastName,
       isAdmin,
     };
   }

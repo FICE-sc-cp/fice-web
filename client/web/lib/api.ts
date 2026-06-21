@@ -1,4 +1,15 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+// Public base URL — what the browser uses (e.g. building <img> src). Baked at build.
+const PUBLIC_API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
+
+// Base URL for data fetches. On the server (SSR/RSC) reach the backend via the
+// internal docker network name (`INTERNAL_API_URL`, e.g. http://server:3001);
+// in the browser fall back to the public URL.
+function apiBase(): string {
+  if (typeof window === 'undefined') {
+    return process.env.INTERNAL_API_URL ?? PUBLIC_API_URL;
+  }
+  return PUBLIC_API_URL;
+}
 
 export interface Paginated<T> {
   items: T[];
@@ -95,16 +106,26 @@ export interface Fundraiser {
   detailsLink: string | null;
 }
 
+export type NewsCategory =
+  | 'EVENTS'
+  | 'EDUCATION'
+  | 'PARTNERS'
+  | 'CHARITY'
+  | 'ACHIEVEMENTS';
+
 export interface News {
   id: string;
   title: string;
   publishDate: string;
   details: string | null;
   image: string | null;
+  category: NewsCategory | null;
+  eventDate: string | null;
+  eventLocation: string | null;
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, { cache: 'no-store', ...init });
+  const res = await fetch(`${apiBase()}${path}`, { cache: 'no-store', ...init });
   if (!res.ok) {
     throw new Error(`API ${path} responded ${res.status}`);
   }
@@ -113,7 +134,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export function mediaUrl(path: string | null | undefined): string | null {
   if (!path) return null;
-  return path.startsWith('http') ? path : `${API_URL}${path}`;
+  // Always the public URL — this string is resolved by the browser.
+  return path.startsWith('http') ? path : `${PUBLIC_API_URL}${path}`;
 }
 
 export async function safe<T>(promise: Promise<T>, fallback: T): Promise<T> {
@@ -122,6 +144,18 @@ export async function safe<T>(promise: Promise<T>, fallback: T): Promise<T> {
   } catch {
     return fallback;
   }
+}
+
+export interface CreateApplicationPayload {
+  firstName: string;
+  middleName: string;
+  lastName: string;
+  telegramTag: string;
+  group: string;
+  phoneNumber: string;
+  motivation?: string;
+  experience?: string;
+  departments: { departmentId: string; question?: string }[];
 }
 
 export const fice = {
@@ -138,6 +172,7 @@ export const fice = {
     request<Paginated<Partner>>(`/partner?limit=${limit}&page=${page}`),
   news: (limit = 6, page = 1) =>
     request<Paginated<News>>(`/news?limit=${limit}&page=${page}`),
+  newsItem: (id: string) => request<News>(`/news/${id}`),
 
   applyPartner: (body: unknown) =>
     request<Partner>('/partner/apply', {

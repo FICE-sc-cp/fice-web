@@ -8,13 +8,13 @@ import { Container } from "@/components/ui/Container";
 import { MenuIcon, CloseIcon } from "@/components/ui/icons";
 
 const NAV = [
-  { label: "Про нас", href: "/#about" },
-  { label: "Команда", href: "/#team" },
-  { label: "Партнери", href: "/#partners" },
-  { label: "Благодійність", href: "/#charity" },
-  { label: "Заходи", href: "/#events" },
-  { label: "FAQ", href: "/#faq" },
-  { label: "Новини", href: "/#news" },
+  { label: 'Про нас', href: '/#about' },
+  { label: 'Команда', href: '/#team' },
+  { label: 'Партнери', href: '/#partners' },
+  { label: 'Благодійність', href: '/#charity' },
+  { label: 'Заходи', href: '/#events' },
+  { label: 'FAQ', href: '/#faq' },
+  { label: 'Новини', href: '/news' },
 ];
 
 export function Header() {

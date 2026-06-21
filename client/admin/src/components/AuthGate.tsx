@@ -19,6 +19,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     data: me,
     isLoading,
     isError,
+    error,
   } = useQuery({
     queryKey: ['me'],
     queryFn: api.me,
@@ -43,11 +44,35 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     return <FullScreen>Перевірка доступу…</FullScreen>;
   }
 
-  if (isError || !me?.isAdmin) {
+  // /auth/me failed (e.g. 401) — the Telegram session could not be verified.
+  // This is distinct from "verified, but not an admin" below.
+  if (isError) {
+    return (
+      <FullScreen>
+        <p className="text-lg font-semibold text-fg">Сесію не підтверджено</p>
+        <p>
+          Не вдалося перевірити Telegram-сесію. Повністю закрий і знову відкрий
+          панель через кнопку бота (@fice_admin_bot).
+        </p>
+        <p className="text-xs text-subtle">
+          Деталі: {error instanceof Error ? error.message : 'невідома помилка'}
+        </p>
+      </FullScreen>
+    );
+  }
+
+  // Verified user, but not a member of the admin group.
+  if (!me?.isAdmin) {
     return (
       <FullScreen>
         <p className="text-lg font-semibold text-fg">Немає доступу</p>
         <p>Щоб керувати контентом, потрібно бути учасником адмін-групи студради.</p>
+        {me && (
+          <p className="text-xs text-subtle">
+            Твій Telegram ID: {me.id}
+            {me.username ? ` (@${me.username})` : ''}
+          </p>
+        )}
       </FullScreen>
     );
   }

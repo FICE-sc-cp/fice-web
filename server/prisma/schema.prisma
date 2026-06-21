@@ -17,12 +17,26 @@ model StatOverride {
     updatedAt DateTime @default(now()) @updatedAt
 }
 
+enum NewsCategory {
+    EVENTS
+    EDUCATION
+    PARTNERS
+    CHARITY
+    ACHIEVEMENTS
+}
+
 model News {
     id String @id @default(uuid()) @db.Uuid
     title String @db.VarChar(50)
     publishDate DateTime @default(now())
     details String? @db.Text
     image String?
+    category NewsCategory?
+
+    // Optional event-announcement fields. When eventDate is set the news item is
+    // rendered as an event announcement with a registration call-to-action.
+    eventDate DateTime?
+    eventLocation String? @db.VarChar(100)
 }
 
 enum FundraiserStatus {

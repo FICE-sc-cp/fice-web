@@ -25,6 +25,10 @@ export default function NewNewsPage() {
       title: v.title,
       details: v.details?.trim() ? v.details : undefined,
       image: v.image ?? undefined,
+      category: v.category ? v.category : null,
+      eventDate: v.isEvent && v.eventDate ? new Date(v.eventDate).toISOString() : null,
+      eventLocation:
+        v.isEvent && v.eventLocation?.trim() ? v.eventLocation.trim() : null,
     });
   }
 
