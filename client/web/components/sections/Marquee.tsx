@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import Link from "next/link";
 
 const REPEAT = 12;
 const DURATION = `${REPEAT * 7.5}s`;
@@ -18,14 +19,19 @@ export function Marquee() {
   );
 
   return (
-    <div className="overflow-hidden bg-gradient-main py-6">
-      <div
-        className="flex w-max animate-marquee"
-        style={{ animationDuration: DURATION }}
-      >
-        {group}
-        {group}
+    <Link
+      href="/join"
+      className="transition-opacity hover:opacity-90"
+    >
+      <div className="overflow-hidden bg-gradient-main py-6">
+        <div
+          className="flex w-max animate-marquee"
+          style={{ animationDuration: DURATION }}
+        >
+          {group}
+          {group}
+        </div>
       </div>
-    </div>
+    </Link>
   );
 }
