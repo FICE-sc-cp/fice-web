@@ -51,6 +51,10 @@
 }
 
 @layer base {
+  html {
+    /* Scales the whole rem-based design down evenly. One dial for overall size. */
+    font-size: 87.5%;
+  }
   body {
     background-color: var(--color-bg);
     color: var(--color-fg);
