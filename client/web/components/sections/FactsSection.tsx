@@ -100,7 +100,7 @@ export function FactsSection() {
           ))}
         </div>
 
-        <div className="relative mx-auto mt-16 aspect-[968/671] w-full max-w-4xl">
+        <div className="relative mx-auto mt-16 aspect-[968/671] w-full max-w-3xl">
           <UkraineMap
             preserveAspectRatio="none"
             className="absolute inset-0"

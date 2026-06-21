@@ -5,9 +5,6 @@ import { Glow } from "@/components/ui/Glow";
 import { CalendarIcon, ClockIcon, PinIcon } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 
-const DESCRIPTION =
-  "Короткий опис події або оновлення для студентів і партнерів. Текст має швидко пояснювати, що відбулося і чому це важливо. Деталі можна знайти за посиланням нижче.";
-
 const EVENTS = [
   {
     category: "Розваги",
@@ -27,8 +24,7 @@ const EVENTS = [
 ];
 
 const DETAILS = [
-  { Icon: CalendarIcon, text: "14 лютого" },
-  { Icon: ClockIcon, text: "17:00" },
+  { Icon: CalendarIcon, text: "14 лютого", Icon2: ClockIcon, text2: "17:00" },
   { Icon: PinIcon, text: "Ливарка КПІ" },
 ];
 
@@ -79,16 +75,23 @@ export function EventsSection() {
                     День святого Валентина
                   </h3>
                   <div className="flex flex-col gap-2 text-xl text-stone-300">
-                    {DETAILS.map(({ Icon, text }) => (
+                    {DETAILS.map(({ Icon, text, Icon2, text2 }) => (
                       <div key={text} className="flex items-center gap-2">
                         <span className="size-6 shrink-0">
                           <Icon />
                         </span>
                         {text}
+                        {Icon2 && text2 ? (
+                          <>
+                            <span className="size-6 shrink-0">
+                              <Icon2 />
+                            </span>
+                            {text2}
+                          </>
+                        ) : null}
                       </div>
                     ))}
                   </div>
-                  <p className="text-xl text-stone-300">{DESCRIPTION}</p>
                 </div>
 
                 {event.open ? (
@@ -96,11 +99,12 @@ export function EventsSection() {
                     href="#"
                     className="rounded-lg bg-gradient-green px-7 py-3.5 text-center text-xl font-bold text-black transition-opacity hover:opacity-90"
                   >
-                    Зареєструватись
+                    Дізнатись більше
                   </a>
                 ) : (
                   <span className="rounded-lg bg-neutral-600 px-7 py-3.5 text-center text-xl font-bold text-zinc-800">
-                    Реєстрація закрита
+                    {/* Напевно потрібно змінити колір кнопки */}
+                    Переглянути фотографії
                   </span>
                 )}
               </div>

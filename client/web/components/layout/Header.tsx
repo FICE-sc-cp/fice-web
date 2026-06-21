@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import Image from 'next/image';
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Container } from '@/components/ui/Container';
-import { MenuIcon, CloseIcon } from '@/components/ui/icons';
+import { useState } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Container } from "@/components/ui/Container";
+import { MenuIcon, CloseIcon } from "@/components/ui/icons";
 
 const NAV = [
   { label: 'Про нас', href: '/#about' },
@@ -20,15 +20,19 @@ const NAV = [
 export function Header() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-  const isJoinPage = pathname === '/join';
-  const ctaHref = isJoinPage ? '/' : '/join';
-  const ctaLabel = isJoinPage ? 'На головну' : 'Приєднатись до нас';
+  const isJoinPage = pathname === "/join";
+  const ctaHref = isJoinPage ? "/" : "/join";
+  const ctaLabel = isJoinPage ? "На головну" : "Приєднатись до нас";
 
   return (
     <header className="sticky top-4 z-50">
       <Container>
         <div className="relative flex items-center justify-between gap-4 rounded-2xl bg-gradient-main px-4 py-3 shadow-lg shadow-black/20 sm:px-6">
-          <Link href="/" className="flex shrink-0 items-center" aria-label="На головну">
+          <Link
+            href="/"
+            className="flex shrink-0 items-center"
+            aria-label="На головну"
+          >
             <Image
               src="/logo_black.png"
               alt="Студрада ФІОТ"
@@ -61,7 +65,7 @@ export function Header() {
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}
-            aria-label={open ? 'Закрити меню' : 'Відкрити меню'}
+            aria-label={open ? "Закрити меню" : "Відкрити меню"}
             aria-expanded={open}
             className="inline-flex size-9 items-center justify-center rounded-lg p-1.5 text-stone-950 lg:hidden"
           >

@@ -3,7 +3,7 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Glow } from "@/components/ui/Glow";
 import {
   AccentCard,
-  accentText,
+  //accentText,
   type Accent,
 } from "@/components/ui/AccentCard";
 import { cn } from "@/lib/utils";
@@ -98,9 +98,9 @@ export function DepartmentsSection() {
               )}
             >
               <h3 className="text-2xl font-bold text-white">{dept.name}</h3>
-              <p className={cn("text-xl font-bold", accentText[dept.accent])}>
+              {/*<p className={cn("text-xl font-bold", accentText[dept.accent])}>
                 Голова — @user_name
-              </p>
+              </p>*/}
               <p className="flex-1 text-xl font-medium leading-6 text-zinc-400">
                 {dept.description}
               </p>
