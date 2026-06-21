@@ -3,7 +3,7 @@ import { Container } from "@/components/ui/Container";
 import { Glow } from "@/components/ui/Glow";
 import { TelegramIcon } from "@/components/ui/icons";
 
-const MEMBERS = Array.from({ length: 6 }).map((_, i) => ({
+const MEMBERS = Array.from({ length: 9 }).map((_, i) => ({
   id: i,
   name: "Максим Коваль",
   role: "Голова",
@@ -13,11 +13,6 @@ const MEMBERS = Array.from({ length: 6 }).map((_, i) => ({
 export function TeamSection() {
   return (
     <section id="team" className="relative isolate scroll-mt-28 py-20 lg:py-28">
-      <Glow
-        color="#00E3F3"
-        className="left-1/2 top-[22%] h-[28rem] w-[55rem] -translate-x-1/2 -translate-y-1/5"
-      />
-
       <Container>
         <div className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-10">
           {MEMBERS.map((member) => (
@@ -26,12 +21,20 @@ export function TeamSection() {
               className="flex w-72 max-w-full flex-col gap-3"
             >
               <div className="relative aspect-[3/4] overflow-hidden rounded-2xl border border-brand-magenta bg-surface/40">
+                <Glow
+                  color="#9810FA"
+                  className="absolute left-1/2 top-1/2 h-[50%] w-[300%] -translate-x-1/2
+                  -translate-y-1/2 opacity-100 blur-2xl pointer-events-none -z-10"
+                />
                 <Image
                   src="/placeholder-person.png"
                   alt={member.name}
                   fill
                   sizes="288px"
-                  className="object-cover object-top"
+                  className="object-contain object-bottom z-10"
+                  style={{
+                    filter: 'drop-shadow(3px 3px 0 #fff) drop-shadow(-3px -3px 0 #fff) drop-shadow(3px -3px 0 #fff) drop-shadow(-3px 3px 0 #fff)'
+                  }}
                 />
               </div>
               <div className="flex flex-col gap-2">
