@@ -9,7 +9,7 @@ import { MenuIcon, CloseIcon } from '@/components/ui/icons';
 
 const NAV = [
   { label: 'Про нас', href: '/#about' },
-  { label: 'Команда', href: '/#team' },
+  { label: 'Команда', href: '/team' },
   { label: 'Партнери', href: '/#partners' },
   { label: 'Благодійність', href: '/#charity' },
   { label: 'Заходи', href: '/#events' },
@@ -20,9 +20,9 @@ const NAV = [
 export function Header() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
-  const isJoinPage = pathname === '/join';
-  const ctaHref = isJoinPage ? '/' : '/join';
-  const ctaLabel = isJoinPage ? 'На головну' : 'Приєднатись до нас';
+  const replaceJoinButton = pathname === '/join' || pathname === '/team';
+  const ctaHref = replaceJoinButton ? '/' : '/join';
+  const ctaLabel = replaceJoinButton ? 'На головну' : 'Приєднатись до нас';
 
   return (
     <header className="sticky top-4 z-50">

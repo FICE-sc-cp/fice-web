@@ -1,6 +1,5 @@
 import Image from "next/image";
 import { Container } from "@/components/ui/Container";
-import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Glow } from "@/components/ui/Glow";
 import { TelegramIcon } from "@/components/ui/icons";
 
@@ -20,13 +19,7 @@ export function TeamSection() {
       />
 
       <Container>
-        <SectionHeader
-          title="Команда"
-          subtitle="Лідери, які роблять зміни"
-          gradient="bg-gradient-orange"
-        />
-
-        <div className="mt-14 flex flex-wrap justify-center gap-x-6 gap-y-10">
+        <div className="mt-8 flex flex-wrap justify-center gap-x-6 gap-y-10">
           {MEMBERS.map((member) => (
             <article
               key={member.id}

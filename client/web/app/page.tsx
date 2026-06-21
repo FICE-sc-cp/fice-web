@@ -7,7 +7,6 @@ import { AboutSection } from '@/components/sections/AboutSection';
 import { ValuesSection } from '@/components/sections/ValuesSection';
 import { FactsSection } from '@/components/sections/FactsSection';
 import { DepartmentsSection } from '@/components/sections/DepartmentsSection';
-import { TeamSection } from '@/components/sections/TeamSection';
 import { Marquee } from '@/components/sections/Marquee';
 import { PartnersSection } from '@/components/sections/PartnersSection';
 import { FundraisersSection } from '@/components/sections/FundraisersSection';
@@ -28,8 +27,6 @@ export default function HomePage() {
         <ValuesSection />
         <FactsSection />
         <DepartmentsSection />
-        <TeamSection />
-        <Marquee />
         <PartnersSection />
         <FundraisersSection />
         <EventsSection />
