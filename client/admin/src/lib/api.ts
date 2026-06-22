@@ -93,14 +93,69 @@ export interface Partner {
   isApproved: boolean;
 }
 
+export type EventQuestionType =
+  | 'SHORT_TEXT'
+  | 'LONG_TEXT'
+  | 'SINGLE_CHOICE'
+  | 'YES_NO';
+
+export interface EventQuestion {
+  id: string;
+  label: string;
+  type: EventQuestionType;
+  required: boolean;
+  options: string[];
+  order: number;
+}
+
+export interface EventProgramItem {
+  id: string;
+  time: string;
+  title: string;
+  order: number;
+}
+
+export interface EventPartner {
+  id: string;
+  name: string | null;
+  logoImage: string | null;
+  websiteLink: string | null;
+  partner?: Partner | null;
+}
+
 export interface EventItem {
   id: string;
   name: string;
   date: string;
   photoUrl: string | null;
+  description: string | null;
+  location: string | null;
+  locationNote: string | null;
+  timeNote: string | null;
+  registrationCloseDate: string | null;
+  photoAlbumUrl: string | null;
+  feeAmount: string | null;
+  feeAtEventAmount: string | null;
+  feeRequisites: string | null;
   detailsId: string | null;
   details?: EventDetails | null;
-  eventPartners?: { partner: Partner }[];
+  eventPartners?: EventPartner[];
+  program?: EventProgramItem[];
+  questions?: EventQuestion[];
+}
+
+export type RegistrationPayment = 'NONE' | 'DONATED' | 'AT_EVENT';
+
+export interface EventRegistration {
+  id: string;
+  fullName: string;
+  telegramTag: string;
+  group: string;
+  birthDate: string | null;
+  payment: RegistrationPayment;
+  receiptUrl: string | null;
+  createdAt: string;
+  answers?: { id: string; questionId: string; value: string }[];
 }
 
 export type FundraiserStatus = 'ACTIVE' | 'CLOSED';
@@ -133,6 +188,7 @@ export interface News {
   category: NewsCategory | null;
   eventDate: string | null;
   eventLocation: string | null;
+  registrationLink: string | null;
 }
 
 export interface Applicant {
@@ -186,6 +242,22 @@ export interface NewsInput {
   category?: NewsCategory | null;
   eventDate?: string | null;
   eventLocation?: string | null;
+  registrationLink?: string | null;
+}
+
+export interface EventProgramInput {
+  time: string;
+  title: string;
+  order?: number;
+}
+
+export interface EventQuestionInput {
+  id?: string;
+  label: string;
+  type: EventQuestionType;
+  required?: boolean;
+  options?: string[];
+  order?: number;
 }
 
 export interface EventInput {
@@ -193,6 +265,17 @@ export interface EventInput {
   date: string;
   photoUrl?: string;
   detailsId?: string;
+  description?: string;
+  location?: string;
+  locationNote?: string;
+  timeNote?: string;
+  registrationCloseDate?: string;
+  photoAlbumUrl?: string;
+  feeAmount?: number;
+  feeAtEventAmount?: number;
+  feeRequisites?: string;
+  program?: EventProgramInput[];
+  questions?: EventQuestionInput[];
 }
 
 export interface EventDetailsInput {
@@ -273,10 +356,24 @@ export const api = {
   updateEvent: (id: string, body: Partial<EventInput>) =>
     request<EventItem>(`/event/${id}`, { method: 'PATCH', ...json(body) }),
   deleteEvent: (id: string) => request<EventItem>(`/event/${id}`, { method: 'DELETE' }),
-  addEventPartner: (id: string, partnerId: string) =>
-    request<unknown>(`/event/${id}/partners`, { method: 'POST', ...json({ partnerId }) }),
-  removeEventPartner: (id: string, partnerId: string) =>
-    request<unknown>(`/event/${id}/partners/${partnerId}`, { method: 'DELETE' }),
+  addEventPartner: (
+    id: string,
+    body: { name: string; logoImage?: string; websiteLink?: string },
+  ) => request<unknown>(`/event/${id}/partners`, { method: 'POST', ...json(body) }),
+  removeEventPartner: (id: string, eventPartnerId: string) =>
+    request<unknown>(`/event/${id}/partners/${eventPartnerId}`, { method: 'DELETE' }),
+  eventRegistrations: (id: string, page = 1, limit = 100) =>
+    request<Paginated<EventRegistration>>(
+      `/event/${id}/registrations?page=${page}&limit=${limit}`,
+    ),
+  exportEventRegistrations: async (id: string): Promise<Blob> => {
+    const res = await fetch(`${BASE}/event/${id}/registrations/export`, {
+      headers: { 'x-telegram-init-data': getInitData() },
+      cache: 'no-store',
+    });
+    if (!res.ok) throw new Error(`Помилка ${res.status}`);
+    return res.blob();
+  },
 
   createEventDetails: (body: EventDetailsInput) =>
     request<EventDetails>('/event-details', { method: 'POST', ...json(body) }),

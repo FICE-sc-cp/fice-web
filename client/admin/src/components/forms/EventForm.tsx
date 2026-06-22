@@ -1,13 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useQuery } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { type EventInput, type EventQuestionType } from '@/lib/api';
 import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
-import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
 import { ImageUpload } from '../ImageUpload';
 import { useMainButton } from '@/lib/telegram';
@@ -16,14 +15,84 @@ const schema = z.object({
   name: z.string().min(1, 'Вкажи назву').max(50),
   date: z.string().min(1, 'Вкажи дату'),
   photoUrl: z.string().nullable().optional(),
-  description: z.string().max(255).optional(),
+  description: z.string().optional(),
+  location: z.string().max(120).optional(),
+  locationNote: z.string().optional(),
+  timeNote: z.string().max(120).optional(),
+  registrationCloseDate: z.string().optional(),
+  photoAlbumUrl: z.string().optional(),
+  feeAmount: z.string().optional(),
+  feeAtEventAmount: z.string().optional(),
+  feeRequisites: z.string().max(255).optional(),
   moneyCollected: z.string().optional(),
   charityAmount: z.string().optional(),
   visitorsAmount: z.string().optional(),
-  departmentId: z.string().optional(),
 });
 
-export type EventFormValues = z.infer<typeof schema>;
+type ScalarValues = z.infer<typeof schema>;
+
+export interface ProgramItem {
+  time: string;
+  title: string;
+}
+
+export interface QuestionItem {
+  id?: string;
+  label: string;
+  type: EventQuestionType;
+  required: boolean;
+  optionsText: string;
+}
+
+export type EventFormValues = ScalarValues & {
+  program: ProgramItem[];
+  questions: QuestionItem[];
+};
+
+export function eventValuesToInput(v: EventFormValues): EventInput {
+  return {
+    name: v.name,
+    date: new Date(v.date).toISOString(),
+    photoUrl: v.photoUrl ?? undefined,
+    description: v.description?.trim() || undefined,
+    location: v.location?.trim() || undefined,
+    locationNote: v.locationNote?.trim() || undefined,
+    timeNote: v.timeNote?.trim() || undefined,
+    registrationCloseDate: v.registrationCloseDate
+      ? new Date(v.registrationCloseDate).toISOString()
+      : undefined,
+    photoAlbumUrl: v.photoAlbumUrl?.trim() || undefined,
+    feeAmount: v.feeAmount ? Number(v.feeAmount) : undefined,
+    feeAtEventAmount: v.feeAtEventAmount ? Number(v.feeAtEventAmount) : undefined,
+    feeRequisites: v.feeRequisites?.trim() || undefined,
+    program: v.program
+      .filter((p) => p.time.trim() || p.title.trim())
+      .map((p, i) => ({ time: p.time, title: p.title, order: i })),
+    questions: v.questions
+      .filter((q) => q.label.trim())
+      .map((q, i) => ({
+        id: q.id,
+        label: q.label,
+        type: q.type,
+        required: q.required,
+        options:
+          q.type === 'SINGLE_CHOICE'
+            ? (q.optionsText ?? '')
+                .split(',')
+                .map((s) => s.trim())
+                .filter(Boolean)
+            : [],
+        order: i,
+      })),
+  };
+}
+
+const QUESTION_TYPES: { value: EventQuestionType; label: string }[] = [
+  { value: 'SHORT_TEXT', label: 'Коротка відповідь' },
+  { value: 'LONG_TEXT', label: 'Розгорнута відповідь' },
+  { value: 'SINGLE_CHOICE', label: 'Один з варіантів' },
+  { value: 'YES_NO', label: 'Так / Ні' },
+];
 
 export function EventForm({
   defaultValues,
@@ -36,10 +105,11 @@ export function EventForm({
   submitting: boolean;
   submitLabel: string;
 }) {
-  const { data: departments } = useQuery({
-    queryKey: ['departments'],
-    queryFn: () => api.departments(),
-  });
+  const {
+    program: dfProgram,
+    questions: dfQuestions,
+    ...scalarDefaults
+  } = defaultValues ?? {};
 
   const {
     register,
@@ -47,29 +117,58 @@ export function EventForm({
     watch,
     setValue,
     formState: { errors },
-  } = useForm<EventFormValues>({
+  } = useForm<ScalarValues>({
     resolver: zodResolver(schema),
     defaultValues: {
       name: '',
       date: '',
       photoUrl: null,
       description: '',
+      location: '',
+      locationNote: '',
+      timeNote: '',
+      registrationCloseDate: '',
+      photoAlbumUrl: '',
+      feeAmount: '',
+      feeAtEventAmount: '',
+      feeRequisites: '',
       moneyCollected: '',
       charityAmount: '',
       visitorsAmount: '',
-      departmentId: '',
-      ...defaultValues,
+      ...scalarDefaults,
     },
   });
 
+  const [programItems, setProgramItems] = useState<ProgramItem[]>(dfProgram ?? []);
+  const [questionItems, setQuestionItems] = useState<QuestionItem[]>(
+    dfQuestions ?? [],
+  );
+
   const photo = watch('photoUrl');
-  const submit = handleSubmit(onSubmit);
+  const submit = handleSubmit((scalars) =>
+    onSubmit({ ...scalars, program: programItems, questions: questionItems }),
+  );
   useMainButton({ text: submitLabel, onClick: () => void submit(), loading: submitting });
 
-  const deptOptions = [
-    { value: '', label: '— Без відділу —' },
-    ...(departments ?? []).map((d) => ({ value: d.id, label: d.name })),
-  ];
+  const addProgram = () => setProgramItems((p) => [...p, { time: '', title: '' }]);
+  const removeProgram = (i: number) =>
+    setProgramItems((p) => p.filter((_, idx) => idx !== i));
+  const updateProgram = (i: number, field: 'time' | 'title', value: string) =>
+    setProgramItems((p) =>
+      p.map((it, idx) => (idx === i ? { ...it, [field]: value } : it)),
+    );
+
+  const addQuestion = () =>
+    setQuestionItems((q) => [
+      ...q,
+      { label: '', type: 'SHORT_TEXT', required: false, optionsText: '' },
+    ]);
+  const removeQuestion = (i: number) =>
+    setQuestionItems((q) => q.filter((_, idx) => idx !== i));
+  const updateQuestion = (i: number, patch: Partial<QuestionItem>) =>
+    setQuestionItems((q) => q.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
+
+  const hasErrors = Object.keys(errors).length > 0;
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
@@ -81,49 +180,218 @@ export function EventForm({
         error={errors.date?.message}
       />
       <ImageUpload
-        label="Фото"
+        label="Обкладинка"
         value={photo}
         onChange={(url) => setValue('photoUrl', url, { shouldDirty: true })}
       />
+      <Textarea
+        label="Опис (про захід)"
+        {...register('description')}
+        error={errors.description?.message}
+      />
 
       <div className="rounded-2xl border border-border bg-bg-soft p-4">
-        <p className="mb-3 text-sm font-semibold text-muted">
-          Деталі та результати (необовʼязково)
-        </p>
+        <p className="mb-3 text-sm font-semibold text-muted">Деталі сторінки</p>
         <div className="flex flex-col gap-4">
-          <Textarea
-            label="Опис"
-            {...register('description')}
-            error={errors.description?.message}
+          <Input label="Локація" {...register('location')} />
+          <Input
+            label="Посилання на Google Maps"
+            placeholder="https://maps.app.goo.gl/…"
+            {...register('locationNote')}
+          />
+          <Input label="Час — уточнення (напр. «Збір з 16:30»)" {...register('timeNote')} />
+          <Input
+            label="Закриття реєстрації"
+            type="datetime-local"
+            {...register('registrationCloseDate')}
+          />
+          <Input
+            label="Посилання на фотоальбом (після заходу)"
+            placeholder="https://…"
+            {...register('photoAlbumUrl')}
           />
           <div className="grid grid-cols-2 gap-3">
             <Input
-              label="Зібрано, ₴"
+              label="Внесок онлайн, ₴ (0 = безкоштовно)"
               type="number"
               min="0"
               inputMode="numeric"
-              {...register('moneyCollected')}
+              {...register('feeAmount')}
             />
             <Input
-              label="На благодійність, ₴"
+              label="Внесок на заході, ₴"
               type="number"
               min="0"
               inputMode="numeric"
-              {...register('charityAmount')}
+              {...register('feeAtEventAmount')}
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="Відвідувачів"
-              type="number"
-              min="0"
-              inputMode="numeric"
-              {...register('visitorsAmount')}
-            />
-            <Select label="Відділ" options={deptOptions} {...register('departmentId')} />
-          </div>
+          <Input
+            label="Реквізити для донату (текст або посилання)"
+            {...register('feeRequisites')}
+          />
         </div>
       </div>
+
+      <div className="rounded-2xl border border-border bg-bg-soft p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-sm font-semibold text-muted">Програма</p>
+          <button
+            type="button"
+            onClick={addProgram}
+            className="rounded-lg bg-surface px-3 py-1.5 text-sm font-semibold text-brand-cyan"
+          >
+            + Пункт
+          </button>
+        </div>
+        <div className="flex flex-col gap-3">
+          {programItems.map((item, i) => (
+            <div key={i} className="flex items-end gap-2">
+              <div className="w-24 shrink-0">
+                <Input
+                  label="Час"
+                  placeholder="17:00"
+                  value={item.time}
+                  onChange={(e) => updateProgram(i, 'time', e.target.value)}
+                />
+              </div>
+              <div className="flex-1">
+                <Input
+                  label="Пункт"
+                  value={item.title}
+                  onChange={(e) => updateProgram(i, 'title', e.target.value)}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => removeProgram(i)}
+                className="mb-1 shrink-0 rounded-lg border border-brand-red/40 px-3 py-2.5 text-sm font-bold text-brand-red"
+                aria-label="Видалити пункт"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+          {programItems.length === 0 && (
+            <p className="text-sm text-subtle">Поки що немає пунктів програми.</p>
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-border bg-bg-soft p-4">
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-sm font-semibold text-muted">Питання реєстрації</p>
+          <button
+            type="button"
+            onClick={addQuestion}
+            className="rounded-lg bg-surface px-3 py-1.5 text-sm font-semibold text-brand-cyan"
+          >
+            + Питання
+          </button>
+        </div>
+        <div className="flex flex-col gap-4">
+          {questionItems.map((q, i) => (
+            <div
+              key={i}
+              className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-3"
+            >
+              <div className="flex items-start gap-2">
+                <div className="flex-1">
+                  <Input
+                    label={`Питання ${i + 1}`}
+                    value={q.label}
+                    onChange={(e) => updateQuestion(i, { label: e.target.value })}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => removeQuestion(i)}
+                  className="mt-7 shrink-0 rounded-lg border border-brand-red/40 px-3 py-2.5 text-sm font-bold text-brand-red"
+                  aria-label="Видалити питання"
+                >
+                  ✕
+                </button>
+              </div>
+              <div className="grid grid-cols-2 items-end gap-3">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-sm font-semibold text-muted">Тип</label>
+                  <select
+                    value={q.type}
+                    onChange={(e) =>
+                      updateQuestion(i, { type: e.target.value as EventQuestionType })
+                    }
+                    className="rounded-xl border border-border bg-bg-soft px-4 py-3 text-fg outline-none"
+                  >
+                    {QUESTION_TYPES.map((t) => (
+                      <option key={t.value} value={t.value}>
+                        {t.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <label className="mb-3 flex items-center gap-2 text-sm text-muted">
+                  <input
+                    type="checkbox"
+                    className="size-4 accent-brand-green"
+                    checked={q.required}
+                    onChange={(e) => updateQuestion(i, { required: e.target.checked })}
+                  />
+                  Обовʼязкове
+                </label>
+              </div>
+              {q.type === 'SINGLE_CHOICE' && (
+                <Input
+                  label="Варіанти (через кому)"
+                  placeholder="Так, Ні, Можливо"
+                  value={q.optionsText}
+                  onChange={(e) => updateQuestion(i, { optionsText: e.target.value })}
+                />
+              )}
+            </div>
+          ))}
+          {questionItems.length === 0 && (
+            <p className="text-sm text-subtle">
+              Базові поля (ПІБ, Telegram, група, дата народження) збираються завжди.
+              Додай свої питання за потреби.
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-border bg-bg-soft p-4">
+        <p className="mb-3 text-sm font-semibold text-muted">
+          Результати (необовʼязково)
+        </p>
+        <div className="grid grid-cols-2 gap-3">
+          <Input
+            label="Зібрано, ₴"
+            type="number"
+            min="0"
+            inputMode="numeric"
+            {...register('moneyCollected')}
+          />
+          <Input
+            label="На благодійність, ₴"
+            type="number"
+            min="0"
+            inputMode="numeric"
+            {...register('charityAmount')}
+          />
+          <Input
+            label="Відвідувачів"
+            type="number"
+            min="0"
+            inputMode="numeric"
+            {...register('visitorsAmount')}
+          />
+        </div>
+      </div>
+
+      {hasErrors && (
+        <p className="rounded-xl border border-brand-red/40 bg-brand-red/10 px-4 py-3 text-sm text-brand-red">
+          Перевір поля, виділені червоним, і спробуй ще раз.
+        </p>
+      )}
 
       <Button type="submit" disabled={submitting} className="mt-1">
         {submitting ? 'Збереження…' : submitLabel}

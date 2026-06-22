@@ -82,14 +82,55 @@ export interface Partner {
   isApproved: boolean;
 }
 
+export type EventQuestionType =
+  | 'SHORT_TEXT'
+  | 'LONG_TEXT'
+  | 'SINGLE_CHOICE'
+  | 'YES_NO';
+
+export interface EventQuestion {
+  id: string;
+  label: string;
+  type: EventQuestionType;
+  required: boolean;
+  options: string[];
+  order: number;
+}
+
+export interface EventProgramItem {
+  id: string;
+  time: string;
+  title: string;
+  order: number;
+}
+
+export interface EventPartner {
+  id: string;
+  name: string | null;
+  logoImage: string | null;
+  websiteLink: string | null;
+  partner?: Partner | null;
+}
+
 export interface EventItem {
   id: string;
   name: string;
   date: string;
   photoUrl: string | null;
+  description: string | null;
+  location: string | null;
+  locationNote: string | null;
+  timeNote: string | null;
+  registrationCloseDate: string | null;
+  photoAlbumUrl: string | null;
+  feeAmount: string | null;
+  feeAtEventAmount: string | null;
+  feeRequisites: string | null;
   detailsId: string | null;
   details?: EventDetails | null;
-  eventPartners?: { partner: Partner }[];
+  eventPartners?: EventPartner[];
+  program?: EventProgramItem[];
+  questions?: EventQuestion[];
 }
 
 export type FundraiserStatus = 'ACTIVE' | 'CLOSED';
@@ -122,6 +163,7 @@ export interface News {
   category: NewsCategory | null;
   eventDate: string | null;
   eventLocation: string | null;
+  registrationLink: string | null;
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -158,6 +200,18 @@ export interface CreateApplicationPayload {
   departments: { departmentId: string; question?: string }[];
 }
 
+export type RegistrationPayment = 'NONE' | 'DONATED' | 'AT_EVENT';
+
+export interface EventRegistrationPayload {
+  fullName: string;
+  telegramTag: string;
+  group: string;
+  birthDate?: string;
+  payment?: RegistrationPayment;
+  receiptUrl?: string;
+  answers?: { questionId: string; value: string }[];
+}
+
 export const fice = {
   facts: () => request<Facts>('/facts'),
   departments: () => request<Department[]>('/department'),
@@ -166,6 +220,22 @@ export const fice = {
   events: (limit = 6, page = 1) =>
     request<Paginated<EventItem>>(`/event?limit=${limit}&page=${page}`),
   event: (id: string) => request<EventItem>(`/event/${id}`),
+  registerEvent: (id: string, body: EventRegistrationPayload) =>
+    request<unknown>(`/event/${id}/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }),
+  uploadReceipt: async (file: File): Promise<{ url: string }> => {
+    const form = new FormData();
+    form.append('file', file);
+    const res = await fetch(`${apiBase()}/upload/public`, {
+      method: 'POST',
+      body: form,
+    });
+    if (!res.ok) throw new Error(`Upload failed ${res.status}`);
+    return res.json() as Promise<{ url: string }>;
+  },
   fundraisers: (limit = 6, page = 1) =>
     request<Paginated<Fundraiser>>(`/fundraiser?limit=${limit}&page=${page}`),
   partners: (limit = 12, page = 1) =>

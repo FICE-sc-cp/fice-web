@@ -27,6 +27,7 @@ services:
       # `postgres` is the service name on the compose network.
       DATABASE_URL: postgresql://postgres:postgres@postgres:5432/fice?schema=public
       PORT: 3001
+      TZ: Europe/Kyiv
       # Optional Telegram admin config — taken from your shell or a root .env if set.
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       MINI_APP_URL: ${MINI_APP_URL:-}
@@ -64,6 +65,7 @@ services:
     ports:
       - "3000:3000"
     environment:
+      TZ: Europe/Kyiv
       NEXT_PUBLIC_API_URL: http://localhost:3001
       # The /api-proxy rewrite runs inside this container, so it must reach the
       # backend via the compose service name — `localhost` would be the admin
@@ -81,6 +83,7 @@ services:
     ports:
       - "3002:3000"
     environment:
+      TZ: Europe/Kyiv
       # Public URL the browser uses (images, client-side calls).
       NEXT_PUBLIC_API_URL: http://localhost:3001
       # Internal URL for server-side (SSR/RSC) data fetches on the compose network.

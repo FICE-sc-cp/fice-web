@@ -117,13 +117,14 @@ export default async function NewsArticlePage({
                   value={item.eventLocation ?? 'Уточнюється'}
                 />
               </div>
-              {/* registration page is not built yet — placeholder target */}
-              <a
-                href="#"
-                className="inline-flex items-center justify-center gap-2.5 rounded-xl bg-gradient-main px-8 py-3.5 text-[17px] font-extrabold text-stone-950 transition-opacity hover:opacity-90"
-              >
-                Зареєструватися на захід →
-              </a>
+              {item.registrationLink && (
+                <a
+                  href={item.registrationLink}
+                  className="inline-flex items-center justify-center gap-2.5 rounded-xl bg-gradient-main px-8 py-3.5 text-[17px] font-extrabold text-stone-950 transition-opacity hover:opacity-90"
+                >
+                  Зареєструватися на захід →
+                </a>
+              )}
             </div>
           )}
 

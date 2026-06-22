@@ -7,183 +7,263 @@ datasource db {
 }
 
 model User {
-    id String @id @default(uuid()) @db.Uuid
-    telegramTag String @unique @db.VarChar(50)
+  id          String @id @default(uuid()) @db.Uuid
+  telegramTag String @unique @db.VarChar(50)
 }
 
 model StatOverride {
-    key       String   @id @db.VarChar(50)
-    value     Decimal  @db.Decimal(14, 2)
-    updatedAt DateTime @default(now()) @updatedAt
+  key       String   @id @db.VarChar(50)
+  value     Decimal  @db.Decimal(14, 2)
+  updatedAt DateTime @default(now()) @updatedAt
 }
 
 enum NewsCategory {
-    EVENTS
-    EDUCATION
-    PARTNERS
-    CHARITY
-    ACHIEVEMENTS
+  EVENTS
+  EDUCATION
+  PARTNERS
+  CHARITY
+  ACHIEVEMENTS
 }
 
 model News {
-    id String @id @default(uuid()) @db.Uuid
-    title String @db.VarChar(50)
-    publishDate DateTime @default(now())
-    details String? @db.Text
-    image String?
-    category NewsCategory?
+  id          String        @id @default(uuid()) @db.Uuid
+  title       String        @db.VarChar(50)
+  publishDate DateTime      @default(now())
+  details     String?       @db.Text
+  image       String?
+  category    NewsCategory?
 
-    // Optional event-announcement fields. When eventDate is set the news item is
-    // rendered as an event announcement with a registration call-to-action.
-    eventDate DateTime?
-    eventLocation String? @db.VarChar(100)
+  // Optional event-announcement fields. When eventDate is set the news item is
+  // rendered as an event announcement with a registration call-to-action.
+  eventDate        DateTime?
+  eventLocation    String?   @db.VarChar(100)
+  registrationLink String?
 }
 
 enum FundraiserStatus {
-    ACTIVE
-    CLOSED
+  ACTIVE
+  CLOSED
 }
+
 model Fundraiser {
-    id String @id @default(uuid()) @db.Uuid
-    name String @db.VarChar(30)
-    status FundraiserStatus 
-    description String @db.VarChar(255)
-    goalAmount Decimal @db.Decimal(10, 2)
-    currentAmount Decimal @db.Decimal(10, 2)
-    startDate DateTime 
-    endDate DateTime
-    detailsLink String?
+  id            String           @id @default(uuid()) @db.Uuid
+  name          String           @db.VarChar(30)
+  status        FundraiserStatus
+  description   String           @db.VarChar(255)
+  goalAmount    Decimal          @db.Decimal(10, 2)
+  currentAmount Decimal          @db.Decimal(10, 2)
+  startDate     DateTime
+  endDate       DateTime
+  detailsLink   String?
 }
 
-model DepartmentHead { 
-    id String @id @default(uuid()) @db.Uuid 
-    firstName String @db.VarChar(30)
-    lastName String @db.VarChar(30)
-    photo String?
-    jobDescription String? @db.VarChar(100)
-    telegramTag String @db.VarChar(50)
+model DepartmentHead {
+  id             String  @id @default(uuid()) @db.Uuid
+  firstName      String  @db.VarChar(30)
+  lastName       String  @db.VarChar(30)
+  photo          String?
+  jobDescription String? @db.VarChar(100)
+  telegramTag    String  @db.VarChar(50)
 
-    department Department?
+  department Department?
 }
 
 model DepartmentDetails {
-    id String @id @default(uuid()) @db.Uuid
-    about String @db.Text
-    detailedDescription String? @db.Text
-    exampleOfWork String? @db.Text
+  id                  String  @id @default(uuid()) @db.Uuid
+  about               String  @db.Text
+  detailedDescription String? @db.Text
+  exampleOfWork       String? @db.Text
 
-    department Department? 
+  department Department?
 }
 
 model Department {
-    id String @id @default(uuid()) @db.Uuid
-    name String @db.VarChar(50)
-    shortDescription String @db.VarChar(100)
+  id               String @id @default(uuid()) @db.Uuid
+  name             String @db.VarChar(50)
+  shortDescription String @db.VarChar(100)
 
-    headId String? @unique @db.Uuid
-    head DepartmentHead? @relation(fields: [headId], references: [id], onDelete: SetNull)
+  headId String?         @unique @db.Uuid
+  head   DepartmentHead? @relation(fields: [headId], references: [id], onDelete: SetNull)
 
-    detailsId String? @unique @db.Uuid
-    details DepartmentDetails? @relation(fields: [detailsId], references: [id], onDelete: SetNull)
+  detailsId String?            @unique @db.Uuid
+  details   DepartmentDetails? @relation(fields: [detailsId], references: [id], onDelete: SetNull)
 
-    applicantDepartments ApplicantDepartment[]
-    departmentMemberAssignments DepartmentMemberAssignment[]
-    eventDetails EventDetails[]
+  applicantDepartments        ApplicantDepartment[]
+  departmentMemberAssignments DepartmentMemberAssignment[]
+  eventDetails                EventDetails[]
 }
 
 enum DepartmentMemberRole {
-    DEPUTY
-    HR
-    HEAD
-    MEMBER
-    FIRST_DEPUTY
-    SECRETARY
+  DEPUTY
+  HR
+  HEAD
+  MEMBER
+  FIRST_DEPUTY
+  SECRETARY
 }
-model DepartmentMember {
-    id String @id @default(uuid()) @db.Uuid
-    role DepartmentMemberRole
-    firstName String @db.VarChar(30)
-    lastName String @db.VarChar(30)
-    specialization String? @db.VarChar(100)
 
-    assignments DepartmentMemberAssignment[] 
+model DepartmentMember {
+  id             String               @id @default(uuid()) @db.Uuid
+  role           DepartmentMemberRole
+  firstName      String               @db.VarChar(30)
+  lastName       String               @db.VarChar(30)
+  specialization String?              @db.VarChar(100)
+
+  assignments DepartmentMemberAssignment[]
 }
 
 model DepartmentMemberAssignment {
-    id String @id @default(uuid()) @db.Uuid
-    departmentId String @db.Uuid
-    memberId String @db.Uuid
+  id           String @id @default(uuid()) @db.Uuid
+  departmentId String @db.Uuid
+  memberId     String @db.Uuid
 
-    department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
-    member DepartmentMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  department Department       @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  member     DepartmentMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
 }
 
 model Applicant {
-    id String @id @default(uuid()) @db.Uuid
-    firstName String @db.VarChar(30)
-    middleName String @db.VarChar(30)
-    lastName String @db.VarChar(30)
-    telegramTag String @db.VarChar(50)
-    group String @db.VarChar(5)
-    phoneNumber String @db.VarChar(20)
-    motivation String? @db.Text
-    experience String? @db.Text
-    createdAt DateTime @default(now())
+  id          String   @id @default(uuid()) @db.Uuid
+  firstName   String   @db.VarChar(30)
+  middleName  String   @db.VarChar(30)
+  lastName    String   @db.VarChar(30)
+  telegramTag String   @db.VarChar(50)
+  group       String   @db.VarChar(5)
+  phoneNumber String   @db.VarChar(20)
+  motivation  String?  @db.Text
+  experience  String?  @db.Text
+  createdAt   DateTime @default(now())
 
-    applicantDepartments ApplicantDepartment[]
+  applicantDepartments ApplicantDepartment[]
 }
 
 model ApplicantDepartment {
-    id String @id @default(uuid()) @db.Uuid
-    applicantId String @db.Uuid
-    departmentId String @db.Uuid
-    question String? @db.Text
+  id           String  @id @default(uuid()) @db.Uuid
+  applicantId  String  @db.Uuid
+  departmentId String  @db.Uuid
+  question     String? @db.Text
 
-    applicant Applicant @relation(fields: [applicantId], references: [id], onDelete: Cascade)
-    department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  applicant  Applicant  @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
 }
 
 model EventDetails {
-    id String @id @default(uuid()) @db.Uuid
-    description String @db.VarChar(255)
-    moneyCollected Decimal @db.Decimal(10, 2)
-    charityAmount Decimal @db.Decimal(10, 2)
-    visitorsAmount Int?
+  id             String  @id @default(uuid()) @db.Uuid
+  description    String  @db.VarChar(255)
+  moneyCollected Decimal @db.Decimal(10, 2)
+  charityAmount  Decimal @db.Decimal(10, 2)
+  visitorsAmount Int?
 
-    departmentId String? @db.Uuid
-    department Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  departmentId String?     @db.Uuid
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: SetNull)
 
-    event Event?
+  event Event?
 }
 
 model Event {
-    id String @id @default(uuid()) @db.Uuid
-    name String @db.VarChar(50)
-    date DateTime
-    photoUrl String?
+  id       String   @id @default(uuid()) @db.Uuid
+  name     String   @db.VarChar(50)
+  date     DateTime
+  photoUrl String?
 
-    detailsId String? @unique @db.Uuid
-    details EventDetails? @relation(fields: [detailsId], references: [id], onDelete: SetNull)
+  description           String?   @db.Text
+  location              String?   @db.VarChar(120)
+  locationNote          String?   @db.Text
+  timeNote              String?   @db.VarChar(120)
+  registrationCloseDate DateTime?
+  photoAlbumUrl         String?
+  feeAmount             Decimal?  @db.Decimal(10, 2)
+  feeAtEventAmount      Decimal?  @db.Decimal(10, 2)
+  feeRequisites         String?   @db.VarChar(255)
 
-    eventPartners EventPartner[]
+  detailsId String?       @unique @db.Uuid
+  details   EventDetails? @relation(fields: [detailsId], references: [id], onDelete: SetNull)
+
+  eventPartners EventPartner[]
+  program       EventProgramItem[]
+  questions     EventQuestion[]
+  registrations EventRegistration[]
+}
+
+model EventProgramItem {
+  id      String @id @default(uuid()) @db.Uuid
+  eventId String @db.Uuid
+  time    String @db.VarChar(20)
+  title   String @db.VarChar(120)
+  order   Int    @default(0)
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+enum EventQuestionType {
+  SHORT_TEXT
+  LONG_TEXT
+  SINGLE_CHOICE
+  YES_NO
+}
+
+model EventQuestion {
+  id       String            @id @default(uuid()) @db.Uuid
+  eventId  String            @db.Uuid
+  label    String            @db.VarChar(200)
+  type     EventQuestionType @default(SHORT_TEXT)
+  required Boolean           @default(false)
+  options  String[]
+  order    Int               @default(0)
+
+  event   Event                     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  answers EventRegistrationAnswer[]
+}
+
+enum RegistrationPayment {
+  NONE
+  DONATED
+  AT_EVENT
+}
+
+model EventRegistration {
+  id          String              @id @default(uuid()) @db.Uuid
+  eventId     String              @db.Uuid
+  fullName    String              @db.VarChar(100)
+  telegramTag String              @db.VarChar(50)
+  group       String              @db.VarChar(10)
+  birthDate   DateTime?
+  payment     RegistrationPayment @default(NONE)
+  receiptUrl  String?
+  createdAt   DateTime            @default(now())
+
+  event   Event                     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  answers EventRegistrationAnswer[]
+}
+
+model EventRegistrationAnswer {
+  id             String @id @default(uuid()) @db.Uuid
+  registrationId String @db.Uuid
+  questionId     String @db.Uuid
+  value          String @db.Text
+
+  registration EventRegistration @relation(fields: [registrationId], references: [id], onDelete: Cascade)
+  question     EventQuestion     @relation(fields: [questionId], references: [id], onDelete: Cascade)
 }
 
 model Partner {
-    id String @id @default(uuid()) @db.Uuid
-    name String @db.VarChar(30)
-    logoImage String?
-    websiteLink String?
-    shortDescription String? @db.VarChar(150)
-    isApproved Boolean @default(false)
+  id               String  @id @default(uuid()) @db.Uuid
+  name             String  @db.VarChar(30)
+  logoImage        String?
+  websiteLink      String?
+  shortDescription String? @db.VarChar(150)
+  isApproved       Boolean @default(false)
 
-    eventPartners EventPartner[]
+  eventPartners EventPartner[]
 }
 
 model EventPartner {
-    id  String @id @default(uuid()) @db.Uuid
-    partnerId String @db.Uuid
-    eventId String @db.Uuid
+  id          String  @id @default(uuid()) @db.Uuid
+  partnerId   String? @db.Uuid
+  eventId     String  @db.Uuid
+  name        String? @db.VarChar(60)
+  logoImage   String?
+  websiteLink String?
 
-    partner Partner @relation(fields: [partnerId], references: [id], onDelete: Cascade)
-    event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  partner Partner? @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  event   Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
 }
