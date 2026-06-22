@@ -17,12 +17,11 @@ export default function NewDepartmentPage() {
   const mutation = useMutation({
     mutationFn: async (v: DepartmentFormValues) => {
       let headId: string | undefined;
-      if (v.headFirstName && v.headLastName && v.headTelegramTag) {
+      if (v.headFirstName && v.headLastName) {
         const head = await api.createDepartmentHead({
           firstName: v.headFirstName,
           lastName: v.headLastName,
-          telegramTag: v.headTelegramTag,
-          jobDescription: v.headJob || undefined,
+          telegramTag: v.headTelegramTag?.trim() ? v.headTelegramTag.trim() : undefined,
           photo: v.headPhoto || undefined,
         });
         headId = head.id;

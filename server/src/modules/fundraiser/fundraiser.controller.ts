@@ -22,7 +22,9 @@ import { ApiPaginatedResponse } from '../../common/dto/paginated.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { CreateFundraiserDto } from './dto/create-fundraiser.dto';
 import { UpdateFundraiserDto } from './dto/update-fundraiser.dto';
+import { CreateDonationDto } from './dto/create-donation.dto';
 import { FundraiserEntity } from './entities/fundraiser.entity';
+import { DonationEntity } from './entities/donation.entity';
 import { FundraiserService } from './fundraiser.service';
 
 @ApiTags('fundraisers')
@@ -54,10 +56,38 @@ export class FundraiserController {
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get a fundraiser by id' })
+  @ApiOperation({ summary: 'Get a fundraiser by id (with recent donations)' })
   @ApiOkResponse({ type: FundraiserEntity })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.fundraiserService.findOne(id);
+  }
+
+  @Get(':id/donations')
+  @ApiOperation({ summary: 'List recent donations for a fundraiser' })
+  @ApiOkResponse({ type: [DonationEntity] })
+  donations(@Param('id', ParseUUIDPipe) id: string) {
+    return this.fundraiserService.listDonations(id);
+  }
+
+  @Post(':id/donations')
+  @Admin()
+  @ApiOperation({ summary: 'Add a donation; bumps progress + counter (admin)' })
+  @ApiCreatedResponse({ type: DonationEntity })
+  addDonation(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CreateDonationDto,
+  ) {
+    return this.fundraiserService.addDonation(id, dto);
+  }
+
+  @Delete(':id/donations/:donationId')
+  @Admin()
+  @ApiOperation({ summary: 'Remove a donation; reverts progress + counter (admin)' })
+  removeDonation(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('donationId', ParseUUIDPipe) donationId: string,
+  ) {
+    return this.fundraiserService.removeDonation(id, donationId);
   }
 
   @Patch(':id')

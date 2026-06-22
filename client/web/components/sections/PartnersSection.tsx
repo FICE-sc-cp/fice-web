@@ -2,25 +2,32 @@ import Image from "next/image";
 import { Container } from "@/components/ui/Container";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Glow } from "@/components/ui/Glow";
+import { EMPTY_FACTS, fice, safe, type Facts } from "@/lib/api";
 
 const LOGO_ROWS = [4, 3, 4];
 
-const STATS: { value: string; label: string; gradient: string }[] = [
+const STAT_DEFS: { key: keyof Facts; label: string; gradient: string }[] = [
   {
-    value: "1000+",
+    key: "activeStudents",
     label: "Активних студентів",
     gradient: "bg-gradient-magenta",
   },
-  { value: "15+", label: "Діючих партнерів", gradient: "bg-gradient-green" },
-  { value: "20+", label: "Заходів щороку", gradient: "bg-gradient-blue" },
   {
-    value: "NULL",
-    label: "Придумати щось",
+    key: "activePartners",
+    label: "Діючих партнерів",
+    gradient: "bg-gradient-green",
+  },
+  { key: "eventsPerYear", label: "Заходів щороку", gradient: "bg-gradient-blue" },
+  {
+    key: "projectsDone",
+    label: "Реалізованих проєктів",
     gradient: "bg-gradient-orange",
   },
 ];
 
-export function PartnersSection() {
+export async function PartnersSection() {
+  const facts = await safe(fice.facts(), EMPTY_FACTS);
+
   return (
     <section
       id="partners"
@@ -76,7 +83,7 @@ export function PartnersSection() {
               </div>
 
               <div className="grid flex-1 grid-cols-1 gap-4 sm:grid-cols-2">
-                {STATS.map((stat) => (
+                {STAT_DEFS.map((stat) => (
                   <div
                     key={stat.label}
                     className={`rounded-lg p-px ${stat.gradient}`}
@@ -85,7 +92,7 @@ export function PartnersSection() {
                       <span
                         className={`bg-clip-text text-4xl font-bold text-transparent ${stat.gradient}`}
                       >
-                        {stat.value}
+                        {facts[stat.key]}+
                       </span>
                       <span className="text-xl font-medium text-stone-300">
                         {stat.label}

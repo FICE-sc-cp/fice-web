@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { FundraiserStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 
 export const STAT_KEYS = [
@@ -10,9 +10,23 @@ export const STAT_KEYS = [
   'partnersCount',
   'departmentsCount',
   'membersCount',
+  'closedFundraisers',
+  'activeStudents',
+  'activePartners',
+  'eventsPerYear',
+  'projectsDone',
 ] as const;
 
 export type StatKey = (typeof STAT_KEYS)[number];
+
+// Marketing stats with no automatic source — shown as defaults until
+// overridden from the admin "Факти" page.
+const MANUAL_DEFAULTS: Record<string, number> = {
+  activeStudents: 1000,
+  activePartners: 15,
+  eventsPerYear: 20,
+  projectsDone: 50,
+};
 
 @Injectable()
 export class FactsService {
@@ -25,6 +39,7 @@ export class FactsService {
       partnersCount,
       departmentsCount,
       membersCount,
+      closedFundraisers,
     ] = await this.prisma.$transaction([
       this.prisma.event.count(),
       this.prisma.eventDetails.aggregate({
@@ -37,6 +52,7 @@ export class FactsService {
       this.prisma.partner.count({ where: { isApproved: true } }),
       this.prisma.department.count(),
       this.prisma.departmentMember.count(),
+      this.prisma.fundraiser.count({ where: { status: FundraiserStatus.CLOSED } }),
     ]);
 
     return {
@@ -47,6 +63,11 @@ export class FactsService {
       partnersCount,
       departmentsCount,
       membersCount,
+      closedFundraisers,
+      activeStudents: MANUAL_DEFAULTS.activeStudents,
+      activePartners: MANUAL_DEFAULTS.activePartners,
+      eventsPerYear: MANUAL_DEFAULTS.eventsPerYear,
+      projectsDone: MANUAL_DEFAULTS.projectsDone,
     };
   }
 

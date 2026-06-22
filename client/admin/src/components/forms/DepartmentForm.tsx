@@ -15,7 +15,6 @@ const schema = z.object({
   headFirstName: z.string().max(30).optional(),
   headLastName: z.string().max(30).optional(),
   headTelegramTag: z.string().max(50).optional(),
-  headJob: z.string().max(100).optional(),
   headPhoto: z.string().nullable().optional(),
   about: z.string().optional(),
   detailedDescription: z.string().optional(),
@@ -49,7 +48,6 @@ export function DepartmentForm({
       headFirstName: '',
       headLastName: '',
       headTelegramTag: '',
-      headJob: '',
       headPhoto: null,
       about: '',
       detailedDescription: '',
@@ -79,11 +77,10 @@ export function DepartmentForm({
             <Input label="Прізвище" {...register('headLastName')} />
           </div>
           <Input
-            label="Telegram"
+            label="Telegram (необовʼязково)"
             placeholder="@username"
             {...register('headTelegramTag')}
           />
-          <Input label="Посада" {...register('headJob')} />
           <ImageUpload
             label="Фото"
             value={photo}

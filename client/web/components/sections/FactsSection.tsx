@@ -15,32 +15,40 @@ import {
   MapPinIcon,
   type IconComponent,
 } from "@/components/ui/icons";
+import { EMPTY_FACTS, fice, safe, type Facts } from "@/lib/api";
 
-const STATS: {
-  value: string;
+const fmt = (n: number) => n.toLocaleString("uk-UA");
+
+const STAT_DEFS: {
+  key: keyof Facts;
   label: string;
   accent: Accent;
   Icon: IconComponent;
 }[] = [
   {
-    value: "656 432",
+    key: "charityRaised",
     label: "зібрано на благодійність",
     accent: "magenta",
     Icon: MoneyBagIcon,
   },
   {
-    value: "178",
+    key: "membersCount",
     label: "активних учасників",
     accent: "cyan",
     Icon: PeopleIcon,
   },
   {
-    value: "43",
+    key: "eventsHeld",
     label: "проведених заходів",
     accent: "orange",
     Icon: CheckDoneIcon,
   },
-  { value: "5", label: "закритих зборів", accent: "green", Icon: JarIcon },
+  {
+    key: "closedFundraisers",
+    label: "закритих зборів",
+    accent: "green",
+    Icon: JarIcon,
+  },
 ];
 
 const PINS = [
@@ -59,7 +67,9 @@ const PINS = [
   { left: "40%", top: "80.5%" },
 ];
 
-export function FactsSection() {
+export async function FactsSection() {
+  const facts = await safe(fice.facts(), EMPTY_FACTS);
+
   return (
     <section
       id="facts"
@@ -81,9 +91,9 @@ export function FactsSection() {
         </div>
 
         <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
-          {STATS.map(({ value, label, accent, Icon }) => (
+          {STAT_DEFS.map(({ key, label, accent, Icon }) => (
             <AccentCard
-              key={label}
+              key={key}
               accent={accent}
               className="flex flex-col gap-6"
             >
@@ -95,7 +105,9 @@ export function FactsSection() {
                   <Icon gradient={accentGradient[accent]} />
                 </span>
               </div>
-              <span className="text-4xl font-bold lg:text-5xl">{value}</span>
+              <span className="text-4xl font-bold lg:text-5xl">
+                {fmt(facts[key])}
+              </span>
             </AccentCard>
           ))}
         </div>

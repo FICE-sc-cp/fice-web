@@ -4,5 +4,5 @@ export class DepartmentHeadEntity {
   lastName: string;
   photo: string | null;
   jobDescription: string | null;
-  telegramTag: string;
+  telegramTag: string | null;
 }

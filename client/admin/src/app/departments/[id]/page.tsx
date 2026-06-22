@@ -24,12 +24,11 @@ export default function EditDepartmentPage() {
   const mutation = useMutation({
     mutationFn: async (v: DepartmentFormValues) => {
       let headId = dep?.headId ?? undefined;
-      if (v.headFirstName && v.headLastName && v.headTelegramTag) {
+      if (v.headFirstName && v.headLastName) {
         const body = {
           firstName: v.headFirstName,
           lastName: v.headLastName,
-          telegramTag: v.headTelegramTag,
-          jobDescription: v.headJob || undefined,
+          telegramTag: v.headTelegramTag?.trim() ? v.headTelegramTag.trim() : undefined,
           photo: v.headPhoto || undefined,
         };
         if (dep?.headId) {
@@ -96,7 +95,6 @@ export default function EditDepartmentPage() {
                     headFirstName: dep.head?.firstName ?? '',
                     headLastName: dep.head?.lastName ?? '',
                     headTelegramTag: dep.head?.telegramTag ?? '',
-                    headJob: dep.head?.jobDescription ?? '',
                     headPhoto: dep.head?.photo ?? null,
                     about: dep.details?.about ?? '',
                     detailedDescription: dep.details?.detailedDescription ?? '',

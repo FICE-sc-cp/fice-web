@@ -47,14 +47,38 @@ enum FundraiserStatus {
 
 model Fundraiser {
   id            String           @id @default(uuid()) @db.Uuid
-  name          String           @db.VarChar(30)
+  name          String           @db.VarChar(120)
   status        FundraiserStatus
   description   String           @db.VarChar(255)
+  story         String?          @db.Text
+  imageUrl      String?
+  location      String?          @db.VarChar(100)
   goalAmount    Decimal          @db.Decimal(10, 2)
   currentAmount Decimal          @db.Decimal(10, 2)
+  donationsCount Int             @default(0)
+  cardNumber    String?          @db.VarChar(25)
+  jarUrl        String?
+  monoJarId     String?          @db.VarChar(40)
   startDate     DateTime
   endDate       DateTime
   detailsLink   String?
+
+  donations Donation[]
+}
+
+model Donation {
+  id           String   @id @default(uuid()) @db.Uuid
+  fundraiserId String   @db.Uuid
+  name         String?  @db.VarChar(60)
+  amount       Decimal  @db.Decimal(10, 2)
+  comment      String?  @db.VarChar(160)
+  createdAt    DateTime @default(now())
+  externalId   String?  @db.VarChar(64)
+
+  fundraiser Fundraiser @relation(fields: [fundraiserId], references: [id], onDelete: Cascade)
+
+  @@unique([fundraiserId, externalId])
+  @@index([fundraiserId, createdAt])
 }
 
 model DepartmentHead {
@@ -63,7 +87,7 @@ model DepartmentHead {
   lastName       String  @db.VarChar(30)
   photo          String?
   jobDescription String? @db.VarChar(100)
-  telegramTag    String  @db.VarChar(50)
+  telegramTag    String? @db.VarChar(50)
 
   department Department?
 }
@@ -108,6 +132,9 @@ model DepartmentMember {
   firstName      String               @db.VarChar(30)
   lastName       String               @db.VarChar(30)
   specialization String?              @db.VarChar(100)
+  photo          String?
+  telegramTag    String?              @db.VarChar(50)
+  quote          String?              @db.VarChar(160)
 
   assignments DepartmentMemberAssignment[]
 }

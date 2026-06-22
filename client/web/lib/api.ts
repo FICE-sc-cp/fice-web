@@ -27,7 +27,27 @@ export interface Facts {
   partnersCount: number;
   departmentsCount: number;
   membersCount: number;
+  closedFundraisers: number;
+  activeStudents: number;
+  activePartners: number;
+  eventsPerYear: number;
+  projectsDone: number;
 }
+
+export const EMPTY_FACTS: Facts = {
+  eventsHeld: 0,
+  moneyRaised: 0,
+  charityRaised: 0,
+  visitorsReached: 0,
+  partnersCount: 0,
+  departmentsCount: 0,
+  membersCount: 0,
+  closedFundraisers: 0,
+  activeStudents: 0,
+  activePartners: 0,
+  eventsPerYear: 0,
+  projectsDone: 0,
+};
 
 export interface DepartmentHead {
   id: string;
@@ -35,7 +55,7 @@ export interface DepartmentHead {
   lastName: string;
   photo: string | null;
   jobDescription: string | null;
-  telegramTag: string;
+  telegramTag: string | null;
 }
 
 export interface DepartmentDetails {
@@ -55,13 +75,23 @@ export interface Department {
   details?: DepartmentDetails | null;
 }
 
-export type DepartmentMemberRole = 'DEPUTY' | 'HR' | 'HEAD' | 'MEMBER';
+export type DepartmentMemberRole =
+  | 'HEAD'
+  | 'FIRST_DEPUTY'
+  | 'SECRETARY'
+  | 'DEPUTY'
+  | 'HR'
+  | 'MEMBER';
 
 export interface DepartmentMember {
   id: string;
   role: DepartmentMemberRole;
   firstName: string;
   lastName: string;
+  specialization: string | null;
+  photo: string | null;
+  telegramTag: string | null;
+  quote: string | null;
 }
 
 export interface EventDetails {
@@ -135,16 +165,33 @@ export interface EventItem {
 
 export type FundraiserStatus = 'ACTIVE' | 'CLOSED';
 
+export interface Donation {
+  id: string;
+  fundraiserId: string;
+  name: string | null;
+  amount: string;
+  comment: string | null;
+  createdAt: string;
+}
+
 export interface Fundraiser {
   id: string;
   name: string;
   status: FundraiserStatus;
   description: string;
+  story: string | null;
+  imageUrl: string | null;
+  location: string | null;
   goalAmount: string;
   currentAmount: string;
+  donationsCount: number;
+  cardNumber: string | null;
+  jarUrl: string | null;
+  monoJarId: string | null;
   startDate: string;
   endDate: string;
   detailsLink: string | null;
+  donations?: Donation[];
 }
 
 export type NewsCategory =
@@ -238,6 +285,9 @@ export const fice = {
   },
   fundraisers: (limit = 6, page = 1) =>
     request<Paginated<Fundraiser>>(`/fundraiser?limit=${limit}&page=${page}`),
+  fundraiser: (id: string) => request<Fundraiser>(`/fundraiser/${id}`),
+  fundraiserDonations: (id: string) =>
+    request<Donation[]>(`/fundraiser/${id}/donations`),
   partners: (limit = 12, page = 1) =>
     request<Paginated<Partner>>(`/partner?limit=${limit}&page=${page}`),
   news: (limit = 6, page = 1) =>

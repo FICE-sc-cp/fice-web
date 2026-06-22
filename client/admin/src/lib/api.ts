@@ -26,6 +26,11 @@ export interface Facts {
   partnersCount: number;
   departmentsCount: number;
   membersCount: number;
+  closedFundraisers: number;
+  activeStudents: number;
+  activePartners: number;
+  eventsPerYear: number;
+  projectsDone: number;
 }
 
 export interface StatOverride {
@@ -40,7 +45,7 @@ export interface DepartmentHead {
   lastName: string;
   photo: string | null;
   jobDescription: string | null;
-  telegramTag: string;
+  telegramTag: string | null;
 }
 
 export interface DepartmentDetails {
@@ -64,7 +69,8 @@ export type DepartmentMemberRole =
   | 'HEAD'
   | 'FIRST_DEPUTY'
   | 'SECRETARY'
-  | 'DEPUTY';
+  | 'DEPUTY'
+  | 'HR';
 
 export interface DepartmentMember {
   id: string;
@@ -72,6 +78,9 @@ export interface DepartmentMember {
   firstName: string;
   lastName: string;
   specialization: string | null;
+  photo: string | null;
+  telegramTag: string | null;
+  quote: string | null;
   assignments?: { id: string; department: Department }[];
 }
 
@@ -160,16 +169,33 @@ export interface EventRegistration {
 
 export type FundraiserStatus = 'ACTIVE' | 'CLOSED';
 
+export interface Donation {
+  id: string;
+  fundraiserId: string;
+  name: string | null;
+  amount: string;
+  comment: string | null;
+  createdAt: string;
+}
+
 export interface Fundraiser {
   id: string;
   name: string;
   status: FundraiserStatus;
   description: string;
+  story: string | null;
+  imageUrl: string | null;
+  location: string | null;
   goalAmount: string;
   currentAmount: string;
+  donationsCount: number;
+  cardNumber: string | null;
+  jarUrl: string | null;
+  monoJarId: string | null;
   startDate: string;
   endDate: string;
   detailsLink: string | null;
+  donations?: Donation[];
 }
 
 export type NewsCategory =
@@ -297,11 +323,25 @@ export interface FundraiserInput {
   name: string;
   status?: FundraiserStatus;
   description: string;
+  story?: string;
+  imageUrl?: string;
+  location?: string;
   goalAmount: number;
   currentAmount?: number;
+  donationsCount?: number;
+  cardNumber?: string;
+  jarUrl?: string;
+  monoJarId?: string;
   startDate: string;
   endDate: string;
   detailsLink?: string;
+}
+
+export interface DonationInput {
+  name?: string;
+  amount: number;
+  comment?: string;
+  createdAt?: string;
 }
 
 export interface DepartmentInput {
@@ -316,7 +356,7 @@ export interface DepartmentHeadInput {
   lastName: string;
   photo?: string;
   jobDescription?: string;
-  telegramTag: string;
+  telegramTag?: string;
 }
 
 export interface DepartmentDetailsInput {
@@ -330,6 +370,9 @@ export interface DepartmentMemberInput {
   firstName: string;
   lastName: string;
   specialization?: string;
+  photo?: string;
+  telegramTag?: string;
+  quote?: string;
 }
 
 export const api = {
@@ -392,12 +435,19 @@ export const api = {
 
   fundraisers: (page = 1, limit = 50) =>
     request<Paginated<Fundraiser>>(`/fundraiser?page=${page}&limit=${limit}`),
+  fundraiser: (id: string) => request<Fundraiser>(`/fundraiser/${id}`),
   createFundraiser: (body: FundraiserInput) =>
     request<Fundraiser>('/fundraiser', { method: 'POST', ...json(body) }),
   updateFundraiser: (id: string, body: Partial<FundraiserInput>) =>
     request<Fundraiser>(`/fundraiser/${id}`, { method: 'PATCH', ...json(body) }),
   deleteFundraiser: (id: string) =>
     request<Fundraiser>(`/fundraiser/${id}`, { method: 'DELETE' }),
+  fundraiserDonations: (id: string) =>
+    request<Donation[]>(`/fundraiser/${id}/donations`),
+  addDonation: (id: string, body: DonationInput) =>
+    request<Donation>(`/fundraiser/${id}/donations`, { method: 'POST', ...json(body) }),
+  removeDonation: (id: string, donationId: string) =>
+    request<unknown>(`/fundraiser/${id}/donations/${donationId}`, { method: 'DELETE' }),
 
   departments: () => request<Department[]>('/department'),
   department: (id: string) => request<Department>(`/department/${id}`),

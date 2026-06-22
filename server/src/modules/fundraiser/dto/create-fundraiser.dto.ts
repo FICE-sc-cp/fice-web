@@ -4,6 +4,7 @@ import { Type } from 'class-transformer';
 import {
   IsDate,
   IsEnum,
+  IsInt,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -14,10 +15,10 @@ import {
 } from 'class-validator';
 
 export class CreateFundraiserDto {
-  @ApiProperty({ maxLength: 30, example: 'Help the shelter' })
+  @ApiProperty({ maxLength: 120, example: 'Пікап для евакуаційної групи 47-ї бригади' })
   @IsString()
   @IsNotEmpty()
-  @MaxLength(30)
+  @MaxLength(120)
   name: string;
 
   @ApiPropertyOptional({
@@ -28,13 +29,29 @@ export class CreateFundraiserDto {
   @IsEnum(FundraiserStatus)
   status?: FundraiserStatus;
 
-  @ApiProperty({ maxLength: 255 })
+  @ApiProperty({ maxLength: 255, description: 'Short lead shown under the title' })
   @IsString()
   @IsNotEmpty()
   @MaxLength(255)
   description: string;
 
-  @ApiProperty({ example: 10000, description: 'Target amount' })
+  @ApiPropertyOptional({ description: 'Full "About the fundraiser" body' })
+  @IsOptional()
+  @IsString()
+  story?: string;
+
+  @ApiPropertyOptional({ description: 'Hero image URL' })
+  @IsOptional()
+  @IsString()
+  imageUrl?: string;
+
+  @ApiPropertyOptional({ maxLength: 100, example: 'Запорізький напрямок' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  location?: string;
+
+  @ApiProperty({ example: 480000, description: 'Target amount' })
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   goalAmount: number;
@@ -48,6 +65,32 @@ export class CreateFundraiserDto {
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   currentAmount?: number;
+
+  @ApiPropertyOptional({ example: 0, default: 0, description: 'Number of donations' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  donationsCount?: number;
+
+  @ApiPropertyOptional({ maxLength: 25, example: '5375 4141 0000 1234' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(25)
+  cardNumber?: string;
+
+  @ApiPropertyOptional({ description: 'Monobank jar link', example: 'https://send.monobank.ua/jar/…' })
+  @IsOptional()
+  @IsUrl()
+  jarUrl?: string;
+
+  @ApiPropertyOptional({
+    maxLength: 40,
+    description: 'Monobank jar account id, enables automatic balance sync',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  monoJarId?: string;
 
   @ApiProperty({ type: String, format: 'date-time' })
   @Type(() => Date)

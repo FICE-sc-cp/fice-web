@@ -6,22 +6,27 @@ import { z } from 'zod';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
+import { ImageUpload } from '../ImageUpload';
 import { useMainButton } from '@/lib/telegram';
 
 const schema = z.object({
-  role: z.enum(['HEAD', 'FIRST_DEPUTY', 'SECRETARY', 'DEPUTY']),
+  role: z.enum(['HEAD', 'FIRST_DEPUTY', 'SECRETARY', 'DEPUTY', 'HR']),
   firstName: z.string().min(1, 'Вкажи імʼя').max(30),
   lastName: z.string().min(1, 'Вкажи прізвище').max(30),
   specialization: z.string().max(100).optional(),
+  photo: z.string().nullable().optional(),
+  telegramTag: z.string().max(50).optional(),
+  quote: z.string().max(160).optional(),
 });
 
 export type MemberFormValues = z.infer<typeof schema>;
 
 export const ROLE_OPTIONS = [
-  { value: 'HEAD', label: 'Голова' },
+  { value: 'HEAD', label: 'Голова студради' },
   { value: 'FIRST_DEPUTY', label: 'Перший заступник' },
   { value: 'SECRETARY', label: 'Секретар' },
   { value: 'DEPUTY', label: 'Заступник' },
+  { value: 'HR', label: 'HR' },
 ];
 
 export function MemberForm({
@@ -38,6 +43,8 @@ export function MemberForm({
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<MemberFormValues>({
     resolver: zodResolver(schema),
@@ -46,10 +53,14 @@ export function MemberForm({
       firstName: '',
       lastName: '',
       specialization: '',
+      photo: null,
+      telegramTag: '',
+      quote: '',
       ...defaultValues,
     },
   });
 
+  const photo = watch('photo');
   const submit = handleSubmit(onSubmit);
   useMainButton({ text: submitLabel, onClick: () => void submit(), loading: submitting });
 
@@ -64,10 +75,27 @@ export function MemberForm({
           error={errors.lastName?.message}
         />
       </div>
+      <ImageUpload
+        label="Фото"
+        value={photo}
+        onChange={(url) => setValue('photo', url, { shouldDirty: true })}
+      />
+      <Input
+        label="Telegram-тег"
+        placeholder="@username"
+        {...register('telegramTag')}
+        error={errors.telegramTag?.message}
+      />
       <Input
         label="Напрям / спеціалізація"
         placeholder="напр. технічний напрям (для заступників)"
         {...register('specialization')}
+      />
+      <Input
+        label="Цитата / девіз (необовʼязково)"
+        placeholder="Один короткий рядок про себе"
+        {...register('quote')}
+        error={errors.quote?.message}
       />
       <Button type="submit" disabled={submitting} className="mt-1">
         {submitting ? 'Збереження…' : submitLabel}

@@ -25,9 +25,9 @@ export class CreateDepartmentHeadDto {
   @MaxLength(100)
   jobDescription?: string;
 
-  @ApiProperty({ maxLength: 50, example: '@head_tag' })
+  @ApiPropertyOptional({ maxLength: 50, example: '@head_tag' })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
   @MaxLength(50)
-  telegramTag: string;
+  telegramTag?: string;
 }

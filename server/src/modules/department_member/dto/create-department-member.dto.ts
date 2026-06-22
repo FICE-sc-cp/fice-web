@@ -33,4 +33,21 @@ export class CreateDepartmentMemberDto {
   @IsString()
   @MaxLength(100)
   specialization?: string;
+
+  @ApiPropertyOptional({ description: 'URL фото учасника' })
+  @IsOptional()
+  @IsString()
+  photo?: string;
+
+  @ApiPropertyOptional({ maxLength: 50, description: 'Telegram-тег' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  telegramTag?: string;
+
+  @ApiPropertyOptional({ maxLength: 160, description: 'Коротка цитата/девіз' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(160)
+  quote?: string;
 }

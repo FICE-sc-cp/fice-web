@@ -8,8 +8,9 @@ import { Container } from "@/components/ui/Container";
 import { MenuIcon, CloseIcon } from "@/components/ui/icons";
 
 const NAV = [
+  { label: 'Головна', href: '/' },
   { label: 'Команда', href: '/team' },
-  { label: 'Благодійність', href: '/#charity' },
+  { label: 'Благодійність', href: '/charity' },
   { label: 'Заходи', href: '/events' },
   { label: 'Новини', href: '/news' },
 ];
@@ -54,7 +55,7 @@ export function Header() {
 
           <Link
             href={ctaHref}
-            className="hidden shrink-0 rounded-lg bg-stone-950 px-4 py-2 text-sm font-bold text-white transition-opacity hover:opacity-80 sm:inline-flex"
+            className="hidden shrink-0 justify-center rounded-lg bg-stone-950 px-4 py-2 text-center text-sm font-bold text-white transition-opacity hover:opacity-80 sm:inline-flex sm:min-w-[11.5rem]"
           >
             {ctaLabel}
           </Link>

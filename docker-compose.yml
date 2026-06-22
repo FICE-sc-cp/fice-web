@@ -38,6 +38,8 @@ services:
       COUNCIL_HEAD_TG: ${COUNCIL_HEAD_TG:-}
       # Set to "true" to open write endpoints without Telegram auth (dev only).
       AUTH_DISABLED: ${AUTH_DISABLED:-false}
+      # Optional Monobank jar token for auto-syncing collected amounts/donations.
+      MONOBANK_TOKEN: ${MONOBANK_TOKEN:-}
       # Where uploaded images are stored inside the container (persisted via volume).
       UPLOAD_DIR: /app/uploads
     ports:

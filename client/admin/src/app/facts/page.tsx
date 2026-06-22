@@ -16,6 +16,11 @@ const STATS: { key: keyof Facts; label: string }[] = [
   { key: 'partnersCount', label: 'Партнерів' },
   { key: 'departmentsCount', label: 'Відділів' },
   { key: 'membersCount', label: 'Учасників' },
+  { key: 'closedFundraisers', label: 'Закритих зборів' },
+  { key: 'activeStudents', label: 'Активних студентів (блок «Партнери»)' },
+  { key: 'activePartners', label: 'Діючих партнерів (блок «Партнери»)' },
+  { key: 'eventsPerYear', label: 'Заходів щороку (блок «Партнери»)' },
+  { key: 'projectsDone', label: 'Реалізованих проєктів (блок «Партнери»)' },
 ];
 
 export default function FactsPage() {
