@@ -57,4 +57,9 @@ export class CreateNewsDto {
   @IsString()
   @MaxLength(100)
   eventLocation?: string | null;
+
+  @ApiPropertyOptional({ description: 'Registration link for the announced event' })
+  @IsOptional()
+  @IsString()
+  registrationLink?: string | null;
 }

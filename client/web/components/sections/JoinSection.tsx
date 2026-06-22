@@ -1,3 +1,5 @@
+// this component is not used, I keeped it here just in case
+
 import { Container } from "@/components/ui/Container";
 import { Glow } from "@/components/ui/Glow";
 import { SunglassesIcon } from "@/components/ui/icons";

@@ -45,6 +45,8 @@ export default function EditNewsPage() {
       eventDate: v.isEvent && v.eventDate ? new Date(v.eventDate).toISOString() : null,
       eventLocation:
         v.isEvent && v.eventLocation?.trim() ? v.eventLocation.trim() : null,
+      registrationLink:
+        v.isEvent && v.registrationLink?.trim() ? v.registrationLink.trim() : null,
     });
   }
 
@@ -76,6 +78,7 @@ export default function EditNewsPage() {
                     isEvent: !!data.eventDate,
                     eventDate: data.eventDate ? toLocalInput(data.eventDate) : '',
                     eventLocation: data.eventLocation ?? '',
+                    registrationLink: data.registrationLink ?? '',
                   }
                 : undefined
             }

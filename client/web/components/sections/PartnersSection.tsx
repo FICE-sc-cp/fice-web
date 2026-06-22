@@ -14,8 +14,8 @@ const STATS: { value: string; label: string; gradient: string }[] = [
   { value: "15+", label: "Діючих партнерів", gradient: "bg-gradient-green" },
   { value: "20+", label: "Заходів щороку", gradient: "bg-gradient-blue" },
   {
-    value: "100%",
-    label: "Прозорість діяльності",
+    value: "NULL",
+    label: "Придумати щось",
     gradient: "bg-gradient-orange",
   },
 ];
@@ -32,7 +32,7 @@ export function PartnersSection() {
       />
 
       <Container>
-        <SectionHeader title="Нашим партнерам" gradient="bg-gradient-blue" />
+        <SectionHeader title="Наші партнери" gradient="bg-gradient-blue" />
 
         <div className="mt-14 flex flex-col items-center gap-8">
           {LOGO_ROWS.map((count, r) => (

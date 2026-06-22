@@ -30,6 +30,7 @@ const schema = z
     isEvent: z.boolean().optional(),
     eventDate: z.string().optional(),
     eventLocation: z.string().max(100, 'Максимум 100 символів').optional(),
+    registrationLink: z.string().optional(),
   })
   .refine((v) => !v.isEvent || !!v.eventDate, {
     message: 'Вкажи дату й час заходу',
@@ -65,6 +66,7 @@ export function NewsForm({
       isEvent: false,
       eventDate: '',
       eventLocation: '',
+      registrationLink: '',
       ...defaultValues,
     },
   });
@@ -114,6 +116,12 @@ export function NewsForm({
             placeholder="Напр. КПІ, корпус 18"
             {...register('eventLocation')}
             error={errors.eventLocation?.message}
+          />
+          <Input
+            label="Посилання на реєстрацію"
+            placeholder="https://…"
+            {...register('registrationLink')}
+            error={errors.registrationLink?.message}
           />
         </div>
       )}

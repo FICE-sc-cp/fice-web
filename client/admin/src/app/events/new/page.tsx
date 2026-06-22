@@ -4,7 +4,11 @@ import { useRouter } from 'next/navigation';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
-import { EventForm, type EventFormValues } from '@/components/forms/EventForm';
+import {
+  EventForm,
+  eventValuesToInput,
+  type EventFormValues,
+} from '@/components/forms/EventForm';
 import { hapticNotify } from '@/lib/telegram';
 
 export default function NewEventPage() {
@@ -13,23 +17,18 @@ export default function NewEventPage() {
 
   const mutation = useMutation({
     mutationFn: async (v: EventFormValues) => {
+      const hasStats = !!(v.moneyCollected || v.charityAmount || v.visitorsAmount);
       let detailsId: string | undefined;
-      if (v.description?.trim()) {
+      if (hasStats) {
         const details = await api.createEventDetails({
-          description: v.description,
+          description: (v.description?.trim() || v.name).slice(0, 255),
           moneyCollected: Number(v.moneyCollected) || 0,
           charityAmount: Number(v.charityAmount) || 0,
           visitorsAmount: v.visitorsAmount ? Number(v.visitorsAmount) : undefined,
-          departmentId: v.departmentId || undefined,
         });
         detailsId = details.id;
       }
-      return api.createEvent({
-        name: v.name,
-        date: new Date(v.date).toISOString(),
-        photoUrl: v.photoUrl ?? undefined,
-        detailsId,
-      });
+      return api.createEvent({ ...eventValuesToInput(v), detailsId });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['events'] });

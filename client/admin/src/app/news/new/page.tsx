@@ -29,6 +29,8 @@ export default function NewNewsPage() {
       eventDate: v.isEvent && v.eventDate ? new Date(v.eventDate).toISOString() : null,
       eventLocation:
         v.isEvent && v.eventLocation?.trim() ? v.eventLocation.trim() : null,
+      registrationLink:
+        v.isEvent && v.registrationLink?.trim() ? v.registrationLink.trim() : null,
     });
   }
 
