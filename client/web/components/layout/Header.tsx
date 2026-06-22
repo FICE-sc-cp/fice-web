@@ -9,7 +9,7 @@ import { MenuIcon, CloseIcon } from "@/components/ui/icons";
 
 const NAV = [
   { label: 'Про нас', href: '/#about' },
-  { label: 'Команда', href: '/#team' },
+  { label: 'Команда', href: '/team' },
   { label: 'Партнери', href: '/#partners' },
   { label: 'Благодійність', href: '/#charity' },
   { label: 'Заходи', href: '/#events' },
