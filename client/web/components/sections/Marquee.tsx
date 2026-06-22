@@ -21,18 +21,6 @@ export function Marquee() {
   return (
     <Link
       href="/join"
-<<<<<<< HEAD
-      className="transition-opacity hover:opacity-90"
-    >
-      <div className="overflow-hidden bg-gradient-main py-6">
-        <div
-          className="flex w-max animate-marquee"
-          style={{ animationDuration: DURATION }}
-        >
-          {group}
-          {group}
-        </div>
-=======
       aria-label="Приєднатись до команди"
       className="group block overflow-hidden bg-gradient-main py-6 transition-opacity hover:opacity-90"
     >
@@ -42,7 +30,6 @@ export function Marquee() {
       >
         {group}
         {group}
->>>>>>> b957ad1 (feat: event registration system (backend, web, admin))
       </div>
     </Link>
   );
