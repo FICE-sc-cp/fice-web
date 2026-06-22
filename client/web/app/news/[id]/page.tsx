@@ -65,7 +65,7 @@ export default async function NewsArticlePage({
           className="left-[-12rem] top-[56rem] h-[32rem] w-[40rem] opacity-50"
         />
 
-        <article className="relative z-[1] mx-auto max-w-3xl px-4 pt-10 sm:px-6">
+        <article className="relative z-[1] mx-auto max-w-4xl px-4 pt-10 sm:px-6">
           <Link
             href="/news"
             className="mb-6 inline-flex items-center gap-2 text-[15px] font-extrabold text-brand-cyan transition-opacity hover:opacity-70"

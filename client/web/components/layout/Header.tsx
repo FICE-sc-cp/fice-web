@@ -8,12 +8,15 @@ import { Container } from "@/components/ui/Container";
 import { MenuIcon, CloseIcon } from "@/components/ui/icons";
 
 const NAV = [
+<<<<<<< HEAD
   { label: 'Про нас', href: '/#about' },
   { label: 'Команда', href: '/team' },
   { label: 'Партнери', href: '/#partners' },
+=======
+  { label: 'Команда', href: '/#team' },
+>>>>>>> b957ad1 (feat: event registration system (backend, web, admin))
   { label: 'Благодійність', href: '/#charity' },
-  { label: 'Заходи', href: '/#events' },
-  { label: 'FAQ', href: '/#faq' },
+  { label: 'Заходи', href: '/events' },
   { label: 'Новини', href: '/news' },
 ];
 
