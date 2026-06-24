@@ -105,13 +105,25 @@ export function Footer() {
     <footer className="relative isolate overflow-hidden bg-neutral-700/20">
       <Container className="pt-16">
         <div className="grid grid-cols-1 gap-12 sm:grid-cols-2 lg:grid-cols-[auto_1fr_1fr_1fr_auto] lg:items-start lg:gap-8">
-          <Image
-            src="/logo_white.png"
-            alt="Студрада ФІОТ"
-            width={160}
-            height={87}
-            className="h-auto w-32 lg:w-40"
-          />
+          <div className="flex max-w-[18rem] flex-col gap-4">
+            <Image
+              src="/logo_white.png"
+              alt="Студрада ФІОТ"
+              width={160}
+              height={87}
+              className="h-auto w-32 lg:w-40"
+            />
+            <div className="flex flex-col gap-1 text-sm leading-snug">
+              <br />
+              <p className="font-semibold text-white">
+                Факультет інформатики та обчислювальної техніки
+              </p>
+              <p className="text-gray-400">
+                Національний технічний університет України «Київський
+                політехнічний інститут імені Ігоря Сікорського»
+              </p>
+            </div>
+          </div>
           <LinkColumn title="Контакти" items={CONTACTS} />
           <LinkColumn title="Наші соцмережі" items={SOCIALS} />
           <LinkColumn title="Абітурієнтам" items={SOCIALS_FOR_APPLICANTS} />
