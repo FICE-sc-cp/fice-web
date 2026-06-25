@@ -14,7 +14,7 @@ export function FundraiserCard({ fundraiser }: { fundraiser: Fundraiser }) {
     <Link
       href={`/charity/${fundraiser.id}`}
       className={cn(
-        "group flex flex-col gap-6 rounded-2xl border border-border p-6 transition-colors",
+        "group flex flex-col gap-6 rounded-2xl border border-border p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-black/30",
         theme.borderHover,
       )}
     >

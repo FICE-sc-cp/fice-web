@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Container } from '@/components/ui/Container';
 import { SectionHeader } from '@/components/ui/SectionHeader';
+import { Reveal, RevealGroup } from '@/components/ui/Reveal';
 import { ChevronIcon } from '@/components/ui/icons';
 import { cn } from '@/lib/utils';
 
@@ -34,13 +35,15 @@ export function FaqSection() {
   return (
     <section id="faq" className="scroll-mt-28 py-20 lg:py-28">
       <Container>
-        <SectionHeader
-          title="Поширені запитання"
-          subtitle="Відповіді на найчастіші питання студентів"
-          gradient="bg-gradient-magenta"
-        />
+        <Reveal>
+          <SectionHeader
+            title="Поширені запитання"
+            subtitle="Відповіді на найчастіші питання студентів"
+            gradient="bg-gradient-magenta"
+          />
+        </Reveal>
 
-        <div className="mx-auto mt-14 flex max-w-5xl flex-col gap-4">
+        <RevealGroup className="mx-auto mt-14 flex max-w-5xl flex-col gap-4">
           {FAQS.map((faq, index) => {
             const isOpen = open.includes(index);
             return (
@@ -75,17 +78,26 @@ export function FaqSection() {
                   </span>
                 </button>
 
-                {isOpen && (
-                  <div className="border-t border-brand-cyan px-6 pb-6 lg:px-8 lg:pb-8">
-                    <p className="pt-6 text-lg text-stone-300 lg:text-xl">
-                      {faq.answer}
-                    </p>
+                <div
+                  className={cn(
+                    'grid transition-all duration-300 ease-out',
+                    isOpen
+                      ? 'grid-rows-[1fr] opacity-100'
+                      : 'grid-rows-[0fr] opacity-0',
+                  )}
+                >
+                  <div className="overflow-hidden">
+                    <div className="border-t border-brand-cyan px-6 pb-6 lg:px-8 lg:pb-8">
+                      <p className="pt-6 text-lg text-stone-300 lg:text-xl">
+                        {faq.answer}
+                      </p>
+                    </div>
                   </div>
-                )}
+                </div>
               </div>
             );
           })}
-        </div>
+        </RevealGroup>
       </Container>
     </section>
   );

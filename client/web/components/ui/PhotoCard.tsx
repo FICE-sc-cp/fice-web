@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import type { CSSProperties } from 'react';
 import { cn } from '@/lib/utils';
 
 interface PhotoCardProps {
@@ -6,6 +7,7 @@ interface PhotoCardProps {
   alt: string;
   className?: string;
   sizes?: string;
+  style?: CSSProperties;
 }
 
 export function PhotoCard({
@@ -13,9 +15,11 @@ export function PhotoCard({
   alt,
   className,
   sizes = '(min-width: 1024px) 20rem, 60vw',
+  style,
 }: PhotoCardProps) {
   return (
     <div
+      style={style}
       className={cn(
         'relative overflow-hidden rounded-xl shadow-2xl shadow-black/50 ring-1 ring-white/10',
         className,

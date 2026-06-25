@@ -28,7 +28,9 @@ export function Header() {
       <Container>
         <div className="relative">
           <span className="pointer-events-none absolute right-0 top-1/2 hidden h-14 w-14 -translate-y-1/2 translate-x-[70%] rotate-12 drop-shadow-md lg:block">
-            <FrogMascot className="h-full w-full" />
+            <span className="block h-full w-full animate-float">
+              <FrogMascot className="h-full w-full" />
+            </span>
           </span>
           <div className="relative flex items-center justify-between gap-4 rounded-2xl bg-gradient-main px-4 py-3 shadow-lg shadow-black/20 sm:px-6">
             <Link
@@ -51,7 +53,7 @@ export function Header() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="text-sm font-bold text-stone-950 transition-opacity hover:opacity-70"
+                  className="relative text-base font-bold text-stone-950 transition-opacity after:absolute after:-bottom-1 after:left-0 after:h-0.5 after:w-0 after:rounded-full after:bg-stone-950 after:transition-all after:duration-300 hover:after:w-full"
                 >
                   {item.label}
                 </Link>
@@ -60,7 +62,7 @@ export function Header() {
 
             <Link
               href={ctaHref}
-              className="hidden shrink-0 justify-center rounded-lg bg-stone-950 px-4 py-2 text-center text-sm font-bold text-white transition-opacity hover:opacity-80 sm:inline-flex sm:min-w-[11.5rem]"
+              className="hidden shrink-0 justify-center rounded-lg bg-stone-950 px-4 py-2 text-center text-base font-bold text-white transition-opacity hover:opacity-80 sm:inline-flex sm:min-w-[11.5rem]"
             >
               {ctaLabel}
             </Link>

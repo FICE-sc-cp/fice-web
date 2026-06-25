@@ -6,6 +6,7 @@ import {
   //accentText,
   type Accent,
 } from "@/components/ui/AccentCard";
+import { Reveal, RevealGroup } from "@/components/ui/Reveal";
 import { cn } from "@/lib/utils";
 
 const DEPARTMENTS: {
@@ -81,17 +82,20 @@ export function DepartmentsSection() {
       />
 
       <Container>
-        <SectionHeader
-          title="Структура та департаменти"
-          subtitle="Кожен відділ — це команда однодумців"
-          gradient="bg-gradient-green"
-        />
+        <Reveal>
+          <SectionHeader
+            title="Структура та департаменти"
+            subtitle="Кожен відділ — це команда однодумців"
+            gradient="bg-gradient-green"
+          />
+        </Reveal>
 
-        <div className="mt-14 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <RevealGroup className="mt-14 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {DEPARTMENTS.map((dept) => (
             <AccentCard
               key={dept.name}
               accent={dept.accent}
+              interactive
               className={cn(
                 "flex flex-col gap-4 px-6 py-8",
                 dept.wide && "lg:col-span-2",
@@ -106,13 +110,16 @@ export function DepartmentsSection() {
               </p>
               <a
                 href="#"
-                className="text-xl font-black text-gray-200 transition-opacity hover:opacity-70"
+                className="group/link inline-flex items-center gap-1 text-xl font-black text-gray-200 transition-opacity hover:opacity-70"
               >
-                Читати більше →
+                Читати більше{" "}
+                <span className="transition-transform duration-300 group-hover/link:translate-x-1">
+                  →
+                </span>
               </a>
             </AccentCard>
           ))}
-        </div>
+        </RevealGroup>
       </Container>
     </section>
   );

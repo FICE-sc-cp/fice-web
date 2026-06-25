@@ -15,9 +15,9 @@ import {
   MapPinIcon,
   type IconComponent,
 } from "@/components/ui/icons";
+import { Reveal, RevealGroup } from "@/components/ui/Reveal";
+import { CountUp } from "@/components/ui/CountUp";
 import { EMPTY_FACTS, fice, safe, type Facts } from "@/lib/api";
-
-const fmt = (n: number) => n.toLocaleString("uk-UA");
 
 const STAT_DEFS: {
   key: keyof Facts;
@@ -81,20 +81,21 @@ export async function FactsSection() {
       />
 
       <Container>
-        <div className="flex flex-col items-center gap-4 text-center">
+        <Reveal className="flex flex-col items-center gap-4 text-center">
           <SectionTitle gradient="bg-gradient-magenta">
             Факти та результати
           </SectionTitle>
           <p className="text-lg text-subtle lg:text-xl">
             Те, що ми зробили разом зі студентами та партнерами.
           </p>
-        </div>
+        </Reveal>
 
-        <div className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
+        <RevealGroup className="mt-12 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8">
           {STAT_DEFS.map(({ key, label, accent, Icon }) => (
             <AccentCard
               key={key}
               accent={accent}
+              interactive
               className="flex flex-col gap-6"
             >
               <div className="flex items-center justify-between gap-2">
@@ -105,14 +106,15 @@ export async function FactsSection() {
                   <Icon gradient={accentGradient[accent]} />
                 </span>
               </div>
-              <span className="text-4xl font-bold lg:text-5xl">
-                {fmt(facts[key])}
-              </span>
+              <CountUp
+                value={facts[key]}
+                className="text-4xl font-bold lg:text-5xl"
+              />
             </AccentCard>
           ))}
-        </div>
+        </RevealGroup>
 
-        <div className="relative mx-auto mt-16 aspect-[968/671] w-full max-w-3xl">
+        <Reveal className="relative mx-auto mt-16 aspect-[968/671] w-full max-w-3xl">
           <UkraineMap
             preserveAspectRatio="none"
             className="absolute inset-0"
@@ -131,19 +133,21 @@ export async function FactsSection() {
               <MapPinIcon className="h-10 w-auto drop-shadow-[0_2px_6px_rgba(0,0,0,0.5)]" />
             </span>
           ))}
-        </div>
+        </Reveal>
 
-        <AccentCard accent="teal" className="mt-12 px-8 py-8 lg:px-24 lg:py-10">
-          <p className="text-center text-2xl font-medium leading-relaxed text-fg lg:text-3xl">
-            Наша спільнота не має меж. Кожна позначка на карті — це місто, з
-            якого походять наші учасники. Попри різну географію, ми
-            об&rsquo;єдналися заради спільної мети, щоб разом допомагати,
-            організовувати заходи та змінювати країну на краще.
-            <br />
-            <br />
-            Разом ми — сила, що діє в кожному куточку України.
-          </p>
-        </AccentCard>
+        <Reveal>
+          <AccentCard accent="teal" className="mt-12 px-8 py-8 lg:px-24 lg:py-10">
+            <p className="text-center text-2xl font-medium leading-relaxed text-fg lg:text-3xl">
+              Наша спільнота не має меж. Кожна позначка на карті — це місто, з
+              якого походять наші учасники. Попри різну географію, ми
+              об&rsquo;єдналися заради спільної мети, щоб разом допомагати,
+              організовувати заходи та змінювати країну на краще.
+              <br />
+              <br />
+              Разом ми — сила, що діє в кожному куточку України.
+            </p>
+          </AccentCard>
+        </Reveal>
       </Container>
     </section>
   );

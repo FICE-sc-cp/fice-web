@@ -13,6 +13,7 @@ import {
   MoneyBagIcon,
   type IconComponent,
 } from "@/components/ui/icons";
+import { Reveal, RevealGroup } from "@/components/ui/Reveal";
 
 const VALUES: { title: string; accent: Accent; Icon: IconComponent }[] = [
   { title: "Якісна освіта", accent: "cyan", Icon: PeopleIcon },
@@ -33,13 +34,16 @@ export function ValuesSection() {
       />
 
       <Container>
-        <SectionTitle gradient="bg-gradient-orange">Наші цінності</SectionTitle>
+        <Reveal>
+          <SectionTitle gradient="bg-gradient-orange">Наші цінності</SectionTitle>
+        </Reveal>
 
-        <div className="mt-14 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
+        <RevealGroup className="mt-14 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-6">
           {VALUES.map(({ title, accent, Icon }) => (
             <AccentCard
               key={title}
               accent={accent}
+              interactive
               className="flex flex-col items-start gap-6 px-6 py-12"
             >
               <span className="size-14">
@@ -50,7 +54,7 @@ export function ValuesSection() {
               </h3>
             </AccentCard>
           ))}
-        </div>
+        </RevealGroup>
       </Container>
     </section>
   );

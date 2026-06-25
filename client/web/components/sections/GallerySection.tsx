@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { Container } from "@/components/ui/Container";
 import { Glow } from "@/components/ui/Glow";
+import { RevealGroup } from "@/components/ui/Reveal";
 
 const COLUMNS = [
   [2, 3],
@@ -22,27 +23,27 @@ export function GallerySection() {
       />
 
       <Container>
-        <div className="flex h-[26rem] gap-3 sm:h-[34rem] sm:gap-4 lg:h-[40rem]">
+        <RevealGroup className="flex h-[26rem] gap-3 sm:h-[34rem] sm:gap-4 lg:h-[40rem]">
           {COLUMNS.map((column, c) => (
             <div key={c} className="flex flex-1 flex-col gap-3 sm:gap-4">
               {column.map((grow, r) => (
                 <div
                   key={r}
                   style={{ flexGrow: grow, flexBasis: 0 }}
-                  className="relative overflow-hidden rounded-lg bg-stone-300"
+                  className="group relative overflow-hidden rounded-lg bg-stone-300"
                 >
                   <Image
                     src="/placeholder-for-fundraisers-and-events.png"
                     alt=""
                     fill
                     sizes="25vw"
-                    className="object-cover"
+                    className="object-cover transition-transform duration-500 group-hover:scale-110"
                   />
                 </div>
               ))}
             </div>
           ))}
-        </div>
+        </RevealGroup>
       </Container>
     </section>
   );

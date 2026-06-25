@@ -2,6 +2,8 @@ import Image from "next/image";
 import { Container } from "@/components/ui/Container";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Glow } from "@/components/ui/Glow";
+import { Reveal, RevealGroup } from "@/components/ui/Reveal";
+import { CountUp } from "@/components/ui/CountUp";
 import { EMPTY_FACTS, fice, safe, type Facts } from "@/lib/api";
 
 const LOGO_ROWS = [4, 3, 4];
@@ -39,9 +41,11 @@ export async function PartnersSection() {
       />
 
       <Container>
-        <SectionHeader title="Наші партнери" gradient="bg-gradient-blue" />
+        <Reveal>
+          <SectionHeader title="Наші партнери" gradient="bg-gradient-blue" />
+        </Reveal>
 
-        <div className="mt-14 flex flex-col items-center gap-8">
+        <RevealGroup className="mt-14 flex flex-col items-center gap-8">
           {LOGO_ROWS.map((count, r) => (
             <div
               key={r}
@@ -54,14 +58,14 @@ export async function PartnersSection() {
                   alt="Логотип партнера"
                   width={184}
                   height={101}
-                  className="h-auto w-28 opacity-50 sm:w-36 lg:w-44"
+                  className="h-auto w-28 opacity-50 grayscale transition-all duration-300 hover:opacity-100 hover:grayscale-0 sm:w-36 lg:w-44"
                 />
               ))}
             </div>
           ))}
-        </div>
+        </RevealGroup>
 
-        <div className="mt-12 rounded-lg bg-gradient-main p-0.5">
+        <Reveal className="mt-12 rounded-lg bg-gradient-main p-0.5">
           <div className="rounded-lg bg-bg px-6 pb-12 pt-8 lg:px-16">
             <h3 className="text-center text-4xl font-bold lg:text-6xl">
               Стати партнером
@@ -76,7 +80,7 @@ export async function PartnersSection() {
                 </p>
                 <a
                   href="#"
-                  className="rounded-2xl bg-gradient-main px-12 py-6 text-center text-2xl font-bold text-black transition-opacity hover:opacity-90 lg:text-3xl"
+                  className="rounded-2xl bg-gradient-main px-12 py-6 text-center text-2xl font-bold text-black transition-transform hover:scale-[1.02] hover:opacity-95 active:scale-95 lg:text-3xl"
                 >
                   Стати партнером
                 </a>
@@ -86,14 +90,14 @@ export async function PartnersSection() {
                 {STAT_DEFS.map((stat) => (
                   <div
                     key={stat.label}
-                    className={`rounded-lg p-px ${stat.gradient}`}
+                    className={`rounded-lg p-px transition-transform duration-300 hover:-translate-y-1 ${stat.gradient}`}
                   >
                     <div className="flex h-full flex-col gap-2 rounded-lg bg-bg p-6">
-                      <span
+                      <CountUp
+                        value={facts[stat.key]}
+                        suffix="+"
                         className={`bg-clip-text text-4xl font-bold text-transparent ${stat.gradient}`}
-                      >
-                        {facts[stat.key]}+
-                      </span>
+                      />
                       <span className="text-xl font-medium text-stone-300">
                         {stat.label}
                       </span>
@@ -103,7 +107,7 @@ export async function PartnersSection() {
               </div>
             </div>
           </div>
-        </div>
+        </Reveal>
       </Container>
     </section>
   );
