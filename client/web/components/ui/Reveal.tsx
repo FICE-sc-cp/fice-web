@@ -3,13 +3,6 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
-/**
- * Toggles `inView` once the element scrolls into the viewport.
- * Disconnects after the first reveal so it never re-runs (and never
- * fights the user as they scroll back up). Reduced-motion is handled
- * purely in CSS — the media query forces `.reveal` fully visible — so
- * there's nothing motion-specific to do here.
- */
 function useInView() {
   const ref = useRef<HTMLDivElement>(null);
   const [inView, setInView] = useState(false);
@@ -25,7 +18,6 @@ function useInView() {
           io.disconnect();
         }
       },
-      // Fire a touch before the element is fully on screen for a livelier feel.
       { threshold: 0.15, rootMargin: "0px 0px -10% 0px" },
     );
 
@@ -39,13 +31,10 @@ function useInView() {
 interface RevealProps {
   children: ReactNode;
   className?: string;
-  /** Vertical travel distance, e.g. "2rem". Defaults to 1.25rem (set in CSS). */
   y?: string;
-  /** Delay before the reveal starts, in ms. */
   delay?: number;
 }
 
-/** Fades + rises a single block into view. */
 export function Reveal({ children, className, y, delay }: RevealProps) {
   const { ref, inView } = useInView();
 
@@ -64,11 +53,6 @@ export function Reveal({ children, className, y, delay }: RevealProps) {
   );
 }
 
-/**
- * Like <Reveal>, but staggers its *direct children* in one after another.
- * Drop your existing grid/flex classes straight onto it — it renders a plain
- * div, so layout is unchanged.
- */
 export function RevealGroup({
   children,
   className,

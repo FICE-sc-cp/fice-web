@@ -7,16 +7,10 @@ const fmt = (n: number) => Math.round(n).toLocaleString("uk-UA");
 interface CountUpProps {
   value: number;
   suffix?: string;
-  /** Animation length in ms. */
   duration?: number;
   className?: string;
 }
 
-/**
- * Counts from 0 up to `value` the first time it scrolls into view.
- * Starts at 0 on both server and client (so there's no hydration
- * mismatch) and eases out so the final digits land gently.
- */
 export function CountUp({
   value,
   suffix = "",
@@ -33,8 +27,6 @@ export function CountUp({
     let raf = 0;
     let start = 0;
 
-    // No motion: skip the tween and just land on the final value.
-    // Deferred via rAF so we don't setState synchronously in the effect.
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       raf = requestAnimationFrame(() => setDisplay(value));
       return () => cancelAnimationFrame(raf);
@@ -43,7 +35,7 @@ export function CountUp({
     const step = (ts: number) => {
       if (!start) start = ts;
       const p = Math.min((ts - start) / duration, 1);
-      const eased = 1 - Math.pow(1 - p, 3); // easeOutCubic
+      const eased = 1 - Math.pow(1 - p, 3);
       setDisplay(value * eased);
       if (p < 1) raf = requestAnimationFrame(step);
     };

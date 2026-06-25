@@ -41,7 +41,6 @@ export const accentText: Record<Accent, string> = {
   purple: 'text-brand-purple',
 };
 
-// Soft, accent-tinted glow used on hover for interactive cards.
 const accentHoverShadow: Record<Accent, string> = {
   cyan: 'hover:shadow-brand-cyan/20',
   green: 'hover:shadow-brand-green/20',
@@ -54,7 +53,6 @@ const accentHoverShadow: Record<Accent, string> = {
 
 interface AccentCardProps extends HTMLAttributes<HTMLDivElement> {
   accent: Accent;
-  /** Adds a subtle lift + accent glow on hover. */
   interactive?: boolean;
 }
 

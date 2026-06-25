@@ -112,11 +112,6 @@
   50% { opacity: 0.7; transform: scale(1.12); }
 }
 
-/* ──────────────────────────────────────────────────────────────────
-   Scroll-reveal + micro-interaction primitives.
-   Elements start hidden and animate in once they enter the viewport.
-   The `is-visible` class is toggled by the <Reveal>/<RevealGroup> JS.
-   ────────────────────────────────────────────────────────────────── */
 @layer utilities {
   .reveal {
     opacity: 0;
@@ -132,8 +127,6 @@
     transform: none;
   }
 
-  /* Gradient underline that "draws in" from the left when its <Reveal>
-     parent becomes visible. */
   .reveal .grow-underline {
     transform: scaleX(0);
     transform-origin: left;
@@ -143,8 +136,6 @@
     transform: scaleX(1);
   }
 
-  /* Container whose direct children rise in with a stagger once the
-     container scrolls into view. */
   .reveal-stagger > * {
     opacity: 0;
     transform: translateY(1.25rem);
@@ -188,7 +179,6 @@
   50%      { transform: translateY(-0.4rem); }
 }
 
-/* Honour users who ask for less motion: show everything instantly. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
