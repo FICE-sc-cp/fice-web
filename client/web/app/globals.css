@@ -174,20 +174,3 @@
   0%, 100% { transform: translateY(0); }
   50%      { transform: translateY(-0.4rem); }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.001ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.001ms !important;
-    scroll-behavior: auto !important;
-  }
-  .reveal,
-  .reveal-stagger > *,
-  .reveal .grow-underline {
-    opacity: 1 !important;
-    transform: none !important;
-  }
-}

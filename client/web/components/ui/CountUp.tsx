@@ -27,11 +27,6 @@ export function CountUp({
     let raf = 0;
     let start = 0;
 
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      raf = requestAnimationFrame(() => setDisplay(value));
-      return () => cancelAnimationFrame(raf);
-    }
-
     const step = (ts: number) => {
       if (!start) start = ts;
       const p = Math.min((ts - start) / duration, 1);
