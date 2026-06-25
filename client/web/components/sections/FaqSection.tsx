@@ -23,14 +23,10 @@ const FAQS = [
 ];
 
 export function FaqSection() {
-  const [open, setOpen] = useState<number[]>([0]);
+  const [open, setOpen] = useState<number | null>(0);
 
   const toggle = (index: number) =>
-    setOpen((prev) =>
-      prev.includes(index)
-        ? prev.filter((i) => i !== index)
-        : [...prev, index],
-    );
+    setOpen((prev) => (prev === index ? null : index));
 
   return (
     <section id="faq" className="scroll-mt-28 py-20 lg:py-28">
@@ -45,7 +41,7 @@ export function FaqSection() {
 
         <RevealGroup className="mx-auto mt-14 flex max-w-5xl flex-col gap-4">
           {FAQS.map((faq, index) => {
-            const isOpen = open.includes(index);
+            const isOpen = open === index;
             return (
               <div
                 key={index}
