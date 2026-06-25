@@ -8,6 +8,7 @@ import {
   type Accent,
 } from "@/components/ui/AccentCard";
 import { MoneyBagIcon } from "@/components/ui/icons";
+import { Reveal, RevealGroup } from "@/components/ui/Reveal";
 
 const CARDS: { title: string; accent: Accent; text: string }[] = [
   {
@@ -34,30 +35,33 @@ export function AboutSection() {
       />
 
       <Container>
-        <SectionTitle gradient="bg-gradient-main">Хто ми?</SectionTitle>
+        <Reveal>
+          <SectionTitle gradient="bg-gradient-main">Хто ми?</SectionTitle>
+        </Reveal>
 
         <div className="mt-14 grid grid-cols-1 items-center gap-12 lg:grid-cols-2 lg:gap-16">
-          <div className="flex flex-col gap-8">
+          <Reveal className="flex flex-col gap-8">
             <p className="text-2xl font-medium leading-snug text-fg lg:text-3xl">
               Студрада ФІОТ — ініціатор позитивних змін в освітніх процесах та
               житті студентської спільноти.
             </p>
-            <div className="relative aspect-[546/351] w-full overflow-hidden rounded-xl ring-1 ring-white/10">
+            <div className="group relative aspect-[546/351] w-full overflow-hidden rounded-xl ring-1 ring-white/10">
               <Image
                 src="/photo-7.png"
                 alt="Команда студради ФІОТ"
                 fill
                 sizes="(min-width: 1024px) 32rem, 100vw"
-                className="object-cover"
+                className="object-cover transition-transform duration-500 group-hover:scale-105"
               />
             </div>
-          </div>
+          </Reveal>
 
-          <div className="flex flex-col gap-8">
+          <RevealGroup className="flex flex-col gap-8">
             {CARDS.map((card) => (
               <AccentCard
                 key={card.title}
                 accent={card.accent}
+                interactive
                 className="flex flex-col gap-4 px-6 py-8 lg:px-8 lg:py-10"
               >
                 <span className="size-12">
@@ -67,7 +71,7 @@ export function AboutSection() {
                 <p className="text-lg text-muted">{card.text}</p>
               </AccentCard>
             ))}
-          </div>
+          </RevealGroup>
         </div>
       </Container>
     </section>

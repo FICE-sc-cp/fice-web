@@ -10,10 +10,10 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const base =
-  'inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan disabled:pointer-events-none disabled:opacity-50';
+  'inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all duration-200 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-cyan disabled:pointer-events-none disabled:opacity-50';
 
 const variants: Record<Variant, string> = {
-  primary: 'bg-gradient-main text-black hover:opacity-90',
+  primary: 'bg-gradient-main text-black hover:opacity-90 hover:scale-[1.02]',
   outline: 'border border-border text-fg hover:border-brand-cyan hover:text-brand-cyan',
   ghost: 'text-muted hover:text-fg',
 };

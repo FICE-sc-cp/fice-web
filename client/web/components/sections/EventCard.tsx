@@ -28,7 +28,7 @@ export function EventCard({ event }: { event: EventItem }) {
   ];
 
   return (
-    <article className="flex flex-col gap-6 rounded-lg border border-border p-6">
+    <article className="flex flex-col gap-6 rounded-lg border border-border p-6 transition-all duration-300 hover:-translate-y-1 hover:border-brand-green/40 hover:shadow-xl hover:shadow-brand-green/10">
       <Link
         href={`/events/${event.id}`}
         aria-label={event.name}

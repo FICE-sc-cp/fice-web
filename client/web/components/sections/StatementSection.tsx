@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { Container } from '@/components/ui/Container';
+import { Reveal } from '@/components/ui/Reveal';
 
 function Underlined({
   children,
@@ -13,7 +14,7 @@ function Underlined({
       {children}
       <span
         aria-hidden
-        className={`absolute -bottom-1 left-0 h-1.5 w-full rounded-full ${gradient}`}
+        className={`grow-underline absolute -bottom-1 left-0 h-1.5 w-full rounded-full ${gradient}`}
       />
     </span>
   );
@@ -23,15 +24,17 @@ export function StatementSection() {
   return (
     <section className="py-20 lg:py-28">
       <Container>
-        <p className="mx-auto max-w-5xl text-center text-3xl font-bold leading-tight sm:text-4xl lg:text-6xl">
-          Від освітніх процесів до{' '}
-          <Underlined gradient="bg-gradient-orange">
-            партнерських проєктів
-          </Underlined>{' '}
-          — ми робимо це системно та ініціюємо{' '}
-          <Underlined gradient="bg-gradient-blue">зміни</Underlined>, які реально
-          працюють.
-        </p>
+        <Reveal>
+          <p className="mx-auto max-w-5xl text-center text-3xl font-bold leading-tight sm:text-4xl lg:text-6xl">
+            Від освітніх процесів до{' '}
+            <Underlined gradient="bg-gradient-orange">
+              партнерських проєктів
+            </Underlined>{' '}
+            — ми робимо це системно та ініціюємо{' '}
+            <Underlined gradient="bg-gradient-blue">зміни</Underlined>, які
+            реально працюють.
+          </p>
+        </Reveal>
       </Container>
     </section>
   );
