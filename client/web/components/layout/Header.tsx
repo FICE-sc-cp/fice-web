@@ -48,21 +48,23 @@ export function Header() {
               />
             </Link>
 
-            <nav className="hidden items-center gap-5 lg:flex xl:gap-7">
+            <nav className="-my-3 hidden items-stretch gap-5 self-stretch lg:flex xl:gap-7">
               {NAV.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="relative text-base font-bold text-stone-950 transition-opacity after:absolute after:-bottom-1 after:left-0 after:h-0.5 after:w-0 after:rounded-full after:bg-stone-950 after:transition-all after:duration-300 hover:after:w-full"
+                  className="group flex items-center"
                 >
-                  {item.label}
+                  <span className="relative text-lg font-bold text-stone-950 after:absolute after:-bottom-1 after:left-0 after:h-0.5 after:w-0 after:rounded-full after:bg-stone-950 after:transition-all after:duration-300 group-hover:after:w-full">
+                    {item.label}
+                  </span>
                 </Link>
               ))}
             </nav>
 
             <Link
               href={ctaHref}
-              className="hidden shrink-0 justify-center rounded-lg bg-stone-950 px-4 py-2 text-center text-base font-bold text-white transition-opacity hover:opacity-80 sm:inline-flex sm:min-w-[11.5rem]"
+              className="hidden shrink-0 justify-center whitespace-nowrap rounded-lg bg-stone-950 px-4 py-1.5 text-center text-lg font-bold text-white transition-opacity hover:opacity-80 sm:inline-flex sm:min-w-[11.5rem]"
             >
               {ctaLabel}
             </Link>
