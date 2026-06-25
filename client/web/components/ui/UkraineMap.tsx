@@ -1,5 +1,19 @@
+"use client";
+
+import { useSyncExternalStore } from "react";
 import { cn } from "@/lib/utils";
 import { UA_VIEWBOX, UA_OBLASTS } from "./ukraineMap.data";
+
+const noopSubscribe = () => () => {};
+
+/** False on the server and the first client render, true once hydrated. */
+function useHydrated() {
+  return useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false,
+  );
+}
 
 interface UkraineMapProps {
   className?: string;
@@ -17,6 +31,11 @@ interface UkraineMapProps {
 /**
  * Flat vector map of Ukraine — just the oblast outlines, no markers, gradients,
  * glow, drop-shadows or background image. Meant to sit behind overlay pins.
+ *
+ * Rendered client-side only. The path data is very large, and streaming SSR can
+ * split such a big inline <svg> across a chunk boundary, which corrupts SVG
+ * foreign-content parsing and triggers a hydration mismatch. The map is purely
+ * decorative, so skipping SSR is both correct and lighter on the initial HTML.
  */
 export function UkraineMap({
   className,
@@ -25,6 +44,9 @@ export function UkraineMap({
   strokeWidth = 0.8,
   preserveAspectRatio = "xMidYMid meet",
 }: UkraineMapProps) {
+  const hydrated = useHydrated();
+  if (!hydrated) return null;
+
   return (
     <svg
       viewBox={UA_VIEWBOX}
