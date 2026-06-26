@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { Container } from "@/components/ui/Container";
 import { FrogMascot } from "@/components/ui/FrogMascot";
 import { MenuIcon, CloseIcon } from "@/components/ui/icons";
+import { cn } from "@/lib/utils";
 
 const NAV = [
   { label: "Головна", href: "/" },
@@ -48,21 +49,23 @@ export function Header() {
               />
             </Link>
 
-            <nav className="hidden items-center gap-5 lg:flex xl:gap-7">
+            <nav className="-my-3 hidden items-stretch gap-5 self-stretch lg:flex xl:gap-7">
               {NAV.map((item) => (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="relative text-base font-bold text-stone-950 transition-opacity after:absolute after:-bottom-1 after:left-0 after:h-0.5 after:w-0 after:rounded-full after:bg-stone-950 after:transition-all after:duration-300 hover:after:w-full"
+                  className="group flex items-center"
                 >
-                  {item.label}
+                  <span className="relative text-lg font-bold text-stone-950 after:absolute after:-bottom-1 after:left-0 after:h-0.5 after:w-0 after:rounded-full after:bg-stone-950 after:transition-all after:duration-300 group-hover:after:w-full">
+                    {item.label}
+                  </span>
                 </Link>
               ))}
             </nav>
 
             <Link
               href={ctaHref}
-              className="hidden shrink-0 justify-center rounded-lg bg-stone-950 px-4 py-2 text-center text-base font-bold text-white transition-opacity hover:opacity-80 sm:inline-flex sm:min-w-[11.5rem]"
+              className="hidden shrink-0 justify-center whitespace-nowrap rounded-lg bg-stone-950 px-4 py-1.5 text-center text-lg font-bold text-white transition-opacity hover:opacity-80 sm:inline-flex sm:min-w-[11.5rem]"
             >
               {ctaLabel}
             </Link>
@@ -77,27 +80,37 @@ export function Header() {
               {open ? <CloseIcon /> : <MenuIcon />}
             </button>
 
-            {open && (
-              <div className="absolute inset-x-0 top-full z-50 mt-2 flex flex-col gap-1 rounded-2xl border border-border bg-bg-soft p-3 shadow-xl shadow-black/40 lg:hidden">
-                {NAV.map((item) => (
+            <div
+              inert={!open}
+              className={cn(
+                "absolute inset-x-0 top-full z-50 mt-2 grid transition-all duration-300 ease-out lg:hidden",
+                open
+                  ? "grid-rows-[1fr] opacity-100"
+                  : "pointer-events-none grid-rows-[0fr] opacity-0",
+              )}
+            >
+              <div className="overflow-hidden">
+                <div className="flex flex-col gap-1 rounded-2xl border border-border bg-bg-soft p-3 shadow-xl shadow-black/40">
+                  {NAV.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setOpen(false)}
+                      className="rounded-lg px-4 py-3 font-semibold text-fg transition-colors hover:bg-surface"
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
                   <Link
-                    key={item.href}
-                    href={item.href}
+                    href={ctaHref}
                     onClick={() => setOpen(false)}
-                    className="rounded-lg px-4 py-3 font-semibold text-fg transition-colors hover:bg-surface"
+                    className="mt-1 rounded-lg bg-gradient-main px-4 py-3 text-center font-bold text-black"
                   >
-                    {item.label}
+                    {ctaLabel}
                   </Link>
-                ))}
-                <Link
-                  href={ctaHref}
-                  onClick={() => setOpen(false)}
-                  className="mt-1 rounded-lg bg-gradient-main px-4 py-3 text-center font-bold text-black"
-                >
-                  {ctaLabel}
-                </Link>
+                </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
       </Container>

@@ -21,7 +21,7 @@ const PHOTOS = [
 
 export function HeroSection() {
   return (
-    <section className="relative flex min-h-[calc(100svh_-_5rem)] items-center overflow-hidden py-16 sm:py-20 lg:py-24">
+    <section className="relative flex min-h-[calc(100svh_-_5rem)] items-center overflow-hidden py-16 sm:py-20 lg:min-h-[44rem] lg:py-24">
       <div className="pointer-events-none absolute inset-0 hidden lg:block">
         <div className="relative mx-auto h-full max-w-7xl">
           {PHOTOS.map((p, i) => (
