@@ -181,8 +181,8 @@
   100% { left: 0; }
 }
 @keyframes frog-face {
-  0%, 49.99% { transform: scaleX(-1); }
-  50%, 100%  { transform: scaleX(1); }
+  0%, 49.99% { transform: scaleX(1); }
+  50%, 100%  { transform: scaleX(-1); }
 }
 @keyframes frog-step-a {
   0%, 50%      { opacity: 1; }
@@ -194,12 +194,12 @@
 }
 .frog-runner {
   animation:
-    frog-run-x 8s linear infinite,
-    frog-face 8s linear infinite;
+    frog-run-x 15s linear infinite,
+    frog-face 15s linear infinite;
 }
 .frog-step-a {
-  animation: frog-step-a 0.28s linear infinite;
+  animation: frog-step-a 0.52s linear infinite;
 }
 .frog-step-b {
-  animation: frog-step-b 0.28s linear infinite;
+  animation: frog-step-b 0.52s linear infinite;
 }
