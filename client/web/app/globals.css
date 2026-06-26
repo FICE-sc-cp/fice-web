@@ -174,3 +174,32 @@
   0%, 100% { transform: translateY(0); }
   50%      { transform: translateY(-0.4rem); }
 }
+
+@keyframes frog-run-x {
+  0%   { left: 0; }
+  50%  { left: calc(100% - 2.25rem); }
+  100% { left: 0; }
+}
+@keyframes frog-face {
+  0%, 49.99% { transform: scaleX(-1); }
+  50%, 100%  { transform: scaleX(1); }
+}
+@keyframes frog-step-a {
+  0%, 50%      { opacity: 1; }
+  50.01%, 100% { opacity: 0; }
+}
+@keyframes frog-step-b {
+  0%, 50%      { opacity: 0; }
+  50.01%, 100% { opacity: 1; }
+}
+.frog-runner {
+  animation:
+    frog-run-x 8s linear infinite,
+    frog-face 8s linear infinite;
+}
+.frog-step-a {
+  animation: frog-step-a 0.28s linear infinite;
+}
+.frog-step-b {
+  animation: frog-step-b 0.28s linear infinite;
+}
