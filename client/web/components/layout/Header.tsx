@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { Container } from "@/components/ui/Container";
 import { FrogMascot } from "@/components/ui/FrogMascot";
 import { MenuIcon, CloseIcon } from "@/components/ui/icons";
+import { cn } from "@/lib/utils";
 
 const NAV = [
   { label: "Головна", href: "/" },
@@ -79,27 +80,37 @@ export function Header() {
               {open ? <CloseIcon /> : <MenuIcon />}
             </button>
 
-            {open && (
-              <div className="absolute inset-x-0 top-full z-50 mt-2 flex flex-col gap-1 rounded-2xl border border-border bg-bg-soft p-3 shadow-xl shadow-black/40 lg:hidden">
-                {NAV.map((item) => (
+            <div
+              inert={!open}
+              className={cn(
+                "absolute inset-x-0 top-full z-50 mt-2 grid transition-all duration-300 ease-out lg:hidden",
+                open
+                  ? "grid-rows-[1fr] opacity-100"
+                  : "pointer-events-none grid-rows-[0fr] opacity-0",
+              )}
+            >
+              <div className="overflow-hidden">
+                <div className="flex flex-col gap-1 rounded-2xl border border-border bg-bg-soft p-3 shadow-xl shadow-black/40">
+                  {NAV.map((item) => (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      onClick={() => setOpen(false)}
+                      className="rounded-lg px-4 py-3 font-semibold text-fg transition-colors hover:bg-surface"
+                    >
+                      {item.label}
+                    </Link>
+                  ))}
                   <Link
-                    key={item.href}
-                    href={item.href}
+                    href={ctaHref}
                     onClick={() => setOpen(false)}
-                    className="rounded-lg px-4 py-3 font-semibold text-fg transition-colors hover:bg-surface"
+                    className="mt-1 rounded-lg bg-gradient-main px-4 py-3 text-center font-bold text-black"
                   >
-                    {item.label}
+                    {ctaLabel}
                   </Link>
-                ))}
-                <Link
-                  href={ctaHref}
-                  onClick={() => setOpen(false)}
-                  className="mt-1 rounded-lg bg-gradient-main px-4 py-3 text-center font-bold text-black"
-                >
-                  {ctaLabel}
-                </Link>
+                </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
       </Container>
