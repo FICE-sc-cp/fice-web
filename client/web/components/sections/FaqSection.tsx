@@ -46,47 +46,54 @@ export function FaqSection() {
               <div
                 key={index}
                 className={cn(
-                  'overflow-hidden rounded-2xl border transition-colors',
-                  isOpen ? 'border-brand-cyan' : 'border-zinc-600',
+                  'rounded-2xl p-px transition-colors',
+                  isOpen ? 'bg-gradient-blue' : 'bg-zinc-600',
                 )}
               >
-                <button
-                  type="button"
-                  onClick={() => toggle(index)}
-                  aria-expanded={isOpen}
-                  className="flex w-full items-center justify-between gap-8 p-6 text-left lg:p-8"
-                >
-                  <span
-                    className={cn(
-                      'text-lg font-bold lg:text-xl',
-                      isOpen ? 'text-brand-cyan' : 'text-white',
-                    )}
+                <div className="overflow-hidden rounded-2xl bg-bg">
+                  <button
+                    type="button"
+                    onClick={() => toggle(index)}
+                    aria-expanded={isOpen}
+                    className="flex w-full items-center justify-between gap-8 p-6 text-left lg:p-8"
                   >
-                    {faq.question}
-                  </span>
-                  <span
-                    className={cn(
-                      'size-6 shrink-0 transition-transform',
-                      isOpen ? 'rotate-180 text-brand-cyan' : 'text-white',
-                    )}
-                  >
-                    <ChevronIcon />
-                  </span>
-                </button>
+                    <span
+                      className={cn(
+                        'text-lg font-bold lg:text-xl',
+                        isOpen
+                          ? 'bg-gradient-blue bg-clip-text text-transparent'
+                          : 'text-white',
+                      )}
+                    >
+                      {faq.question}
+                    </span>
+                    <span
+                      className={cn(
+                        'size-6 shrink-0 transition-transform',
+                        isOpen ? 'rotate-180' : 'text-white',
+                      )}
+                    >
+                      <ChevronIcon
+                        stroke={isOpen ? 'url(#grad-blue)' : 'currentColor'}
+                      />
+                    </span>
+                  </button>
 
-                <div
-                  className={cn(
-                    'grid transition-all duration-300 ease-out',
-                    isOpen
-                      ? 'grid-rows-[1fr] opacity-100'
-                      : 'grid-rows-[0fr] opacity-0',
-                  )}
-                >
-                  <div className="overflow-hidden">
-                    <div className="border-t border-brand-cyan px-6 pb-6 lg:px-8 lg:pb-8">
-                      <p className="pt-6 text-lg text-stone-300 lg:text-xl">
-                        {faq.answer}
-                      </p>
+                  <div
+                    className={cn(
+                      'grid transition-all duration-300 ease-out',
+                      isOpen
+                        ? 'grid-rows-[1fr] opacity-100'
+                        : 'grid-rows-[0fr] opacity-0',
+                    )}
+                  >
+                    <div className="overflow-hidden">
+                      <div className="px-6 pb-6 lg:px-8 lg:pb-8">
+                        <div className="h-px bg-gradient-blue" />
+                        <p className="pt-6 text-lg text-stone-300 lg:text-xl">
+                          {faq.answer}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
