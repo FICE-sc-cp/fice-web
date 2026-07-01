@@ -16,7 +16,6 @@ interface TeamCard {
   name: string;
   role: string;
   detail: string | null;
-  quote: string | null;
   telegram: string | null;
   photo: string | null;
 }
@@ -30,8 +29,13 @@ const ROLE_LABEL: Record<DepartmentMemberRole, string> = {
   MEMBER: "Учасник",
 };
 
-const LEADERSHIP: DepartmentMemberRole[] = ["HEAD", "FIRST_DEPUTY"];
-const DEPUTIES: DepartmentMemberRole[] = ["SECRETARY", "DEPUTY", "HR"];
+const PRESIDIUM: DepartmentMemberRole[] = [
+  "HEAD",
+  "FIRST_DEPUTY",
+  "SECRETARY",
+  "DEPUTY",
+  "HR",
+];
 
 function memberCard(m: DepartmentMember): TeamCard {
   return {
@@ -39,7 +43,6 @@ function memberCard(m: DepartmentMember): TeamCard {
     name: `${m.firstName} ${m.lastName}`.trim(),
     role: ROLE_LABEL[m.role] ?? m.role,
     detail: m.specialization,
-    quote: m.quote,
     telegram: m.telegramTag,
     photo: m.photo,
   };
@@ -52,7 +55,6 @@ function headCard(d: Department): TeamCard | null {
     name: `${d.head.firstName} ${d.head.lastName}`.trim(),
     role: `Голова департаменту «${d.name}»`,
     detail: null,
-    quote: null,
     telegram: d.head.telegramTag,
     photo: d.head.photo,
   };
@@ -74,13 +76,10 @@ export async function TeamSection() {
   ]);
 
   const groups = [
-    { title: "Керівництво", cards: byRole(members, LEADERSHIP) },
-    { title: "Заступники та секретаріат", cards: byRole(members, DEPUTIES) },
+    { title: "Президія", cards: byRole(members, PRESIDIUM) },
     {
       title: "Голови департаментів",
-      cards: departments
-        .map(headCard)
-        .filter((c): c is TeamCard => c !== null),
+      cards: departments.map(headCard).filter((c): c is TeamCard => c !== null),
     },
   ].filter((g) => g.cards.length > 0);
 
@@ -108,7 +107,9 @@ export async function TeamSection() {
         )}
 
         <div className="flex flex-col items-center gap-4 text-center">
-          <p className="text-lg text-muted">Хочеш долучитись до нашої команди?</p>
+          <p className="text-lg text-muted">
+            Хочеш долучитись до нашої команди?
+          </p>
           <a
             href="/join"
             className="inline-flex items-center justify-center rounded-2xl bg-gradient-main px-10 py-4 text-lg font-bold text-black transition-opacity hover:opacity-90"
@@ -152,13 +153,10 @@ function TeamCardView({ card }: { card: TeamCard }) {
       </div>
       <div className="flex flex-col gap-1.5">
         <h3 className="text-xl font-bold text-white">{card.name}</h3>
-        <p className="text-lg font-semibold text-brand-magenta">{card.role}</p>
-        {card.detail && <p className="text-sm text-stone-400">{card.detail}</p>}
-        {card.quote && (
-          <p className="text-sm italic leading-snug text-stone-300">
-            «{card.quote}»
-          </p>
-        )}
+        <div className="text-lg font-semibold text-brand-magenta">
+          {card.role}
+          {card.detail && ` | ${card.detail}`}
+        </div>
         {tg && (
           <a
             href={`https://t.me/${tg}`}
