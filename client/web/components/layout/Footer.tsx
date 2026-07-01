@@ -1,7 +1,7 @@
 import { FC, SVGProps } from "react";
 import Image from "next/image";
 import { Container } from "@/components/ui/Container";
-import { FrogRunner } from "@/components/ui/FrogRunner";
+import { FooterFrog } from "@/components/ui/FooterFrog";
 import {
   TelegramOutlineIcon,
   MailIcon,
@@ -138,14 +138,7 @@ export function Footer() {
         </div>
 
         <div className="relative mt-16 border-t border-white/10 py-8">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-x-0 top-0 h-0"
-          >
-            <span className="frog-runner absolute bottom-0 left-0 block h-9 w-9 drop-shadow-md">
-              <FrogRunner className="block h-full w-full" />
-            </span>
-          </div>
+          <FooterFrog />
           <p className="text-sm text-gray-400">
             © {YEAR} Студентська рада ФІОТ. Всі права захищені.
           </p>
