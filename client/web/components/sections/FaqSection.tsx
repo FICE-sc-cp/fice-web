@@ -55,7 +55,7 @@ export function FaqSection() {
                     type="button"
                     onClick={() => toggle(index)}
                     aria-expanded={isOpen}
-                    className="flex w-full items-center justify-between gap-8 p-6 text-left lg:p-8"
+                    className="flex w-full cursor-pointer items-center justify-between gap-8 p-6 text-left lg:p-8"
                   >
                     <span
                       className={cn(
