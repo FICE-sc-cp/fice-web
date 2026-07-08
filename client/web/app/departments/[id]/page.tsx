@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 import { DEPARTMENTS, departmentSlugs, type Member } from "@/lib/departments";
+import { fice, safe, mediaUrl, type Department } from "@/lib/api";
 
 const PERSON_OUTLINE =
   "drop-shadow(3px 3px 0 #fff) drop-shadow(-3px -3px 0 #fff) drop-shadow(3px -3px 0 #fff) drop-shadow(-3px 3px 0 #fff)";
@@ -46,29 +47,63 @@ export async function generateMetadata({
   };
 }
 
-function MemberCard({ member, accent }: { member: Member; accent: Accent }) {
-  const tg = member.telegram?.replace(/^@/, "");
+function MemberCard({
+  name,
+  role,
+  telegram,
+  photo,
+  quote,
+  featured,
+  accent,
+  gradient,
+}: {
+  name: string;
+  role: string;
+  telegram: string | null;
+  photo?: string | null;
+  quote?: string | null;
+  featured?: boolean;
+  accent: Accent;
+  gradient: string;
+}) {
+  const tg = telegram?.replace(/^@/, "");
   return (
     <article className="flex w-64 max-w-full flex-col gap-3">
       <div
         className={cn(
-          "relative aspect-[3/4] overflow-hidden rounded-2xl border bg-surface/40",
-          accentBorder[accent],
+          "rounded-2xl",
+          featured ? cn("p-px", gradient) : cn("border", accentBorder[accent]),
         )}
       >
-        <Image
-          src="/placeholder-person.png"
-          alt={member.name}
-          fill
-          sizes="256px"
-          className="object-contain object-bottom"
-          style={{ filter: PERSON_OUTLINE }}
-        />
+        <div className="relative aspect-[3/4] overflow-hidden rounded-2xl bg-surface/40">
+          {photo ? (
+            <div
+              className="absolute inset-0 bg-cover bg-center"
+              style={{ backgroundImage: `url("${photo}")` }}
+            />
+          ) : (
+            <Image
+              src="/placeholder-person.png"
+              alt={name}
+              fill
+              sizes="256px"
+              className="object-contain object-bottom"
+              style={{ filter: PERSON_OUTLINE }}
+            />
+          )}
+        </div>
       </div>
       <div className="flex flex-col gap-1">
-        <h3 className="text-lg font-bold text-white">{member.name}</h3>
-        <p className={cn("text-base font-semibold", accentText[accent])}>
-          {member.role}
+        <h3 className="text-lg font-bold text-white">{name}</h3>
+        <p
+          className={cn(
+            "text-base font-semibold",
+            featured
+              ? cn("bg-clip-text text-transparent", gradient)
+              : accentText[accent],
+          )}
+        >
+          {role}
         </p>
         {tg && (
           <a
@@ -82,6 +117,11 @@ function MemberCard({ member, accent }: { member: Member; accent: Accent }) {
             </span>
             <span className="text-sm">@{tg}</span>
           </a>
+        )}
+        {quote && (
+          <p className="mt-1 text-sm italic leading-snug text-stone-400">
+            «{quote}»
+          </p>
         )}
       </div>
     </article>
@@ -114,20 +154,21 @@ export default async function DepartmentPage({
 
   const iconGrad = accentGradient[d.accent];
   const joinHref = `/join?dept=${encodeURIComponent(d.name)}`;
-  const headTg = d.head?.telegram?.replace(/^@/, "");
-  const headMember: Member | null = d.head
-    ? {
-        name: d.head.name,
-        role: "Голова департаменту",
-        telegram: d.head.telegram,
-      }
-    : null;
-  const teamMembers: Member[] = [
-    ...(headMember ? [headMember] : []),
-    ...(d.team ?? []),
-  ];
+  const teamMembers: Member[] = d.team ?? [];
   const hasAbout = !!d.about?.length;
   const hasResp = !!d.responsibilities?.length;
+
+  const dbDepartments = await safe(fice.departments(), [] as Department[]);
+  const dbHead =
+    dbDepartments.find((x) => x.name.trim() === d.name.trim())?.head ?? null;
+  const head = dbHead
+    ? {
+        name: `${dbHead.firstName} ${dbHead.lastName}`.trim(),
+        telegram: dbHead.telegramTag,
+        photo: mediaUrl(dbHead.photo),
+      }
+    : null;
+  const headTg = head?.telegram?.replace(/^@/, "");
 
   return (
     <>
@@ -289,46 +330,89 @@ export default async function DepartmentPage({
           </section>
         )}
 
-        {d.head && (
+        {teamMembers.length > 0 ? (
+          <section className="relative isolate py-16 lg:py-24">
+            <Glow
+              color={d.glow[0]}
+              className="left-1/2 top-1/2 h-[24rem] w-[40rem] -translate-x-1/2 -translate-y-1/2"
+            />
+            <Container className="flex flex-col">
+              <SectionHeading title="Команда" gradient={d.gradient} />
+              <div className="mt-12 flex flex-wrap justify-center gap-x-6 gap-y-10">
+                {head && (
+                  <MemberCard
+                    name={head.name}
+                    role="Голова департаменту"
+                    telegram={head.telegram}
+                    photo={head.photo}
+                    quote={d.headQuote}
+                    featured
+                    accent={d.accent}
+                    gradient={d.gradient}
+                  />
+                )}
+                {teamMembers.map((m, i) => (
+                  <MemberCard
+                    key={i}
+                    name={m.name}
+                    role={m.role}
+                    telegram={m.telegram}
+                    accent={d.accent}
+                    gradient={d.gradient}
+                  />
+                ))}
+              </div>
+            </Container>
+          </section>
+        ) : head ? (
           <section className="relative isolate py-16 lg:py-24">
             <Glow
               color={d.glow[0]}
               className="left-1/2 top-1/2 h-[24rem] w-[40rem] -translate-x-1/2 -translate-y-1/2"
             />
             <Container>
-              <div className={cn("rounded-3xl p-px", d.gradient)}>
-                <div className="grid grid-cols-1 gap-8 rounded-3xl bg-bg p-6 sm:p-10 md:grid-cols-[auto_1fr] md:items-center">
-                  <div className="relative mx-auto aspect-[3/4] w-56 max-w-full overflow-hidden rounded-2xl border border-white/10 bg-surface/40">
-                    <Image
-                      src="/placeholder-person.png"
-                      alt={d.head.name}
-                      fill
-                      sizes="224px"
-                      className="object-contain object-bottom"
-                      style={{ filter: PERSON_OUTLINE }}
-                    />
+              <div className={cn("overflow-hidden rounded-3xl p-px", d.gradient)}>
+                <div className="grid grid-cols-1 overflow-hidden rounded-3xl bg-bg sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+                  <div className="relative min-h-[22rem] bg-surface/40">
+                    {head.photo ? (
+                      <div
+                        className="absolute inset-0 bg-cover bg-center"
+                        style={{ backgroundImage: `url("${head.photo}")` }}
+                      />
+                    ) : (
+                      <Image
+                        src="/placeholder-person.png"
+                        alt={head.name}
+                        fill
+                        sizes="(min-width: 640px) 40vw, 100vw"
+                        className="object-contain object-bottom"
+                        style={{ filter: PERSON_OUTLINE }}
+                      />
+                    )}
                   </div>
-                  <div className="flex flex-col gap-4 text-center md:text-left">
+                  <div className="flex flex-col justify-center gap-4 p-8 text-center sm:p-10 sm:text-left">
                     <span
                       className={cn(
-                        "self-center rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide text-black md:self-start",
+                        "self-center rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide text-black sm:self-start",
                         d.gradient,
                       )}
                     >
                       Голова департаменту
                     </span>
                     <h2 className="text-3xl font-bold sm:text-4xl">
-                      {d.head.name}
+                      {head.name}
                     </h2>
-                    <p className="text-xl leading-relaxed text-muted">
-                      «{d.head.quote}»
-                    </p>
+                    {d.headQuote && (
+                      <p className="text-xl leading-relaxed text-muted">
+                        «{d.headQuote}»
+                      </p>
+                    )}
                     {headTg && (
                       <a
                         href={`https://t.me/${headTg}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mx-auto inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2.5 font-semibold text-stone-200 transition-colors hover:border-brand-cyan hover:text-brand-cyan md:mx-0 md:self-start"
+                        className="mx-auto inline-flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-2.5 font-semibold text-stone-200 transition-colors hover:border-brand-cyan hover:text-brand-cyan sm:mx-0 sm:self-start"
                       >
                         <span className="size-5">
                           <TelegramIcon />
@@ -341,20 +425,7 @@ export default async function DepartmentPage({
               </div>
             </Container>
           </section>
-        )}
-
-        {teamMembers.length > 0 && (
-          <section className="relative isolate py-16 lg:py-24">
-            <Container className="flex flex-col">
-              <SectionHeading title="Команда" gradient={d.gradient} />
-              <div className="mt-12 flex flex-wrap justify-center gap-x-6 gap-y-10">
-                {teamMembers.map((m, i) => (
-                  <MemberCard key={i} member={m} accent={d.accent} />
-                ))}
-              </div>
-            </Container>
-          </section>
-        )}
+        ) : null}
 
         {!!d.subDepartments?.length && (
           <section className="relative isolate py-16 lg:py-24">

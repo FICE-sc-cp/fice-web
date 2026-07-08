@@ -26,7 +26,7 @@ export interface DepartmentData {
   slogan: string | null;
   about: string[] | null;
   responsibilities: Responsibility[] | null;
-  head: (Member & { quote: string }) | null;
+  headQuote: string | null;
   team: Member[] | null;
   subDepartments: { name: string; description: string }[] | null;
   projects: Project[] | null;
@@ -44,7 +44,7 @@ interface DeptInput {
   slogan?: string | null;
   about?: string[] | null;
   responsibilities?: Responsibility[] | null;
-  head?: (Member & { quote: string }) | null;
+  headQuote?: string | null;
   team?: Member[] | null;
   subDepartments?: { name: string; description: string }[] | null;
   projects?: Project[] | null;
@@ -63,7 +63,7 @@ function dept(input: DeptInput): DepartmentData {
     slogan: input.slogan ?? null,
     about: input.about ?? null,
     responsibilities: input.responsibilities ?? null,
-    head: input.head ?? null,
+    headQuote: input.headQuote ?? null,
     team: input.team ?? null,
     subDepartments: input.subDepartments ?? null,
     projects: input.projects ?? null,
