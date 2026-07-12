@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Glow } from "@/components/ui/Glow";
@@ -10,54 +11,63 @@ import { Reveal, RevealGroup } from "@/components/ui/Reveal";
 import { cn } from "@/lib/utils";
 
 const DEPARTMENTS: {
+  slug: string;
   name: string;
   accent: Accent;
   description: string;
   wide?: boolean;
 }[] = [
   {
+    slug: "presidium",
     name: "Президія",
     accent: "magenta",
     description:
       "Керівництво студрадою, формування стратегії та координування ключових процесів. Робота спрямована на забезпечення стабільної та ефективної діяльності організації.",
   },
   {
+    slug: "secretariat",
     name: "Секретаріат",
     accent: "magenta",
     description:
       "Організовує комунікацію, документи та внутрішні процеси. Відповідає за порядок та облік важливої інформації.",
   },
   {
+    slug: "projects",
     name: "Проєктний департамент",
     accent: "cyan",
     description:
       "Департамент реалізує події та ініціативи для студентів факультету. Створюємо події та можливості, що розвивають студспільноту. Робота з партнерами, планування активностей та формування команд.",
   },
   {
+    slug: "media",
     name: "Департамент медіа",
     accent: "cyan",
     description:
       "Команда працює над контентом студради: фото, відео, дизайн, соцмережі. Ми забезпечуємо актуальну комунікацію, висвітлюємо життя факультету.",
   },
   {
+    slug: "partnerships",
     name: "Департамент партнерств",
     accent: "green",
     description:
       "Співпраця з компаніями та організаціями, пошук можливостей для студентів. Працюємо над проєктами та підтримкою благодійних ініціатив та розширюємо можливості для студспільноти.",
   },
   {
+    slug: "merch",
     name: "Департамент мерчу",
     accent: "orange",
     description:
       "Команда розробляє дизайн, створює нові продукти. Працюємо над якістю, стилем і впізнаваністю бренду ФІОТ.",
   },
   {
+    slug: "education",
     name: "Департамент якості освіти",
     accent: "green",
     description:
       "Аналізує освітній процес, збирає фідбек і допомагає вирішувати академічні питання.",
   },
   {
+    slug: "applicants",
     name: "Департамент по роботі з абітурієнтами",
     accent: "orange",
     description:
@@ -108,15 +118,15 @@ export function DepartmentsSection() {
               <p className="flex-1 text-xl font-medium leading-6 text-zinc-400">
                 {dept.description}
               </p>
-              <a
-                href="#"
+              <Link
+                href={`/departments/${dept.slug}`}
                 className="group/link inline-flex items-center gap-1 text-xl font-black text-gray-200 transition-opacity hover:opacity-70"
               >
                 Читати більше{" "}
                 <span className="transition-transform duration-300 group-hover/link:translate-x-1">
                   →
                 </span>
-              </a>
+              </Link>
             </AccentCard>
           ))}
         </RevealGroup>

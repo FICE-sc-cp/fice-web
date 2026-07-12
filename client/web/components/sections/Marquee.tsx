@@ -8,7 +8,13 @@ const DURATION = REPEAT * 7500;
 const SLOW_RATE = 0.2;
 const RAMP = 600;
 
-export function Marquee() {
+export function Marquee({
+  href = "/join",
+  gradient = "bg-gradient-main",
+}: {
+  href?: string;
+  gradient?: string;
+}) {
   const trackRef = useRef<HTMLDivElement>(null);
   const animRef = useRef<Animation | null>(null);
   const rafRef = useRef(0);
@@ -57,11 +63,11 @@ export function Marquee() {
 
   return (
     <Link
-      href="/join"
+      href={href}
       aria-label="Приєднатись до команди"
       onMouseEnter={() => rampTo(SLOW_RATE)}
       onMouseLeave={() => rampTo(1)}
-      className="block overflow-hidden bg-gradient-main py-6 transition-opacity hover:opacity-90"
+      className={`block overflow-hidden ${gradient} py-6 transition-opacity hover:opacity-90`}
     >
       <div ref={trackRef} className="flex w-max">
         {group}

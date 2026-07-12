@@ -87,6 +87,18 @@ export function ApplicationFormSection() {
     };
   }, []);
 
+  useEffect(() => {
+    if (!departments.length) return;
+    const param = new URLSearchParams(window.location.search).get('dept');
+    if (!param) return;
+    const match = departments.find(
+      (d) => d.name.toLowerCase() === param.toLowerCase(),
+    );
+    if (match && getValues('departmentIds').length === 0) {
+      setValue('departmentIds', [match.id], { shouldValidate: false });
+    }
+  }, [departments, getValues, setValue]);
+
   const toggleDepartment = (id: string) => {
     const current = getValues('departmentIds');
     const next = current.includes(id)
