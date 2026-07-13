@@ -2,17 +2,21 @@
 
 import { useState } from "react";
 import { RevealGroup } from "@/components/ui/Reveal";
+import { RichText } from "@/components/ui/RichText";
 import { ChevronIcon } from "@/components/ui/icons";
+import { accentText, type Accent } from "@/components/ui/AccentCard";
 import { cn } from "@/lib/utils";
 
 export function FaqAccordion({
   items,
   gradient = "bg-gradient-blue",
   gradId = "grad-blue",
+  accent = "cyan",
 }: {
   items: { question: string; answer: string }[];
   gradient?: string;
   gradId?: string;
+  accent?: Accent;
 }) {
   const [open, setOpen] = useState<number | null>(0);
   const toggle = (index: number) =>
@@ -71,7 +75,10 @@ export function FaqAccordion({
                   <div className="px-6 pb-6 lg:px-8 lg:pb-8">
                     <div className={cn("h-px", gradient)} />
                     <p className="pt-6 text-lg text-stone-300 lg:text-xl">
-                      {faq.answer}
+                      <RichText
+                        text={faq.answer}
+                        linkClassName={accentText[accent]}
+                      />
                     </p>
                   </div>
                 </div>
