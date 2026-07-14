@@ -72,9 +72,20 @@ async function reset() {
   await prisma.fundraiser.deleteMany();
   await prisma.partner.deleteMany();
   await prisma.news.deleteMany();
+  await prisma.projectParticipant.deleteMany();
   await prisma.statOverride.deleteMany();
   await prisma.user.deleteMany();
 }
+
+// Демо-учасники проєктного департаменту для стінки «Люди проєктного».
+const PROJECT_PEOPLE = [
+  'Anny', 'Вероніка Нуар', 'sonya', 'TimΔ', 'Julìa', 'Apolinarik', 'Veronika',
+  'Катерина', 'Toshka', 'Daria', 'Artem Zhmura', 'Софія', 'Макс Koval', 'rina',
+  'Vladyslav Mykhailov', 'Роман Максименко', 'Лёха', 'Андрій', 'Mariia Bidiuk',
+  'Соня', 'dna', 'Юлія Зелюк', 'Nightcore', 'Maryna', 'arina', 'Тарас', 'marina',
+  'Maksym', 'Laanji', 'льошик', 'Влад', 'Sherlochek', 'Ілюша', 'Android hacker',
+  'Гена Цидрусні', 'tanossska',
+];
 
 // ── Departments (each with a 1:1 head + 1:1 details) ──────────────────────────
 const DEPARTMENTS = [
@@ -670,6 +681,15 @@ async function main() {
     });
     partnerIds[p.name] = created.id;
   }
+
+  // Project department participants (photos left null → frontend placeholder).
+  await prisma.projectParticipant.createMany({
+    data: PROJECT_PEOPLE.map((fullName, i) => ({
+      telegramId: BigInt(900000 + i),
+      fullName,
+      source: 'HARVESTED' as const,
+    })),
+  });
 
   // Events (nested details + program + questions), then link a few partners.
   const eventIds: Record<string, string> = {};
