@@ -23,6 +23,8 @@ export interface DepartmentData {
   glow: [string, string];
   cover: string | null;
   memberCount: number | null;
+  // Renders the "Люди проєктного" people wall (heart). Set only for projects.
+  heart: boolean | null;
   slogan: string | null;
   about: string[] | null;
   responsibilities: Responsibility[] | null;
@@ -41,6 +43,7 @@ interface DeptInput {
   glow: [string, string];
   cover?: string | null;
   memberCount?: number | null;
+  heart?: boolean | null;
   slogan?: string | null;
   about?: string[] | null;
   responsibilities?: Responsibility[] | null;
@@ -60,6 +63,7 @@ function dept(input: DeptInput): DepartmentData {
     glow: input.glow,
     cover: input.cover ?? null,
     memberCount: input.memberCount ?? null,
+    heart: input.heart ?? null,
     slogan: input.slogan ?? null,
     about: input.about ?? null,
     responsibilities: input.responsibilities ?? null,
@@ -106,40 +110,6 @@ export const DEPARTMENTS: Record<string, DepartmentData> = {
       },
     ],
   }),
-  secretariat: dept({
-    slug: "secretariat",
-    cover: "/photo-7.png",
-    name: "Секретаріат",
-    accent: "magenta",
-    gradient: "bg-gradient-magenta",
-    glow: ["#F6339A", "#9810FA"],
-    memberCount: 5,
-    slogan:
-      "Порядок, у якому народжуються великі проєкти: документи, комунікація й процеси під контролем.",
-    about: [
-      "Секретаріат тримає внутрішні процеси студради в порядку: організовує комунікацію, веде документообіг і стежить за обліком важливої інформації.",
-      "Завдяки нам команди не губляться в задачах: усе зафіксовано, структуровано й доступно. Це та невидима робота, без якої не працює жодна велика організація.",
-    ],
-    responsibilities: [
-      "Ведення документообігу та протоколів",
-      "Організація зустрічей і внутрішньої комунікації",
-      "Облік складу команд та задач",
-      "Підготовка звітності за ініціативами",
-      "Систематизація й зберігання інформації",
-    ],
-    subDepartments: [
-      {
-        name: "Документообіг",
-        description:
-          "Готує, оформлює та зберігає внутрішні документи студради.",
-      },
-      {
-        name: "Комунікація",
-        description:
-          "Налагоджує обмін інформацією між командами й фіксує домовленості.",
-      },
-    ],
-  }),
   projects: dept({
     slug: "projects",
     cover: "/projects-main-photo.jpg",
@@ -148,6 +118,7 @@ export const DEPARTMENTS: Record<string, DepartmentData> = {
     gradient: "bg-gradient-blue",
     glow: ["#36DFFF", "#2B7FFF"],
     memberCount: 45,
+    heart: true,
     slogan: "Твори свої ідеї 💫",
     about: [
       "Проєктний департамент - це простір для створення, розвитку і реалізації студентських ініціатив. Ми працюємо над тим, щоб кожна ідея отримала шанс на втілення: від перших обговорень до фінального проведення заходу.",

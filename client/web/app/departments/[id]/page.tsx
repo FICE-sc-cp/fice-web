@@ -9,6 +9,7 @@ import { Glow } from "@/components/ui/Glow";
 import { Marquee } from "@/components/sections/Marquee";
 import { FaqAccordion } from "@/components/sections/FaqAccordion";
 import { ProjectsGrid } from "@/components/sections/ProjectsGrid";
+import { ProjectPeopleWall } from "@/components/sections/ProjectPeopleWall";
 import { RichText } from "@/components/ui/RichText";
 import {
   AccentCard,
@@ -25,7 +26,13 @@ import {
 } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 import { DEPARTMENTS, departmentSlugs, type Member } from "@/lib/departments";
-import { fice, safe, mediaUrl, type Department } from "@/lib/api";
+import {
+  fice,
+  safe,
+  mediaUrl,
+  type Department,
+  type ProjectParticipant,
+} from "@/lib/api";
 
 const PERSON_OUTLINE =
   "drop-shadow(3px 3px 0 #fff) drop-shadow(-3px -3px 0 #fff) drop-shadow(3px -3px 0 #fff) drop-shadow(-3px 3px 0 #fff)";
@@ -160,8 +167,14 @@ export default async function DepartmentPage({
   const hasResp = !!d.responsibilities?.length;
 
   const dbDepartments = await safe(fice.departments(), [] as Department[]);
-  const dbHead =
-    dbDepartments.find((x) => x.name.trim() === d.name.trim())?.head ?? null;
+  const dbDept = dbDepartments.find((x) => x.name.trim() === d.name.trim());
+  const dbHead = dbDept?.head ?? null;
+  // Admin-set member count overrides the template default when present.
+  const memberCount = dbDept?.memberCount ?? d.memberCount;
+  // People wall ("сердечко") — only for departments with heart set (projects).
+  const projectPeople = d.heart
+    ? await safe(fice.projectParticipants(), [] as ProjectParticipant[])
+    : [];
   const head = dbHead
     ? {
         name: `${dbHead.firstName} ${dbHead.lastName}`.trim(),
@@ -207,12 +220,12 @@ export default async function DepartmentPage({
                   </p>
                 )}
                 <div className="mt-1 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
-                  {d.memberCount != null && (
+                  {memberCount != null && (
                     <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-surface/50 px-4 py-2 text-base font-semibold text-fg">
                       <span className="size-5">
                         <PeopleIcon gradient={iconGrad} />
                       </span>
-                      {d.memberCount} учасників
+                      {memberCount} учасників
                     </span>
                   )}
                   <Link
@@ -236,12 +249,6 @@ export default async function DepartmentPage({
                     height={0}
                     sizes="(min-width: 1024px) 32rem, 100vw"
                     className="h-auto w-full"
-                  />
-                  <div
-                    className={cn(
-                      "pointer-events-none absolute inset-0 opacity-20 mix-blend-overlay",
-                      d.gradient,
-                    )}
                   />
                 </div>
               )}
@@ -329,6 +336,14 @@ export default async function DepartmentPage({
               </div>
             </Container>
           </section>
+        )}
+
+        {d.heart && projectPeople.length > 0 && (
+          <ProjectPeopleWall
+            people={projectPeople}
+            gradient={d.gradient}
+            glow={d.glow}
+          />
         )}
 
         {teamMembers.length > 0 ? (
