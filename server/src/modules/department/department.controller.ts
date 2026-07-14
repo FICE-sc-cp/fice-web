@@ -34,7 +34,7 @@ export class DepartmentController {
   }
 
   @Get()
-  @ApiOperation({ summary: 'List departments with head and details' })
+  @ApiOperation({ summary: 'List departments with head' })
   @ApiOkResponse({ type: [DepartmentEntity] })
   findAll() {
     return this.departmentService.findAll();

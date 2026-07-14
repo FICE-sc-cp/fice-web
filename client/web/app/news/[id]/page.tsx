@@ -7,6 +7,7 @@ import { Footer } from '@/components/layout/Footer';
 import { Container } from '@/components/ui/Container';
 import { Glow } from '@/components/ui/Glow';
 import { fice, mediaUrl, safe, type News, type Paginated } from '@/lib/api';
+import { renderRichInline } from '@/lib/richText';
 import {
   bodyParagraphs,
   categoryLabel,
@@ -131,17 +132,17 @@ export default async function NewsArticlePage({
           {paragraphs.length > 0 ? (
             <div className="flex flex-col">
               {lead && (
-                <p className="mb-6 text-xl font-medium leading-relaxed text-zinc-200">
-                  {lead}
-                </p>
+                <p
+                  className="mb-6 text-xl font-medium leading-relaxed text-zinc-200"
+                  dangerouslySetInnerHTML={{ __html: renderRichInline(lead) }}
+                />
               )}
               {rest.map((p, i) => (
                 <p
                   key={i}
                   className="mb-6 text-[18.5px] leading-[1.72] text-zinc-300"
-                >
-                  {p}
-                </p>
+                  dangerouslySetInnerHTML={{ __html: renderRichInline(p) }}
+                />
               ))}
             </div>
           ) : (

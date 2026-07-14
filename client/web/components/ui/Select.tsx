@@ -11,7 +11,7 @@ interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
   (
-    { label, options, error, className, placeholder = 'Оберіть варіант...', ...props },
+    { label, options, error, className, placeholder = 'Обери варіант...', ...props },
     ref,
   ) => (
     <div className="flex w-full flex-col gap-1.5 text-left">

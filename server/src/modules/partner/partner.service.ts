@@ -1,7 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../database/prisma.service';
-import { BotService } from '../../bot/bot.service';
+import { BotService, parseChatRef } from '../../bot/bot.service';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { paginated, skipFor } from '../../common/pagination';
 import { CreatePartnerDto } from './dto/create-partner.dto';
@@ -32,7 +32,6 @@ export class PartnerService {
   private async notifyHeads(partner: {
     name: string;
     websiteLink: string | null;
-    shortDescription: string | null;
   }) {
     const mentions = [
       this.config.get<string>('PARTNERSHIP_HEAD_TG'),
@@ -46,14 +45,20 @@ export class PartnerService {
       '🤝 Нова заявка на партнерство',
       partner.name,
       partner.websiteLink ? `Сайт: ${partner.websiteLink}` : '',
-      partner.shortDescription || '',
       'Деталі — в адмінці.',
       mentions ? `${mentions} — погляньте, будь ласка` : '',
     ]
       .filter(Boolean)
       .join('\n');
 
-    await this.bot.notifyGroup(text);
+    // Deliver to the partnerships department chat/topic when configured,
+    // otherwise fall back to the shared admin group.
+    const ref = parseChatRef(this.config.get<string>('PARTNERSHIP_CHAT_ID'));
+    if (ref) {
+      await this.bot.sendToChat(ref.chatId, text, ref.threadId);
+    } else {
+      await this.bot.notifyGroup(text);
+    }
   }
 
   create(dto: CreatePartnerDto) {

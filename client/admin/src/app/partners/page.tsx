@@ -70,9 +70,9 @@ export default function PartnersListPage() {
                   )}
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold">{p.name}</p>
-                    {p.shortDescription && (
+                    {p.websiteLink && (
                       <p className="truncate text-xs text-subtle">
-                        {p.shortDescription}
+                        {p.websiteLink}
                       </p>
                     )}
                   </div>

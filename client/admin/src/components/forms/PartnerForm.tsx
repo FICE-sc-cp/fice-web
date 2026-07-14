@@ -4,7 +4,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Input } from '../ui/Input';
-import { Textarea } from '../ui/Textarea';
 import { Button } from '../ui/Button';
 import { ImageUpload } from '../ImageUpload';
 import { useMainButton } from '@/lib/telegram';
@@ -12,7 +11,6 @@ import { useMainButton } from '@/lib/telegram';
 const schema = z.object({
   name: z.string().min(1, 'Вкажи назву').max(30, 'Максимум 30 символів'),
   websiteLink: z.union([z.string().url('Невалідний URL'), z.literal('')]).optional(),
-  shortDescription: z.string().max(150, 'Максимум 150 символів').optional(),
   logoImage: z.string().nullable().optional(),
 });
 
@@ -40,7 +38,6 @@ export function PartnerForm({
     defaultValues: {
       name: '',
       websiteLink: '',
-      shortDescription: '',
       logoImage: null,
       ...defaultValues,
     },
@@ -58,11 +55,6 @@ export function PartnerForm({
         placeholder="https://…"
         {...register('websiteLink')}
         error={errors.websiteLink?.message}
-      />
-      <Textarea
-        label="Короткий опис"
-        {...register('shortDescription')}
-        error={errors.shortDescription?.message}
       />
       <ImageUpload
         label="Логотип"

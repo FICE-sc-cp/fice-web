@@ -4,11 +4,7 @@ import { PrismaService } from '../../database/prisma.service';
 
 export const STAT_KEYS = [
   'eventsHeld',
-  'moneyRaised',
   'charityRaised',
-  'visitorsReached',
-  'partnersCount',
-  'departmentsCount',
   'membersCount',
   'closedFundraisers',
   'activeStudents',
@@ -33,35 +29,19 @@ export class FactsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async computeStats(): Promise<Record<StatKey, number>> {
-    const [
-      eventsHeld,
-      eventAgg,
-      partnersCount,
-      departmentsCount,
-      membersCount,
-      closedFundraisers,
-    ] = await this.prisma.$transaction([
-      this.prisma.event.count(),
-      this.prisma.eventDetails.aggregate({
-        _sum: {
-          moneyCollected: true,
-          charityAmount: true,
-          visitorsAmount: true,
-        },
-      }),
-      this.prisma.partner.count({ where: { isApproved: true } }),
-      this.prisma.department.count(),
-      this.prisma.departmentMember.count(),
-      this.prisma.fundraiser.count({ where: { status: FundraiserStatus.CLOSED } }),
-    ]);
+    const [eventsHeld, eventAgg, membersCount, closedFundraisers] =
+      await this.prisma.$transaction([
+        this.prisma.event.count(),
+        this.prisma.eventDetails.aggregate({ _sum: { charityAmount: true } }),
+        this.prisma.departmentMember.count(),
+        this.prisma.fundraiser.count({
+          where: { status: FundraiserStatus.CLOSED },
+        }),
+      ]);
 
     return {
       eventsHeld,
-      moneyRaised: this.toNumber(eventAgg._sum.moneyCollected),
       charityRaised: this.toNumber(eventAgg._sum.charityAmount),
-      visitorsReached: eventAgg._sum.visitorsAmount ?? 0,
-      partnersCount,
-      departmentsCount,
       membersCount,
       closedFundraisers,
       activeStudents: MANUAL_DEFAULTS.activeStudents,

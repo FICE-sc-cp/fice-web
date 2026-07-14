@@ -61,14 +61,14 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
 
   const validate = () => {
     const e: Record<string, string> = {};
-    if (!lastName.trim()) e.lastName = 'Вкажіть прізвище';
-    if (!firstName.trim()) e.firstName = 'Вкажіть імʼя';
-    if (!middleName.trim()) e.middleName = 'Вкажіть по батькові';
-    if (!telegram.trim()) e.telegram = 'Вкажіть Telegram-тег';
-    if (!group.trim()) e.group = 'Вкажіть групу';
-    if (!birthDate) e.birthDate = 'Вкажіть дату народження';
-    if (hasFee && !payment) e.payment = 'Оберіть спосіб оплати';
-    if (payment === 'DONATED' && !receiptUrl) e.receipt = 'Додайте скриншот оплати';
+    if (!lastName.trim()) e.lastName = 'Вкажи прізвище';
+    if (!firstName.trim()) e.firstName = 'Вкажи імʼя';
+    if (!middleName.trim()) e.middleName = 'Вкажи по батькові';
+    if (!telegram.trim()) e.telegram = 'Вкажи Telegram-тег';
+    if (!group.trim()) e.group = 'Вкажи групу';
+    if (!birthDate) e.birthDate = 'Вкажи дату народження';
+    if (hasFee && !payment) e.payment = 'Обери спосіб оплати';
+    if (payment === 'DONATED' && !receiptUrl) e.receipt = 'Додай скриншот оплати';
     for (const q of questions) {
       if (q.required && !(answers[q.id] ?? '').trim()) {
         e[`q_${q.id}`] = 'Обовʼязкове поле';

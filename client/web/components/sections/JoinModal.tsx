@@ -33,7 +33,7 @@ export function JoinModal({ isOpen, onClose }: JoinModalProps) {
             alert('Заявка успішно відправлена!');
         } catch (error) {
             console.error('Помилка при відправці заявки:', error);
-            alert('Сталася помилка. Спробуйте пізніше.');
+            alert('Сталася помилка. Спробуй пізніше.');
         } finally {
             setIsLoading(false);
         }
@@ -93,7 +93,7 @@ export function JoinModal({ isOpen, onClose }: JoinModalProps) {
                     </div>
 
                     <Select
-                        label="Які відділи тебе цікавлять?"
+                        label="Які департаменти тебе цікавлять?"
                         name="department"
                         required
                         disabled={isLoading}

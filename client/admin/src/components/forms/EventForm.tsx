@@ -6,7 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { type EventInput, type EventQuestionType } from '@/lib/api';
 import { Input } from '../ui/Input';
-import { Textarea } from '../ui/Textarea';
+import { RichTextArea } from '../RichTextArea';
 import { Button } from '../ui/Button';
 import { ImageUpload } from '../ImageUpload';
 import { useMainButton } from '@/lib/telegram';
@@ -145,6 +145,7 @@ export function EventForm({
   );
 
   const photo = watch('photoUrl');
+  const description = watch('description');
   const submit = handleSubmit((scalars) =>
     onSubmit({ ...scalars, program: programItems, questions: questionItems }),
   );
@@ -184,10 +185,10 @@ export function EventForm({
         value={photo}
         onChange={(url) => setValue('photoUrl', url, { shouldDirty: true })}
       />
-      <Textarea
+      <RichTextArea
         label="Опис (про захід)"
-        {...register('description')}
-        error={errors.description?.message}
+        value={description ?? ''}
+        onChange={(v) => setValue('description', v, { shouldDirty: true })}
       />
 
       <div className="rounded-2xl border border-border bg-bg-soft p-4">

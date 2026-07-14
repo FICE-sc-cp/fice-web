@@ -95,7 +95,7 @@ export function DepartmentsSection() {
         <Reveal>
           <SectionHeader
             title="Структура та департаменти"
-            subtitle="Кожен відділ — це команда однодумців"
+            subtitle="Кожен департамент — це команда однодумців"
             gradient="bg-gradient-green"
           />
         </Reveal>
