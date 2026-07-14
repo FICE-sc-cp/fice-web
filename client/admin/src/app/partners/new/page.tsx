@@ -24,7 +24,6 @@ export default function NewPartnerPage() {
     mutation.mutate({
       name: v.name,
       websiteLink: v.websiteLink || undefined,
-      shortDescription: v.shortDescription?.trim() ? v.shortDescription : undefined,
       logoImage: v.logoImage ?? undefined,
     });
   }

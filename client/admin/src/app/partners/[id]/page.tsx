@@ -32,7 +32,6 @@ export default function EditPartnerPage() {
     mutation.mutate({
       name: v.name,
       websiteLink: v.websiteLink || undefined,
-      shortDescription: v.shortDescription?.trim() ? v.shortDescription : undefined,
       logoImage: v.logoImage ?? undefined,
     });
   }
@@ -60,7 +59,6 @@ export default function EditPartnerPage() {
                 ? {
                     name: data.name,
                     websiteLink: data.websiteLink ?? '',
-                    shortDescription: data.shortDescription ?? '',
                     logoImage: data.logoImage,
                   }
                 : undefined

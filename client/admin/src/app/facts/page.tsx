@@ -10,11 +10,7 @@ import { hapticNotify } from '@/lib/telegram';
 
 const STATS: { key: keyof Facts; label: string }[] = [
   { key: 'eventsHeld', label: 'Проведено заходів' },
-  { key: 'moneyRaised', label: 'Зібрано, ₴' },
   { key: 'charityRaised', label: 'На благодійність, ₴' },
-  { key: 'visitorsReached', label: 'Відвідувачів' },
-  { key: 'partnersCount', label: 'Партнерів' },
-  { key: 'departmentsCount', label: 'Відділів' },
   { key: 'membersCount', label: 'Учасників' },
   { key: 'closedFundraisers', label: 'Закритих зборів' },
   { key: 'activeStudents', label: 'Активних студентів (блок «Партнери»)' },

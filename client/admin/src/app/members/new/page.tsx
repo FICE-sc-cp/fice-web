@@ -20,7 +20,6 @@ export default function NewMemberPage() {
         specialization: v.specialization?.trim() ? v.specialization : undefined,
         photo: v.photo ?? undefined,
         telegramTag: v.telegramTag?.trim() ? v.telegramTag.trim() : undefined,
-        quote: v.quote?.trim() ? v.quote.trim() : undefined,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['members'] });

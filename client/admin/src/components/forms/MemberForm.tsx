@@ -16,7 +16,6 @@ const schema = z.object({
   specialization: z.string().max(100).optional(),
   photo: z.string().nullable().optional(),
   telegramTag: z.string().max(50).optional(),
-  quote: z.string().max(160).optional(),
 });
 
 export type MemberFormValues = z.infer<typeof schema>;
@@ -55,7 +54,6 @@ export function MemberForm({
       specialization: '',
       photo: null,
       telegramTag: '',
-      quote: '',
       ...defaultValues,
     },
   });
@@ -90,12 +88,6 @@ export function MemberForm({
         label="Напрям / спеціалізація"
         placeholder="напр. технічний напрям (для заступників)"
         {...register('specialization')}
-      />
-      <Input
-        label="Цитата / девіз (необовʼязково)"
-        placeholder="Один короткий рядок про себе"
-        {...register('quote')}
-        error={errors.quote?.message}
       />
       <Button type="submit" disabled={submitting} className="mt-1">
         {submitting ? 'Збереження…' : submitLabel}
