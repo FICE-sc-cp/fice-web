@@ -93,8 +93,9 @@ model DepartmentHead {
 }
 
 model Department {
-  id   String @id @default(uuid()) @db.Uuid
-  name String @db.VarChar(50)
+  id          String @id @default(uuid()) @db.Uuid
+  name        String @db.VarChar(50)
+  memberCount Int?
 
   headId String?         @unique @db.Uuid
   head   DepartmentHead? @relation(fields: [headId], references: [id], onDelete: SetNull)

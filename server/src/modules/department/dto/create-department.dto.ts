@@ -1,5 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import {
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+  Min,
+} from 'class-validator';
 
 export class CreateDepartmentDto {
   @ApiProperty({ maxLength: 50 })
@@ -7,6 +15,12 @@ export class CreateDepartmentDto {
   @IsNotEmpty()
   @MaxLength(50)
   name: string;
+
+  @ApiPropertyOptional({ description: 'Кількість учасників (для сторінки)' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  memberCount?: number;
 
   @ApiPropertyOptional({ format: 'uuid', description: 'Department head id' })
   @IsOptional()

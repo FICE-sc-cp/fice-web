@@ -28,6 +28,7 @@ export default function NewDepartmentPage() {
       }
       return api.createDepartment({
         name: v.name,
+        memberCount: v.memberCount?.trim() ? Number(v.memberCount) : undefined,
         headId,
       });
     },

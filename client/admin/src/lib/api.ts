@@ -47,6 +47,7 @@ export interface DepartmentHead {
 export interface Department {
   id: string;
   name: string;
+  memberCount: number | null;
   headId: string | null;
   head?: DepartmentHead | null;
 }
@@ -329,6 +330,7 @@ export interface DonationInput {
 
 export interface DepartmentInput {
   name: string;
+  memberCount?: number;
   headId?: string;
 }
 

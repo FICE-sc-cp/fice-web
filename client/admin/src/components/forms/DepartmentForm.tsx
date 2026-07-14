@@ -10,6 +10,7 @@ import { useMainButton } from '@/lib/telegram';
 
 const schema = z.object({
   name: z.string().min(1, 'Вкажи назву').max(50),
+  memberCount: z.string().optional(),
   headFirstName: z.string().max(30).optional(),
   headLastName: z.string().max(30).optional(),
   headTelegramTag: z.string().max(50).optional(),
@@ -39,6 +40,7 @@ export function DepartmentForm({
     resolver: zodResolver(schema),
     defaultValues: {
       name: '',
+      memberCount: '',
       headFirstName: '',
       headLastName: '',
       headTelegramTag: '',
@@ -54,6 +56,13 @@ export function DepartmentForm({
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
       <Input label="Назва" {...register('name')} error={errors.name?.message} />
+      <Input
+        label="Кількість учасників"
+        type="number"
+        min="0"
+        placeholder="напр. 45"
+        {...register('memberCount')}
+      />
 
       <div className="rounded-2xl border border-border bg-bg-soft p-4">
         <p className="mb-3 text-sm font-semibold text-muted">Керівник</p>

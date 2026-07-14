@@ -41,6 +41,7 @@ export default function EditDepartmentPage() {
 
       return api.updateDepartment(id, {
         name: v.name,
+        memberCount: v.memberCount?.trim() ? Number(v.memberCount) : undefined,
         headId,
       });
     },
@@ -74,6 +75,8 @@ export default function EditDepartmentPage() {
               dep
                 ? {
                     name: dep.name,
+                    memberCount:
+                      dep.memberCount != null ? String(dep.memberCount) : '',
                     headFirstName: dep.head?.firstName ?? '',
                     headLastName: dep.head?.lastName ?? '',
                     headTelegramTag: dep.head?.telegramTag ?? '',
