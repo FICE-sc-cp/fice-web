@@ -9,6 +9,7 @@ import { Glow } from "@/components/ui/Glow";
 import { Marquee } from "@/components/sections/Marquee";
 import { FaqAccordion } from "@/components/sections/FaqAccordion";
 import { ProjectsGrid } from "@/components/sections/ProjectsGrid";
+import { RichText } from "@/components/ui/RichText";
 import {
   AccentCard,
   accentBorder,
@@ -269,7 +270,7 @@ export default async function DepartmentPage({
                     </div>
                     {d.about?.map((p, i) => (
                       <p key={i} className="text-xl leading-relaxed text-muted">
-                        {p}
+                        <RichText text={p} linkClassName={accentText[d.accent]} />
                       </p>
                     ))}
                   </div>
@@ -278,7 +279,7 @@ export default async function DepartmentPage({
                 {hasResp && (
                   <AccentCard
                     accent={d.accent}
-                    className="flex flex-col gap-5 p-7"
+                    className="flex flex-col gap-5 self-start p-7 lg:sticky lg:top-28"
                   >
                     <h3 className="text-2xl font-bold text-white">
                       Сфери відповідальності
@@ -479,6 +480,7 @@ export default async function DepartmentPage({
                 items={d.faq}
                 gradient={d.gradient}
                 gradId={`grad-${iconGrad}`}
+                accent={d.accent}
               />
             </Container>
           </section>
