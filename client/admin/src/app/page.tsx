@@ -3,9 +3,11 @@ import Link from 'next/link';
 const SECTIONS = [
   { href: '/news', label: 'Новини', emoji: '📰' },
   { href: '/events', label: 'Заходи', emoji: '🎉' },
+  { href: '/channel', label: 'Публікації', emoji: '📢' },
   { href: '/partners', label: 'Партнери', emoji: '🤝' },
-  { href: '/departments', label: 'Відділи', emoji: '🏛️' },
+  { href: '/departments', label: 'Департаменти', emoji: '🏛️' },
   { href: '/members', label: 'Президія', emoji: '👥' },
+  { href: '/project-participants', label: 'Люди проєктного', emoji: '👤' },
   { href: '/fundraisers', label: 'Збори', emoji: '💛' },
   { href: '/applicants', label: 'Заявки', emoji: '📩' },
   { href: '/facts', label: 'Факти', emoji: '📊' },
