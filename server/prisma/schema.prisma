@@ -46,22 +46,22 @@ enum FundraiserStatus {
 }
 
 model Fundraiser {
-  id            String           @id @default(uuid()) @db.Uuid
-  name          String           @db.VarChar(120)
-  status        FundraiserStatus
-  description   String           @db.VarChar(255)
-  story         String?          @db.Text
-  imageUrl      String?
-  location      String?          @db.VarChar(100)
-  goalAmount    Decimal          @db.Decimal(10, 2)
-  currentAmount Decimal          @db.Decimal(10, 2)
-  donationsCount Int             @default(0)
-  cardNumber    String?          @db.VarChar(25)
-  jarUrl        String?
-  monoJarId     String?          @db.VarChar(40)
-  startDate     DateTime
-  endDate       DateTime
-  detailsLink   String?
+  id             String           @id @default(uuid()) @db.Uuid
+  name           String           @db.VarChar(120)
+  status         FundraiserStatus
+  description    String           @db.VarChar(255)
+  story          String?          @db.Text
+  imageUrl       String?
+  location       String?          @db.VarChar(100)
+  goalAmount     Decimal          @db.Decimal(10, 2)
+  currentAmount  Decimal          @db.Decimal(10, 2)
+  donationsCount Int              @default(0)
+  cardNumber     String?          @db.VarChar(25)
+  jarUrl         String?
+  monoJarId      String?          @db.VarChar(40)
+  startDate      DateTime
+  endDate        DateTime
+  detailsLink    String?
 
   donations Donation[]
 }
@@ -92,25 +92,12 @@ model DepartmentHead {
   department Department?
 }
 
-model DepartmentDetails {
-  id                  String  @id @default(uuid()) @db.Uuid
-  about               String  @db.Text
-  detailedDescription String? @db.Text
-  exampleOfWork       String? @db.Text
-
-  department Department?
-}
-
 model Department {
-  id               String @id @default(uuid()) @db.Uuid
-  name             String @db.VarChar(50)
-  shortDescription String @db.VarChar(100)
+  id   String @id @default(uuid()) @db.Uuid
+  name String @db.VarChar(50)
 
   headId String?         @unique @db.Uuid
   head   DepartmentHead? @relation(fields: [headId], references: [id], onDelete: SetNull)
-
-  detailsId String?            @unique @db.Uuid
-  details   DepartmentDetails? @relation(fields: [detailsId], references: [id], onDelete: SetNull)
 
   applicantDepartments        ApplicantDepartment[]
   departmentMemberAssignments DepartmentMemberAssignment[]
@@ -134,7 +121,6 @@ model DepartmentMember {
   specialization String?              @db.VarChar(100)
   photo          String?
   telegramTag    String?              @db.VarChar(50)
-  quote          String?              @db.VarChar(160)
 
   assignments DepartmentMemberAssignment[]
 }
@@ -273,12 +259,11 @@ model EventRegistrationAnswer {
 }
 
 model Partner {
-  id               String  @id @default(uuid()) @db.Uuid
-  name             String  @db.VarChar(30)
-  logoImage        String?
-  websiteLink      String?
-  shortDescription String? @db.VarChar(150)
-  isApproved       Boolean @default(false)
+  id          String  @id @default(uuid()) @db.Uuid
+  name        String  @db.VarChar(30)
+  logoImage   String?
+  websiteLink String?
+  isApproved  Boolean @default(false)
 
   eventPartners EventPartner[]
 }
@@ -293,4 +278,26 @@ model EventPartner {
 
   partner Partner? @relation(fields: [partnerId], references: [id], onDelete: Cascade)
   event   Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+enum ProjectParticipantSource {
+  HARVESTED
+  MANUAL
+}
+
+// People of the "Проєктний" department. HARVESTED rows are captured by the bot
+// from the project chat (name + avatar); MANUAL rows are added in the admin to
+// cover members the bot can't see. Consumed by a public read endpoint for the
+// "Люди проєктного" wall (frontend added separately).
+model ProjectParticipant {
+  id           String                   @id @default(uuid()) @db.Uuid
+  telegramId   BigInt?                  @unique // null for MANUAL entries
+  fullName     String                   @db.VarChar(120)
+  telegramTag  String?                  @db.VarChar(50)
+  photo        String? // "/uploads/<uuid>.jpg"
+  avatarFileId String? // Telegram file_unique_id — skip re-downloading unchanged avatars
+  source       ProjectParticipantSource @default(HARVESTED)
+  hidden       Boolean                  @default(false)
+  lastSeenAt   DateTime                 @default(now())
+  createdAt    DateTime                 @default(now())
 }
