@@ -16,25 +16,25 @@ import { fice, safe, type CreateApplicationPayload, type Department } from '@/li
 const MAX_DEPARTMENTS = 2;
 
 const schema = z.object({
-  lastName: z.string().trim().min(1, 'Вкажіть прізвище').max(30, 'Занадто довге'),
-  firstName: z.string().trim().min(1, 'Вкажіть імʼя').max(30, 'Занадто довге'),
-  middleName: z.string().trim().min(1, 'Вкажіть по батькові').max(30, 'Занадто довге'),
-  telegram: z.string().trim().min(1, 'Вкажіть Telegram-тег').max(49, 'Занадто довгий'),
-  group: z.string().trim().min(1, 'Вкажіть групу').max(5, 'Не більше 5 символів'),
+  lastName: z.string().trim().min(1, 'Вкажи прізвище').max(30, 'Занадто довге'),
+  firstName: z.string().trim().min(1, 'Вкажи імʼя').max(30, 'Занадто довге'),
+  middleName: z.string().trim().min(1, 'Вкажи по батькові').max(30, 'Занадто довге'),
+  telegram: z.string().trim().min(1, 'Вкажи Telegram-тег').max(49, 'Занадто довгий'),
+  group: z.string().trim().min(1, 'Вкажи групу').max(5, 'Не більше 5 символів'),
   phoneNumber: z
     .string()
     .trim()
-    .min(5, 'Вкажіть номер телефону')
+    .min(5, 'Вкажи номер телефону')
     .max(20, 'Занадто довгий'),
   motivation: z
     .string()
     .trim()
-    .min(1, 'Розкажіть про мотивацію')
+    .min(1, 'Розкажи про мотивацію')
     .min(10, 'Хоча б кілька речень, будь ласка'),
   experience: z.string().trim().max(2000, 'Занадто довго'),
   departmentIds: z
     .array(z.string())
-    .min(1, 'Оберіть хоча б один департамент')
+    .min(1, 'Обери хоча б один департамент')
     .max(MAX_DEPARTMENTS, `Можна обрати щонайбільше ${MAX_DEPARTMENTS}`),
   consent: z.boolean().refine((v) => v === true, 'Потрібна згода на обробку даних'),
 });

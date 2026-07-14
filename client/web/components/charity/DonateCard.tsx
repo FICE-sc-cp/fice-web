@@ -175,7 +175,7 @@ export function DonateCard({ initial }: { initial: Fundraiser }) {
 
             {/* amount picker */}
             <div className="flex flex-col gap-3">
-              <span className="text-sm font-bold text-muted">Оберіть суму</span>
+              <span className="text-sm font-bold text-muted">Обери суму</span>
               <div className="grid grid-cols-2 gap-2.5">
                 {PRESETS.map((v) => {
                   const selected = !custom && preset === v;
