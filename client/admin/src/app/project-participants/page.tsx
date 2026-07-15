@@ -21,20 +21,17 @@ export default function ProjectParticipantsPage() {
   });
 
   const [fullName, setFullName] = useState('');
-  const [telegramTag, setTelegramTag] = useState('');
   const [photo, setPhoto] = useState<string | null>(null);
 
   const addMutation = useMutation({
     mutationFn: () =>
       api.createProjectParticipant({
         fullName: fullName.trim(),
-        telegramTag: telegramTag.trim() || undefined,
         photo: photo ?? undefined,
       }),
     onSuccess: () => {
       hapticNotify('success');
       setFullName('');
-      setTelegramTag('');
       setPhoto(null);
       invalidate();
     },
@@ -70,12 +67,6 @@ export default function ProjectParticipantsPage() {
           label="ПІБ"
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
-        />
-        <Input
-          label="Telegram-тег"
-          placeholder="@username"
-          value={telegramTag}
-          onChange={(e) => setTelegramTag(e.target.value)}
         />
         <ImageUpload label="Аватарка" value={photo} onChange={setPhoto} />
         {addMutation.error && (
