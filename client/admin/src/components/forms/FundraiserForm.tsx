@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
+import { RichTextArea } from '../RichTextArea';
 import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
 import { ImageUpload } from '../ImageUpload';
@@ -74,6 +75,7 @@ export function FundraiserForm({
   });
 
   const imageUrl = watch('imageUrl');
+  const story = watch('story');
   const submit = handleSubmit(onSubmit);
   useMainButton({ text: submitLabel, onClick: () => void submit(), loading: submitting });
 
@@ -98,10 +100,11 @@ export function FundraiserForm({
         {...register('description')}
         error={errors.description?.message}
       />
-      <Textarea
+      <RichTextArea
         label="Повний опис «Про збір» (необовʼязково)"
         placeholder="Розгорнута історія збору…"
-        {...register('story')}
+        value={story ?? ''}
+        onChange={(v) => setValue('story', v, { shouldDirty: true })}
       />
       <Input
         label="Локація (необовʼязково)"

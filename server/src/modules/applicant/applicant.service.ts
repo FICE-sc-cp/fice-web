@@ -67,7 +67,7 @@ export class ApplicantService {
       '🆕 Нова заявка на вступ у студраду',
       `${applicant.lastName} ${applicant.firstName} (${applicant.group})`,
       `Контакт: ${applicant.telegramTag}, ${applicant.phoneNumber}`,
-      `Відділи: ${deptNames}`,
+      `Департаменти: ${deptNames}`,
       mentions ? `${mentions} — звʼяжіться з кандидатом` : '',
     ]
       .filter(Boolean)

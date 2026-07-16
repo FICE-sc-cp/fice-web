@@ -10,24 +10,19 @@ export class DepartmentService {
 
   private readonly listInclude: Prisma.DepartmentInclude = {
     head: true,
-    details: true,
   };
 
   private readonly detailInclude: Prisma.DepartmentInclude = {
     head: true,
-    details: true,
     departmentMemberAssignments: { include: { member: true } },
     eventDetails: true,
   };
 
   private relationData(dto: CreateDepartmentDto | UpdateDepartmentDto) {
-    const { headId, detailsId, ...rest } = dto;
+    const { headId, ...rest } = dto;
     return {
       ...rest,
       ...(headId !== undefined ? { head: { connect: { id: headId } } } : {}),
-      ...(detailsId !== undefined
-        ? { details: { connect: { id: detailsId } } }
-        : {}),
     };
   }
 

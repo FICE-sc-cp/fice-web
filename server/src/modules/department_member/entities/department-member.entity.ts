@@ -12,5 +12,4 @@ export class DepartmentMemberEntity {
   specialization: string | null;
   photo: string | null;
   telegramTag: string | null;
-  quote: string | null;
 }

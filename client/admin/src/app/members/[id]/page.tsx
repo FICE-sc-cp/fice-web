@@ -29,7 +29,6 @@ export default function EditMemberPage() {
         specialization: v.specialization?.trim() ? v.specialization : undefined,
         photo: v.photo ?? undefined,
         telegramTag: v.telegramTag?.trim() ? v.telegramTag.trim() : undefined,
-        quote: v.quote?.trim() ? v.quote.trim() : undefined,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['members'] });
@@ -65,7 +64,6 @@ export default function EditMemberPage() {
                     specialization: member.specialization ?? '',
                     photo: member.photo,
                     telegramTag: member.telegramTag ?? '',
-                    quote: member.quote ?? '',
                   }
                 : undefined
             }

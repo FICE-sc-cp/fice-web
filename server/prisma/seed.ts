@@ -69,13 +69,23 @@ async function reset() {
   await prisma.departmentMember.deleteMany();
   await prisma.department.deleteMany();
   await prisma.departmentHead.deleteMany();
-  await prisma.departmentDetails.deleteMany();
   await prisma.fundraiser.deleteMany();
   await prisma.partner.deleteMany();
   await prisma.news.deleteMany();
+  await prisma.projectParticipant.deleteMany();
   await prisma.statOverride.deleteMany();
   await prisma.user.deleteMany();
 }
+
+// Демо-учасники проєктного департаменту для стінки «Люди проєктного».
+const PROJECT_PEOPLE = [
+  'Anny', 'Вероніка Нуар', 'sonya', 'TimΔ', 'Julìa', 'Apolinarik', 'Veronika',
+  'Катерина', 'Toshka', 'Daria', 'Artem Zhmura', 'Софія', 'Макс Koval', 'rina',
+  'Vladyslav Mykhailov', 'Роман Максименко', 'Лёха', 'Андрій', 'Mariia Bidiuk',
+  'Соня', 'dna', 'Юлія Зелюк', 'Nightcore', 'Maryna', 'arina', 'Тарас', 'marina',
+  'Maksym', 'Laanji', 'льошик', 'Влад', 'Sherlochek', 'Ілюша', 'Android hacker',
+  'Гена Цидрусні', 'tanossska',
+];
 
 // ── Departments (each with a 1:1 head + 1:1 details) ──────────────────────────
 const DEPARTMENTS = [
@@ -637,9 +647,7 @@ async function main() {
     const created = await prisma.department.create({
       data: {
         name: d.name,
-        shortDescription: d.short,
         head: { create: d.head },
-        details: { create: d.details },
       },
     });
     deptIds[d.key] = created.id;
@@ -654,7 +662,6 @@ async function main() {
         lastName: m.lastName,
         specialization: m.specialization,
         telegramTag: m.telegramTag,
-        quote: m.quote,
       },
     });
     await prisma.departmentMemberAssignment.create({
@@ -665,9 +672,24 @@ async function main() {
   // Partners.
   const partnerIds: Record<string, string> = {};
   for (const p of PARTNERS) {
-    const created = await prisma.partner.create({ data: p });
+    const created = await prisma.partner.create({
+      data: {
+        name: p.name,
+        websiteLink: p.websiteLink,
+        isApproved: p.isApproved,
+      },
+    });
     partnerIds[p.name] = created.id;
   }
+
+  // Project department participants (photos left null → frontend placeholder).
+  await prisma.projectParticipant.createMany({
+    data: PROJECT_PEOPLE.map((fullName, i) => ({
+      telegramId: BigInt(900000 + i),
+      fullName,
+      source: 'HARVESTED' as const,
+    })),
+  });
 
   // Events (nested details + program + questions), then link a few partners.
   const eventIds: Record<string, string> = {};
@@ -855,7 +877,7 @@ async function main() {
         publishDate: new Date('2026-03-05T15:00:00Z'),
       },
       {
-        title: 'Гайд: що робити, якщо викладач не дотримується силабусу',
+        title: 'Гайд: якщо викладач не дотримується силабусу',
         details:
           'Департамент якості освіти підготував покрокову інструкцію, куди звертатися та як захистити свої права.',
         category: 'EDUCATION',

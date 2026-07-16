@@ -20,11 +20,7 @@ export interface Me {
 
 export interface Facts {
   eventsHeld: number;
-  moneyRaised: number;
   charityRaised: number;
-  visitorsReached: number;
-  partnersCount: number;
-  departmentsCount: number;
   membersCount: number;
   closedFundraisers: number;
   activeStudents: number;
@@ -48,21 +44,12 @@ export interface DepartmentHead {
   telegramTag: string | null;
 }
 
-export interface DepartmentDetails {
-  id: string;
-  about: string;
-  detailedDescription: string | null;
-  exampleOfWork: string | null;
-}
-
 export interface Department {
   id: string;
   name: string;
-  shortDescription: string;
+  memberCount: number | null;
   headId: string | null;
-  detailsId: string | null;
   head?: DepartmentHead | null;
-  details?: DepartmentDetails | null;
 }
 
 export type DepartmentMemberRole =
@@ -80,7 +67,6 @@ export interface DepartmentMember {
   specialization: string | null;
   photo: string | null;
   telegramTag: string | null;
-  quote: string | null;
   assignments?: { id: string; department: Department }[];
 }
 
@@ -98,7 +84,6 @@ export interface Partner {
   name: string;
   logoImage: string | null;
   websiteLink: string | null;
-  shortDescription: string | null;
   isApproved: boolean;
 }
 
@@ -316,7 +301,6 @@ export interface PartnerInput {
   name: string;
   logoImage?: string;
   websiteLink?: string;
-  shortDescription?: string;
 }
 
 export interface FundraiserInput {
@@ -346,9 +330,8 @@ export interface DonationInput {
 
 export interface DepartmentInput {
   name: string;
-  shortDescription: string;
+  memberCount?: number;
   headId?: string;
-  detailsId?: string;
 }
 
 export interface DepartmentHeadInput {
@@ -359,12 +342,6 @@ export interface DepartmentHeadInput {
   telegramTag?: string;
 }
 
-export interface DepartmentDetailsInput {
-  about: string;
-  detailedDescription?: string;
-  exampleOfWork?: string;
-}
-
 export interface DepartmentMemberInput {
   role: DepartmentMemberRole;
   firstName: string;
@@ -372,7 +349,41 @@ export interface DepartmentMemberInput {
   specialization?: string;
   photo?: string;
   telegramTag?: string;
-  quote?: string;
+}
+
+export interface ChannelStatus {
+  configured: boolean;
+  channelIdSet: boolean;
+  botTokenSet: boolean;
+  webUrlSet: boolean;
+}
+
+export interface ChannelPostInput {
+  text: string;
+  imageUrl?: string;
+  eventId?: string;
+  buttonText?: string;
+  buttonUrl?: string;
+}
+
+export type ProjectParticipantSource = 'HARVESTED' | 'MANUAL';
+
+export interface ProjectParticipant {
+  id: string;
+  fullName: string;
+  telegramTag: string | null;
+  photo: string | null;
+  source: ProjectParticipantSource;
+  hidden: boolean;
+  lastSeenAt: string;
+  createdAt: string;
+}
+
+export interface ProjectParticipantInput {
+  fullName: string;
+  telegramTag?: string;
+  photo?: string;
+  hidden?: boolean;
 }
 
 export const api = {
@@ -466,14 +477,6 @@ export const api = {
   deleteDepartmentHead: (id: string) =>
     request<DepartmentHead>(`/department-head/${id}`, { method: 'DELETE' }),
 
-  departmentDetails: () => request<DepartmentDetails[]>('/department-details'),
-  createDepartmentDetails: (body: DepartmentDetailsInput) =>
-    request<DepartmentDetails>('/department-details', { method: 'POST', ...json(body) }),
-  updateDepartmentDetails: (id: string, body: Partial<DepartmentDetailsInput>) =>
-    request<DepartmentDetails>(`/department-details/${id}`, { method: 'PATCH', ...json(body) }),
-  deleteDepartmentDetails: (id: string) =>
-    request<DepartmentDetails>(`/department-details/${id}`, { method: 'DELETE' }),
-
   members: () => request<DepartmentMember[]>('/department-member'),
   createMember: (body: DepartmentMemberInput) =>
     request<DepartmentMember>('/department-member', { method: 'POST', ...json(body) }),
@@ -490,6 +493,31 @@ export const api = {
     request<Paginated<Applicant>>(`/applicant?page=${page}&limit=${limit}`),
   applicant: (id: string) => request<Applicant>(`/applicant/${id}`),
   deleteApplicant: (id: string) => request<unknown>(`/applicant/${id}`, { method: 'DELETE' }),
+
+  channelStatus: () => request<ChannelStatus>('/channel/status'),
+  postChannel: (body: ChannelPostInput) =>
+    request<{ ok: boolean; messageId: number }>('/channel/post', {
+      method: 'POST',
+      ...json(body),
+    }),
+
+  projectParticipants: () =>
+    request<ProjectParticipant[]>('/project-participant'),
+  createProjectParticipant: (body: ProjectParticipantInput) =>
+    request<ProjectParticipant>('/project-participant', {
+      method: 'POST',
+      ...json(body),
+    }),
+  updateProjectParticipant: (
+    id: string,
+    body: Partial<ProjectParticipantInput>,
+  ) =>
+    request<ProjectParticipant>(`/project-participant/${id}`, {
+      method: 'PATCH',
+      ...json(body),
+    }),
+  deleteProjectParticipant: (id: string) =>
+    request<unknown>(`/project-participant/${id}`, { method: 'DELETE' }),
 
   upload: async (file: File): Promise<{ url: string; filename: string }> => {
     const form = new FormData();

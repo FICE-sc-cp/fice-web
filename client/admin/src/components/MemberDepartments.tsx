@@ -43,7 +43,7 @@ export function MemberDepartments({
 
   return (
     <div className="mt-6 rounded-2xl border border-border bg-bg-soft p-4">
-      <p className="mb-3 text-sm font-semibold text-muted">Відділи учасника</p>
+      <p className="mb-3 text-sm font-semibold text-muted">Департаменти учасника</p>
 
       {assignments.length ? (
         <ul className="mb-3 flex flex-col gap-2">
@@ -64,7 +64,7 @@ export function MemberDepartments({
           ))}
         </ul>
       ) : (
-        <p className="mb-3 text-xs text-subtle">Не призначено у відділи.</p>
+        <p className="mb-3 text-xs text-subtle">Не призначено у департаменти.</p>
       )}
 
       <div className="flex gap-2">
@@ -73,7 +73,7 @@ export function MemberDepartments({
           onChange={(e) => setSelected(e.target.value)}
           className="min-w-0 flex-1 rounded-xl border border-border bg-surface px-3 py-2 text-sm text-fg outline-none"
         >
-          <option value="">Обрати відділ…</option>
+          <option value="">Обрати департамент…</option>
           {available.map((d) => (
             <option key={d.id} value={d.id}>
               {d.name}

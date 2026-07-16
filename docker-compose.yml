@@ -33,6 +33,16 @@ services:
       MINI_APP_URL: ${MINI_APP_URL:-}
       # Only members of this Telegram group may change content.
       ADMIN_GROUP_CHAT_ID: ${ADMIN_GROUP_CHAT_ID:-}
+      # Channel the bot posts announcements to (bot must be its admin).
+      TELEGRAM_CHANNEL_ID: ${TELEGRAM_CHANNEL_ID:-}
+      # Partnerships chat — partner applications are sent here. For a forum
+      # topic (гілка) use "chatId/threadId", e.g. -1001234567890/12.
+      PARTNERSHIP_CHAT_ID: ${PARTNERSHIP_CHAT_ID:-}
+      # Project chat the bot harvests participants from. For a forum topic use
+      # "chatId/threadId" (only messages in that topic are harvested).
+      PROJECT_CHAT_ID: ${PROJECT_CHAT_ID:-}
+      # Public origin of the web site, used to build event registration links.
+      PUBLIC_WEB_URL: ${PUBLIC_WEB_URL:-}
       # Telegram usernames pinged on a new partner application.
       PARTNERSHIP_HEAD_TG: ${PARTNERSHIP_HEAD_TG:-}
       COUNCIL_HEAD_TG: ${COUNCIL_HEAD_TG:-}

@@ -1,11 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  IsUrl,
-  MaxLength,
-} from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsUrl, MaxLength } from 'class-validator';
 
 export class CreatePartnerDto {
   @ApiProperty({ maxLength: 30 })
@@ -23,10 +17,4 @@ export class CreatePartnerDto {
   @IsOptional()
   @IsUrl()
   websiteLink?: string;
-
-  @ApiPropertyOptional({ maxLength: 150 })
-  @IsOptional()
-  @IsString()
-  @MaxLength(150)
-  shortDescription?: string;
 }

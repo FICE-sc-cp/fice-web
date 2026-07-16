@@ -5,6 +5,7 @@ import { Container } from '@/components/ui/Container';
 import { Glow } from '@/components/ui/Glow';
 import { DonateCard } from '@/components/charity/DonateCard';
 import { fice, mediaUrl, safe } from '@/lib/api';
+import { renderRichInline } from '@/lib/richText';
 import { cn, daysLeft, fundraiserTheme } from '@/lib/utils';
 
 export default async function CharityDetailsPage({
@@ -123,9 +124,12 @@ export default async function CharityDetailsPage({
                       />
                     </div>
                     {fundraiser.story && (
-                      <p className="whitespace-pre-wrap text-lg leading-relaxed text-muted">
-                        {fundraiser.story}
-                      </p>
+                      <p
+                        className="whitespace-pre-wrap text-lg leading-relaxed text-muted"
+                        dangerouslySetInnerHTML={{
+                          __html: renderRichInline(fundraiser.story),
+                        }}
+                      />
                     )}
                     {fundraiser.detailsLink && (
                       <a
