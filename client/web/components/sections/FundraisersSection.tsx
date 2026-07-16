@@ -42,7 +42,7 @@ export async function FundraisersSection() {
         <div className="mt-14 flex justify-center">
           <Link
             href="/charity"
-            className="rounded-2xl bg-neutral-600/40 px-16 py-5 text-2xl font-bold text-white transition-all hover:bg-neutral-600/60 hover:scale-[1.02] active:scale-95 lg:text-3xl"
+            className="rounded-2xl bg-neutral-600/40 px-10 py-4 text-xl font-bold text-white transition-all hover:bg-neutral-600/60 hover:scale-[1.02] active:scale-95 sm:px-16 sm:py-5 sm:text-2xl lg:text-3xl"
           >
             Переглянути всі
           </Link>

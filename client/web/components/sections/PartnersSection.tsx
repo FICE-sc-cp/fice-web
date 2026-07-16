@@ -80,7 +80,7 @@ export async function PartnersSection() {
                 </p>
                 <a
                   href="#"
-                  className="rounded-2xl bg-gradient-main px-12 py-6 text-center text-2xl font-bold text-black transition-transform hover:scale-[1.02] hover:opacity-95 active:scale-95 lg:text-3xl"
+                  className="rounded-2xl bg-gradient-main px-6 py-5 text-center text-xl font-bold text-black transition-transform hover:scale-[1.02] hover:opacity-95 active:scale-95 sm:px-12 sm:py-6 sm:text-2xl lg:text-3xl"
                 >
                   Стати партнером
                 </a>

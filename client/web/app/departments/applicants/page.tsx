@@ -7,15 +7,19 @@ import { Container } from "@/components/ui/Container";
 import { Glow } from "@/components/ui/Glow";
 import { Reveal, RevealGroup } from "@/components/ui/Reveal";
 import {
+  IconDefs,
   CalendarIcon,
   PinIcon,
-  InstagramIcon,
-  TelegramIcon,
+  PeopleIcon,
 } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 
 const GRADIENT = "bg-gradient-magenta";
 const GLOW: [string, string] = ["#F6339A", "#9810FA"];
+const NAME = "Департамент роботи з абітурієнтами";
+const SLOGAN =
+  "Ми стали містком між амбіціями майбутніх студентів та можливостями університету — створюючи простір для впевненого старту і свідомого вибору.";
+const MEMBER_COUNT = 9;
 
 const PERSON_OUTLINE =
   "drop-shadow(3px 3px 0 #fff) drop-shadow(-3px -3px 0 #fff) drop-shadow(3px -3px 0 #fff) drop-shadow(-3px 3px 0 #fff)";
@@ -85,27 +89,6 @@ const FESTS = [
   },
 ];
 
-const SOCIALS = [
-  {
-    handle: "@abit_fiot",
-    href: "https://instagram.com/abit_fiot",
-    Icon: InstagramIcon,
-    image: "/logo_white.png",
-  },
-  {
-    handle: "@abit_fice",
-    href: "https://t.me/abit_fice",
-    Icon: TelegramIcon,
-    image: "/logo_white.png",
-  },
-  {
-    handle: "@abit_fiot",
-    href: "https://t.me/abit_fiot",
-    Icon: TelegramIcon,
-    image: "/logo_white.png",
-  },
-];
-
 export const metadata: Metadata = {
   title: "Департамент роботи з абітурієнтами — Студрада ФІОТ",
   description:
@@ -122,8 +105,12 @@ function SectionHeading({ title }: { title: string }) {
 }
 
 export default function ApplicantsPage() {
+  const joinHref = `/join?dept=${encodeURIComponent(NAME)}`;
+  const memberCount = MEMBER_COUNT;
+
   return (
     <>
+      <IconDefs />
       <Header />
       <main className="overflow-x-clip">
         <section className="relative isolate pb-10 pt-20 lg:pt-28">
@@ -136,36 +123,40 @@ export default function ApplicantsPage() {
             className="right-0 top-24 h-[28rem] w-[36rem] translate-x-1/4"
           />
           <Container>
-            <div className="mx-auto flex max-w-3xl flex-col items-center gap-6 text-center">
+            <div className="mx-auto flex max-w-3xl flex-col items-center gap-5 text-center">
               <Link
                 href="/#departments"
-                className="animate-rise inline-flex items-center gap-1 text-lg font-semibold text-subtle transition-colors hover:text-fg"
+                className="inline-flex items-center gap-1 text-lg font-semibold text-subtle transition-colors hover:text-fg"
               >
                 ← Усі департаменти
               </Link>
-              <h1 className="animate-rise text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
+              <h1 className="text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
                 <span className={cn("bg-clip-text text-transparent", GRADIENT)}>
-                  Департамент роботи з абітурієнтами
+                  {NAME}
                 </span>
               </h1>
-              <p
-                className="animate-rise max-w-2xl text-xl text-muted sm:text-2xl"
-                style={{ animationDelay: "140ms" }}
-              >
-                Ми стали містком між амбіціями майбутніх студентів та
-                можливостями університету — створюючи простір для впевненого
-                старту і свідомого вибору.
+              <p className="max-w-xl text-xl text-muted sm:text-2xl">
+                {SLOGAN}
               </p>
-              <a
-                href="#about"
-                className={cn(
-                  "animate-rise mt-2 inline-flex items-center justify-center rounded-2xl px-10 py-4 text-lg font-bold text-black transition-transform hover:scale-[1.03] hover:opacity-95 active:scale-95 sm:text-xl",
-                  GRADIENT,
+              <div className="mt-1 flex flex-wrap items-center justify-center gap-3">
+                {memberCount != null && (
+                  <span className="inline-flex h-11 items-center gap-2 rounded-full border border-white/10 bg-surface/50 px-4 text-base font-semibold text-fg">
+                    <span className="size-5">
+                      <PeopleIcon gradient="magenta" />
+                    </span>
+                    {memberCount} учасників
+                  </span>
                 )}
-                style={{ animationDelay: "280ms" }}
-              >
-                Дізнатись більше про департамент
-              </a>
+                <Link
+                  href={joinHref}
+                  className={cn(
+                    "inline-flex h-11 items-center rounded-full px-6 text-base font-bold text-black transition-transform hover:scale-[1.03] active:scale-95",
+                    GRADIENT,
+                  )}
+                >
+                  Долучитися
+                </Link>
+              </div>
             </div>
           </Container>
         </section>
@@ -181,7 +172,7 @@ export default function ApplicantsPage() {
               <Reveal className="relative overflow-hidden rounded-3xl border border-white/10">
                 <Image
                   src="/photo-7.png"
-                  alt="Департамент роботи з абітурієнтами"
+                  alt={NAME}
                   width={0}
                   height={0}
                   sizes="(min-width: 1024px) 32rem, 100vw"
@@ -206,9 +197,12 @@ export default function ApplicantsPage() {
             <Reveal className="flex flex-col items-center">
               <SectionHeading title="Ролі у департаменті" />
             </Reveal>
-            <RevealGroup className="mt-12 grid grid-cols-2 gap-x-6 gap-y-10 lg:grid-cols-4">
+            <RevealGroup className="mt-12 grid grid-cols-1 gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
               {ROLES.map((role) => (
-                <article key={role.name} className="flex flex-col gap-4">
+                <article
+                  key={role.name}
+                  className="mx-auto flex w-full max-w-[18rem] flex-col gap-4 sm:max-w-none"
+                >
                   <div className="group relative aspect-[3/4] overflow-hidden rounded-2xl border border-brand-magenta bg-surface/40">
                     <Image
                       src="/placeholder-person.png"
@@ -218,7 +212,7 @@ export default function ApplicantsPage() {
                       className="object-contain object-bottom"
                       style={{ filter: PERSON_OUTLINE }}
                     />
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/80 p-4 opacity-0 backdrop-blur-sm transition-opacity duration-300 group-hover:opacity-100 sm:p-5">
+                    <div className="absolute inset-0 hidden items-center justify-center bg-black/80 p-4 opacity-0 backdrop-blur-sm transition-opacity duration-300 group-hover:opacity-100 sm:flex sm:p-5">
                       <p className="text-center text-sm leading-snug text-stone-200 sm:text-base">
                         {role.description}
                       </p>
@@ -227,6 +221,9 @@ export default function ApplicantsPage() {
                   <h3 className="text-center text-xl font-bold sm:text-2xl">
                     {role.name}
                   </h3>
+                  <p className="text-center text-base leading-relaxed text-stone-300 sm:hidden">
+                    {role.description}
+                  </p>
                 </article>
               ))}
             </RevealGroup>
@@ -264,7 +261,7 @@ export default function ApplicantsPage() {
           </Container>
         </section>
 
-        <section className="relative isolate py-16 lg:py-24">
+        <section className="relative isolate py-16 pb-24 lg:py-24 lg:pb-32">
           <Container className="flex flex-col">
             <Reveal className="flex flex-col items-center">
               <SectionHeading title="Події" />
@@ -315,45 +312,6 @@ export default function ApplicantsPage() {
           </Container>
         </section>
 
-        <section className="relative isolate py-16 pb-24 lg:py-24 lg:pb-32">
-          <Glow
-            color={GLOW[1]}
-            className="right-0 top-0 h-[22rem] w-[32rem] translate-x-1/4"
-          />
-          <Container className="flex flex-col">
-            <Reveal className="flex flex-col items-center">
-              <SectionHeading title="Наші соціальні мережі" />
-            </Reveal>
-            <RevealGroup className="mx-auto mt-12 grid w-full max-w-4xl grid-cols-1 gap-6 sm:grid-cols-3">
-              {SOCIALS.map(({ handle, href, Icon, image }, i) => (
-                <a
-                  key={i}
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex flex-col gap-4 rounded-lg border border-border p-6 transition-all duration-300 hover:-translate-y-1 hover:border-brand-magenta/40 hover:shadow-xl hover:shadow-brand-magenta/10"
-                >
-                  <div className="relative flex aspect-square items-center justify-center rounded-lg bg-surface p-8">
-                    <Image
-                      src={image}
-                      alt={handle}
-                      width={0}
-                      height={0}
-                      sizes="16rem"
-                      className="h-auto w-full object-contain"
-                    />
-                  </div>
-                  <span className="flex items-center justify-center gap-2 text-base font-semibold text-stone-300">
-                    <span className="size-5 shrink-0">
-                      <Icon />
-                    </span>
-                    {handle}
-                  </span>
-                </a>
-              ))}
-            </RevealGroup>
-          </Container>
-        </section>
       </main>
       <Footer />
     </>

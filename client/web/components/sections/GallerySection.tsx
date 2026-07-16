@@ -4,10 +4,22 @@ import { Glow } from "@/components/ui/Glow";
 import { RevealGroup } from "@/components/ui/Reveal";
 
 const COLUMNS = [
-  [2, 3],
-  [3, 2],
-  [1, 1],
-  [2, 3],
+  [
+    { src: "/projects-main-photo.jpg", grow: 2 },
+    { src: "/merch-main-photo.jpg", grow: 3 },
+  ],
+  [
+    { src: "/photo-3.png", grow: 3 },
+    { src: "/photo-4.png", grow: 2 },
+  ],
+  [
+    { src: "/photo-5.png", grow: 1 },
+    { src: "/photo-6.png", grow: 1 },
+  ],
+  [
+    { src: "/photo-7.png", grow: 2 },
+    { src: "/projects-main-photo.jpg", grow: 3 },
+  ],
 ];
 
 export function GallerySection() {
@@ -23,17 +35,17 @@ export function GallerySection() {
       />
 
       <Container>
-        <RevealGroup className="flex h-[26rem] gap-3 sm:h-[34rem] sm:gap-4 lg:h-[40rem]">
+        <RevealGroup className="grid h-[44rem] grid-cols-2 grid-rows-2 gap-3 sm:flex sm:h-[34rem] sm:gap-4 lg:h-[40rem]">
           {COLUMNS.map((column, c) => (
             <div key={c} className="flex flex-1 flex-col gap-3 sm:gap-4">
-              {column.map((grow, r) => (
+              {column.map(({ src, grow }) => (
                 <div
-                  key={r}
+                  key={src}
                   style={{ flexGrow: grow, flexBasis: 0 }}
-                  className="group relative overflow-hidden rounded-lg bg-stone-300"
+                  className="group relative overflow-hidden rounded-lg bg-surface"
                 >
                   <Image
-                    src="/placeholder-for-fundraisers-and-events.png"
+                    src={src}
                     alt=""
                     fill
                     sizes="25vw"
