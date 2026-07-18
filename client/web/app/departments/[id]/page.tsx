@@ -220,8 +220,8 @@ export default async function DepartmentPage({
                   </p>
                 )}
                 <div className="mt-1 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
-                  {memberCount != null && (
-                    <span className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-surface/50 px-4 py-2 text-base font-semibold text-fg">
+                  {d.memberCount != null && (
+                    <span className="inline-flex h-11 items-center gap-2 rounded-full border border-white/10 bg-surface/50 px-4 text-base font-semibold text-fg">
                       <span className="size-5">
                         <PeopleIcon gradient={iconGrad} />
                       </span>
@@ -231,7 +231,7 @@ export default async function DepartmentPage({
                   <Link
                     href={joinHref}
                     className={cn(
-                      "rounded-full px-6 py-2.5 text-base font-bold text-black transition-transform hover:scale-[1.03] active:scale-95",
+                      "inline-flex h-11 items-center rounded-full px-6 text-base font-bold text-black transition-transform hover:scale-[1.03] active:scale-95",
                       d.gradient,
                     )}
                   >
@@ -277,7 +277,10 @@ export default async function DepartmentPage({
                     </div>
                     {d.about?.map((p, i) => (
                       <p key={i} className="text-xl leading-relaxed text-muted">
-                        <RichText text={p} linkClassName={accentText[d.accent]} />
+                        <RichText
+                          text={p}
+                          linkClassName={accentText[d.accent]}
+                        />
                       </p>
                     ))}
                   </div>
@@ -387,7 +390,9 @@ export default async function DepartmentPage({
               className="left-1/2 top-1/2 h-[24rem] w-[40rem] -translate-x-1/2 -translate-y-1/2"
             />
             <Container>
-              <div className={cn("overflow-hidden rounded-3xl p-px", d.gradient)}>
+              <div
+                className={cn("overflow-hidden rounded-3xl p-px", d.gradient)}
+              >
                 <div className="grid grid-cols-1 overflow-hidden rounded-3xl bg-bg sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
                   <div className="relative min-h-[22rem] bg-surface/40">
                     {head.photo ? (
@@ -450,7 +455,10 @@ export default async function DepartmentPage({
               className="right-0 top-1/3 h-[24rem] w-[34rem] translate-x-1/4"
             />
             <Container className="flex flex-col">
-              <SectionHeading title="Підрозділи" gradient={d.gradient} />
+              <SectionHeading
+                title="Ролі у департаменті"
+                gradient={d.gradient}
+              />
               <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {d.subDepartments?.map((s) => (
                   <AccentCard

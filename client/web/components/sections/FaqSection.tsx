@@ -1,25 +1,40 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Container } from '@/components/ui/Container';
-import { SectionHeader } from '@/components/ui/SectionHeader';
-import { Reveal, RevealGroup } from '@/components/ui/Reveal';
-import { ChevronIcon } from '@/components/ui/icons';
-import { cn } from '@/lib/utils';
-
-const QUESTION =
-  'Викладач не дотримується вимог силабусу. Що робити і куди мені звертатись?';
+import { useState } from "react";
+import { Container } from "@/components/ui/Container";
+import { SectionHeader } from "@/components/ui/SectionHeader";
+import { Reveal, RevealGroup } from "@/components/ui/Reveal";
+import { ChevronIcon } from "@/components/ui/icons";
+import { cn } from "@/lib/utils";
 
 const FAQS = [
-  { question: QUESTION, answer: 'Плакати хз' },
-  { question: QUESTION, answer: 'Текст відповіді на питання.' },
-  { question: QUESTION, answer: 'Текст відповіді на питання.' },
   {
-    question: QUESTION,
+    question:
+      "Скільки додаткових балів дають за активну участь у роботі департаменту?",
     answer:
-      'ввпнапгувріоивс рпнап урапугірарвиірапі гаурнпаурірануппн гупагнкуцгпарові ввпнапгувріоивс рпнап урапугірарвиірапі гаурнпаурірануппн гупагнкуцгпарові ввпнапгувріоивс рпнап урапугірарвиірапі гаурнпаурірануппн гупагнкуцгпарові ввпнапгувріоивс рпнап урапугірарвиірапі гаурнпаурірануппн гупагнкуцгпарові.',
+      "За активну участь у департаменті ти можеш отримати до 20 додаткових балів від Студради.",
   },
-  { question: QUESTION, answer: 'Текст відповіді на питання.' },
+  {
+    question:
+      "Викладач не дотримується вимог силабусу. Що робити і куди мені звертатись?",
+    answer: "Плакати хз",
+  },
+  {
+    question:
+      "Викладач не дотримується вимог силабусу. Що робити і куди мені звертатись?",
+    answer: "Плакати хз",
+  },
+  {
+    question:
+      "Викладач не дотримується вимог силабусу. Що робити і куди мені звертатись?",
+    answer:
+      "ввпнапгувріоивс рпнап урапугірарвиірапі гаурнпаурірануппн гупагнкуцгпарові ввпнапгувріоивс рпнап урапугірарвиірапі гаурнпаурірануппн гупагнкуцгпарові ввпнапгувріоивс рпнап урапугірарвиірапі гаурнпаурірануппн гупагнкуцгпарові ввпнапгувріоивс рпнап урапугірарвиірапі гаурнпаурірануппн гупагнкуцгпарові.",
+  },
+  {
+    question:
+      "Викладач не дотримується вимог силабусу. Що робити і куди мені звертатись?",
+    answer: "Текст відповіді на питання.",
+  },
 ];
 
 export function FaqSection() {
@@ -46,8 +61,8 @@ export function FaqSection() {
               <div
                 key={index}
                 className={cn(
-                  'rounded-2xl p-px transition-colors',
-                  isOpen ? 'bg-gradient-blue' : 'bg-zinc-600',
+                  "rounded-2xl p-px transition-colors",
+                  isOpen ? "bg-gradient-blue" : "bg-zinc-600",
                 )}
               >
                 <div className="overflow-hidden rounded-2xl bg-bg">
@@ -59,32 +74,32 @@ export function FaqSection() {
                   >
                     <span
                       className={cn(
-                        'text-lg font-bold lg:text-xl',
+                        "text-lg font-bold lg:text-xl",
                         isOpen
-                          ? 'bg-gradient-blue bg-clip-text text-transparent'
-                          : 'text-white',
+                          ? "bg-gradient-blue bg-clip-text text-transparent"
+                          : "text-white",
                       )}
                     >
                       {faq.question}
                     </span>
                     <span
                       className={cn(
-                        'size-6 shrink-0 transition-transform',
-                        isOpen ? 'rotate-180' : 'text-white',
+                        "size-6 shrink-0 transition-transform",
+                        isOpen ? "rotate-180" : "text-white",
                       )}
                     >
                       <ChevronIcon
-                        stroke={isOpen ? 'url(#grad-blue)' : 'currentColor'}
+                        stroke={isOpen ? "url(#grad-blue)" : "currentColor"}
                       />
                     </span>
                   </button>
 
                   <div
                     className={cn(
-                      'grid transition-all duration-300 ease-out',
+                      "grid transition-all duration-300 ease-out",
                       isOpen
-                        ? 'grid-rows-[1fr] opacity-100'
-                        : 'grid-rows-[0fr] opacity-0',
+                        ? "grid-rows-[1fr] opacity-100"
+                        : "grid-rows-[0fr] opacity-0",
                     )}
                   >
                     <div className="overflow-hidden">

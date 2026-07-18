@@ -173,7 +173,7 @@ export async function FactsSection() {
                 left: `calc(${pin.left} - 2%)`,
                 top: `calc(${pin.top} + 3%)`,
               }}
-              className="absolute -translate-x-1/2 -translate-y-full"
+              className="absolute origin-bottom -translate-x-1/2 -translate-y-full scale-[0.65] sm:scale-100"
             >
               <MapPinIcon
                 className={`${pinHeight(pin.count)} w-auto drop-shadow-[0_2px_6px_rgba(0,0,0,0.5)]`}
@@ -185,9 +185,9 @@ export async function FactsSection() {
         <Reveal>
           <AccentCard
             accent="teal"
-            className="mt-12 px-8 py-8 lg:px-24 lg:py-10"
+            className="mt-12 px-6 py-6 sm:px-8 sm:py-8 lg:px-24 lg:py-10"
           >
-            <p className="text-center text-2xl font-medium leading-relaxed text-fg lg:text-3xl">
+            <p className="text-center text-xl font-medium leading-relaxed text-fg sm:text-2xl lg:text-3xl">
               Наша спільнота не має меж. Кожна позначка на карті — це місто, з
               якого походять наші учасники. Попри різну географію, ми
               об&rsquo;єдналися заради спільної мети, щоб разом допомагати,
