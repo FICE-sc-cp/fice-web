@@ -4,10 +4,10 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Input } from '../ui/Input';
-import { Textarea } from '../ui/Textarea';
 import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
 import { ImageUpload } from '../ImageUpload';
+import { RichTextArea } from '../RichTextArea';
 import { useMainButton } from '@/lib/telegram';
 
 const CATEGORY_OPTIONS = [
@@ -73,6 +73,7 @@ export function NewsForm({
 
   const image = watch('image');
   const isEvent = watch('isEvent');
+  const details = watch('details');
   const submit = handleSubmit(onSubmit);
   useMainButton({ text: submitLabel, onClick: () => void submit(), loading: submitting });
 
@@ -85,7 +86,12 @@ export function NewsForm({
         error={errors.title?.message}
       />
       <Select label="Категорія" options={CATEGORY_OPTIONS} {...register('category')} />
-      <Textarea label="Текст" placeholder="Деталі новини…" {...register('details')} />
+      <RichTextArea
+        label="Текст"
+        placeholder="Деталі новини…"
+        value={details ?? ''}
+        onChange={(v) => setValue('details', v, { shouldDirty: true })}
+      />
       <ImageUpload
         label="Обкладинка"
         value={image}

@@ -21,11 +21,7 @@ export interface Paginated<T> {
 
 export interface Facts {
   eventsHeld: number;
-  moneyRaised: number;
   charityRaised: number;
-  visitorsReached: number;
-  partnersCount: number;
-  departmentsCount: number;
   membersCount: number;
   closedFundraisers: number;
   activeStudents: number;
@@ -36,11 +32,7 @@ export interface Facts {
 
 export const EMPTY_FACTS: Facts = {
   eventsHeld: 0,
-  moneyRaised: 0,
   charityRaised: 0,
-  visitorsReached: 0,
-  partnersCount: 0,
-  departmentsCount: 0,
   membersCount: 0,
   closedFundraisers: 0,
   activeStudents: 0,
@@ -58,21 +50,12 @@ export interface DepartmentHead {
   telegramTag: string | null;
 }
 
-export interface DepartmentDetails {
-  id: string;
-  about: string;
-  detailedDescription: string | null;
-  exampleOfWork: string | null;
-}
-
 export interface Department {
   id: string;
   name: string;
-  shortDescription: string;
+  memberCount: number | null;
   headId: string | null;
-  detailsId: string | null;
   head?: DepartmentHead | null;
-  details?: DepartmentDetails | null;
 }
 
 export type DepartmentMemberRole =
@@ -91,7 +74,6 @@ export interface DepartmentMember {
   specialization: string | null;
   photo: string | null;
   telegramTag: string | null;
-  quote: string | null;
 }
 
 export interface EventDetails {
@@ -108,7 +90,6 @@ export interface Partner {
   name: string;
   logoImage: string | null;
   websiteLink: string | null;
-  shortDescription: string | null;
   isApproved: boolean;
 }
 
@@ -259,11 +240,21 @@ export interface EventRegistrationPayload {
   answers?: { questionId: string; value: string }[];
 }
 
+// Public "Люди проєктного" entry — name + avatar, harvested by the bot from the
+// project chat (or added manually in the admin).
+export interface ProjectParticipant {
+  fullName: string;
+  telegramTag: string | null;
+  photo: string | null;
+}
+
 export const fice = {
   facts: () => request<Facts>('/facts'),
   departments: () => request<Department[]>('/department'),
   department: (id: string) => request<Department>(`/department/${id}`),
   members: () => request<DepartmentMember[]>('/department-member'),
+  projectParticipants: () =>
+    request<ProjectParticipant[]>('/project-participant/public'),
   events: (limit = 6, page = 1) =>
     request<Paginated<EventItem>>(`/event?limit=${limit}&page=${page}`),
   event: (id: string) => request<EventItem>(`/event/${id}`),

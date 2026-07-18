@@ -5,6 +5,7 @@ import { Container } from '@/components/ui/Container';
 import { Glow } from '@/components/ui/Glow';
 import { EventRegistrationForm } from '@/components/sections/EventRegistrationForm';
 import { fice, mediaUrl, safe } from '@/lib/api';
+import { renderRichInline } from '@/lib/richText';
 import { eventRegistrationOpen } from '@/lib/utils';
 
 const TZ = 'Europe/Kyiv';
@@ -240,9 +241,14 @@ export default async function EventDetailPage({
               <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1.5fr_1fr]">
                 <div>
                   <h2 className="mb-4 text-3xl font-bold">Про захід</h2>
-                  <p className="whitespace-pre-wrap text-lg leading-relaxed text-gray-300">
-                    {event.description ?? 'Деталі скоро зʼявляться.'}
-                  </p>
+                  <p
+                    className="whitespace-pre-wrap text-lg leading-relaxed text-gray-300"
+                    dangerouslySetInnerHTML={{
+                      __html: renderRichInline(
+                        event.description ?? 'Деталі скоро зʼявляться.',
+                      ),
+                    }}
+                  />
                 </div>
                 {program.length > 0 && (
                   <div className="rounded-2xl border border-white/8 bg-surface/45 p-6">

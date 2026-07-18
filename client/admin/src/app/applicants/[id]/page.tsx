@@ -75,7 +75,7 @@ export default function ApplicantDetailPage() {
 
           {a.applicantDepartments?.length ? (
             <Card>
-              <p className="mb-2 text-sm font-semibold text-muted">Відділи</p>
+              <p className="mb-2 text-sm font-semibold text-muted">Департаменти</p>
               <ul className="flex flex-col gap-2">
                 {a.applicantDepartments.map((d) => (
                   <li key={d.id} className="rounded-lg bg-bg-soft px-3 py-2">

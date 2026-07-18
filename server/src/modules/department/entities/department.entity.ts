@@ -1,7 +1,6 @@
 export class DepartmentEntity {
   id: string;
   name: string;
-  shortDescription: string;
+  memberCount: number | null;
   headId: string | null;
-  detailsId: string | null;
 }

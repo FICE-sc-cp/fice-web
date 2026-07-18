@@ -39,26 +39,10 @@ export default function EditDepartmentPage() {
         }
       }
 
-      let detailsId = dep?.detailsId ?? undefined;
-      if (v.about?.trim()) {
-        const body = {
-          about: v.about,
-          detailedDescription: v.detailedDescription || undefined,
-          exampleOfWork: v.exampleOfWork || undefined,
-        };
-        if (dep?.detailsId) {
-          await api.updateDepartmentDetails(dep.detailsId, body);
-        } else {
-          const d = await api.createDepartmentDetails(body);
-          detailsId = d.id;
-        }
-      }
-
       return api.updateDepartment(id, {
         name: v.name,
-        shortDescription: v.shortDescription,
+        memberCount: v.memberCount?.trim() ? Number(v.memberCount) : undefined,
         headId,
-        detailsId,
       });
     },
     onSuccess: () => {
@@ -71,7 +55,7 @@ export default function EditDepartmentPage() {
 
   return (
     <main className="mx-auto max-w-xl px-4 py-6">
-      <PageHeader title="Редагувати відділ" />
+      <PageHeader title="Редагувати департамент" />
       {isLoading ? (
         <div className="flex justify-center py-12">
           <Spinner />
@@ -91,14 +75,12 @@ export default function EditDepartmentPage() {
               dep
                 ? {
                     name: dep.name,
-                    shortDescription: dep.shortDescription,
+                    memberCount:
+                      dep.memberCount != null ? String(dep.memberCount) : '',
                     headFirstName: dep.head?.firstName ?? '',
                     headLastName: dep.head?.lastName ?? '',
                     headTelegramTag: dep.head?.telegramTag ?? '',
                     headPhoto: dep.head?.photo ?? null,
-                    about: dep.details?.about ?? '',
-                    detailedDescription: dep.details?.detailedDescription ?? '',
-                    exampleOfWork: dep.details?.exampleOfWork ?? '',
                   }
                 : undefined
             }

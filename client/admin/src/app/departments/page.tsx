@@ -30,7 +30,7 @@ export default function DepartmentsListPage() {
   return (
     <main className="mx-auto max-w-xl px-4 py-6">
       <PageHeader
-        title="Відділи"
+        title="Департаменти"
         action={
           <Link href="/departments/new">
             <Button>+ Додати</Button>
@@ -45,7 +45,7 @@ export default function DepartmentsListPage() {
       ) : isError ? (
         <p className="text-sm text-brand-red">Не вдалося завантажити.</p>
       ) : !data?.length ? (
-        <p className="py-12 text-center text-sm text-subtle">Відділів ще немає.</p>
+        <p className="py-12 text-center text-sm text-subtle">Департаментів ще немає.</p>
       ) : (
         <ul className="flex flex-col gap-3">
           {data.map((d) => (
@@ -82,7 +82,7 @@ export default function DepartmentsListPage() {
 
       <ConfirmDialog
         open={!!pending}
-        title="Видалити відділ?"
+        title="Видалити департамент?"
         message={pending?.name}
         loading={del.isPending}
         onCancel={() => setPending(null)}

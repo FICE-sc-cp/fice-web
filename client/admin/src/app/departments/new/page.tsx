@@ -26,20 +26,10 @@ export default function NewDepartmentPage() {
         });
         headId = head.id;
       }
-      let detailsId: string | undefined;
-      if (v.about?.trim()) {
-        const det = await api.createDepartmentDetails({
-          about: v.about,
-          detailedDescription: v.detailedDescription || undefined,
-          exampleOfWork: v.exampleOfWork || undefined,
-        });
-        detailsId = det.id;
-      }
       return api.createDepartment({
         name: v.name,
-        shortDescription: v.shortDescription,
+        memberCount: v.memberCount?.trim() ? Number(v.memberCount) : undefined,
         headId,
-        detailsId,
       });
     },
     onSuccess: () => {
@@ -51,7 +41,7 @@ export default function NewDepartmentPage() {
 
   return (
     <main className="mx-auto max-w-xl px-4 py-6">
-      <PageHeader title="Новий відділ" />
+      <PageHeader title="Новий департамент" />
       {mutation.error && (
         <p className="mb-4 rounded-xl border border-brand-red/40 bg-brand-red/10 px-4 py-3 text-sm text-brand-red">
           {mutation.error instanceof Error ? mutation.error.message : 'Помилка'}
