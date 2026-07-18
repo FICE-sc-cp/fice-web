@@ -237,12 +237,6 @@ export default async function DepartmentPage({
                     sizes="(min-width: 1024px) 32rem, 100vw"
                     className="h-auto w-full"
                   />
-                  <div
-                    className={cn(
-                      "pointer-events-none absolute inset-0 opacity-20 mix-blend-overlay",
-                      d.gradient,
-                    )}
-                  />
                 </div>
               )}
             </div>

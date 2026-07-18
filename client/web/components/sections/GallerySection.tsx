@@ -9,7 +9,7 @@ const COLUMNS = [
     { src: "/merch-main-photo.jpg", grow: 3 },
   ],
   [
-    { src: "/photo-3.png", grow: 3 },
+    { src: "/partnerships-main-photo.jpg", grow: 3 },
     { src: "/photo-4.png", grow: 2 },
   ],
   [
