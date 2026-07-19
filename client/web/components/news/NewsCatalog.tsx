@@ -40,6 +40,7 @@ function CardImage({
 export function NewsCatalog({ items }: { items: News[] }) {
   const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
+  const [shown, setShown] = useState(9);
 
   const clean = filter === 'all' && !query.trim();
 
@@ -128,8 +129,8 @@ export function NewsCatalog({ items }: { items: News[] }) {
       <section className="relative z-[1] pb-16 pt-3">
         <Container>
           {visible.length > 0 ? (
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {visible.map((item) => (
+            <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">
+              {visible.slice(0, shown).map((item) => (
                 <Link
                   key={item.id}
                   href={`/news/${item.id}`}
@@ -158,6 +159,20 @@ export function NewsCatalog({ items }: { items: News[] }) {
               ))}
             </div>
           ) : !clean ? (
+            <></>
+          ) : null}
+          {visible.length > shown && (
+            <div className="mt-10 flex justify-center">
+              <button
+                type="button"
+                onClick={() => setShown((s) => s + 9)}
+                className="rounded-2xl bg-neutral-600/40 px-10 py-4 text-lg font-bold text-white transition-all hover:bg-neutral-600/60 hover:scale-[1.02] active:scale-95"
+              >
+                Показати ще
+              </button>
+            </div>
+          )}
+          {visible.length === 0 && !clean ? (
             <div className="flex flex-col items-center gap-2.5 px-4 py-20 text-center">
               <span className="text-4xl">🔍</span>
               <h3 className="text-2xl font-extrabold">Нічого не знайшли</h3>
