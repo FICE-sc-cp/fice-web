@@ -7,8 +7,14 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
-import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiOkResponse,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Admin } from '../../auth/admin.decorator';
 import { CreateProjectParticipantDto } from './dto/create-project-participant.dto';
 import { UpdateProjectParticipantDto } from './dto/update-project-participant.dto';
@@ -20,13 +26,17 @@ import { ProjectParticipantService } from './project_participant.service';
 export class ProjectParticipantController {
   constructor(private readonly service: ProjectParticipantService) {}
 
-  // Public: consumed by the future "Люди проєктного" wall on the landing.
+  // Public: consumed by the department people walls ("сердечка").
   @Get('public')
   @ApiOperation({
-    summary: 'Public list of visible project participants (name + avatar)',
+    summary: 'Public list of visible participants (name + avatar)',
   })
-  findPublic() {
-    return this.service.findPublic();
+  @ApiQuery({ name: 'departmentId', required: false, format: 'uuid' })
+  findPublic(
+    @Query('departmentId', new ParseUUIDPipe({ optional: true }))
+    departmentId?: string,
+  ) {
+    return this.service.findPublic(departmentId);
   }
 
   @Get()

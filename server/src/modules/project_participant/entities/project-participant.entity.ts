@@ -11,6 +11,7 @@ export class ProjectParticipantEntity {
   source: ProjectParticipantSource;
 
   hidden: boolean;
+  departmentId: string | null;
   lastSeenAt: Date;
   createdAt: Date;
 }

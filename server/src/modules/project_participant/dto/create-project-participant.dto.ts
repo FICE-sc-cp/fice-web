@@ -1,5 +1,11 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUUID,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateProjectParticipantDto {
   @ApiProperty({ maxLength: 120, description: 'ПІБ учасника' })
@@ -7,6 +13,11 @@ export class CreateProjectParticipantDto {
   @IsNotEmpty()
   @MaxLength(120)
   fullName: string;
+
+  @ApiPropertyOptional({ format: 'uuid', description: 'Департамент' })
+  @IsOptional()
+  @IsUUID()
+  departmentId?: string;
 
   @ApiPropertyOptional({ maxLength: 50, description: 'Telegram-тег' })
   @IsOptional()
