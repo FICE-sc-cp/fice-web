@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { ViewAllLink } from "@/components/ui/ViewAllLink";
 import { Container } from "@/components/ui/Container";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Glow } from "@/components/ui/Glow";
@@ -45,12 +45,13 @@ export async function FundraisersSection() {
         )}
 
         <div className="mt-10 flex justify-center">
-          <Link
+          <ViewAllLink
             href="/charity"
-            className="rounded-2xl bg-neutral-600/40 px-10 py-4 text-xl font-bold text-white transition-all hover:bg-neutral-600/60 hover:scale-[1.02] active:scale-95 sm:px-16 sm:py-5 sm:text-2xl lg:text-3xl"
+            gradient="bg-gradient-magenta"
+            accent="text-brand-magenta"
           >
             Переглянути всі
-          </Link>
+          </ViewAllLink>
         </div>
       </Container>
     </section>
