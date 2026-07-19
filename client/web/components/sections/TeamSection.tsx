@@ -126,7 +126,7 @@ function TeamCardView({ card }: { card: TeamCard }) {
   const photo = mediaUrl(card.photo);
   const tg = card.telegram?.replace(/^@/, "");
   return (
-    <article className="flex w-72 max-w-full flex-col gap-3">
+    <article className="flex w-[calc(50%_-_0.75rem)] flex-col gap-3 sm:w-72 sm:max-w-full">
       <div className="relative aspect-[3/4] overflow-hidden rounded-2xl border border-brand-magenta bg-surface/40">
         <Glow
           color="#9810FA"
