@@ -48,6 +48,7 @@ export interface Department {
   id: string;
   name: string;
   memberCount: number | null;
+  telegramChatId: string | null;
   headId: string | null;
   head?: DepartmentHead | null;
 }
@@ -331,6 +332,7 @@ export interface DonationInput {
 export interface DepartmentInput {
   name: string;
   memberCount?: number;
+  telegramChatId?: string;
   headId?: string;
 }
 
@@ -375,6 +377,7 @@ export interface ProjectParticipant {
   photo: string | null;
   source: ProjectParticipantSource;
   hidden: boolean;
+  departmentId: string | null;
   lastSeenAt: string;
   createdAt: string;
 }
@@ -384,6 +387,7 @@ export interface ProjectParticipantInput {
   telegramTag?: string;
   photo?: string;
   hidden?: boolean;
+  departmentId?: string;
 }
 
 export const api = {
