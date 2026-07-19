@@ -4,7 +4,9 @@ import { Footer } from '@/components/layout/Footer';
 import { Container } from '@/components/ui/Container';
 import { Glow } from '@/components/ui/Glow';
 import { GradientText } from '@/components/ui/GradientText';
+import { SectionTitle } from '@/components/ui/SectionTitle';
 import { FundraiserCard } from '@/components/charity/FundraiserCard';
+import { LoadMoreList } from '@/components/ui/LoadMoreList';
 import { fice, safe, type Fundraiser } from '@/lib/api';
 
 export const metadata: Metadata = {
@@ -26,7 +28,11 @@ export default async function CharityCatalogPage() {
         <section className="relative isolate pb-4 pt-16 lg:pt-24">
           <Glow
             color="#FF8904"
-            className="left-1/2 top-0 h-[24rem] w-[40rem] -translate-x-1/2"
+            className="left-0 top-6 h-[22rem] w-[26rem] -translate-x-1/2"
+          />
+          <Glow
+            color="#FF8904"
+            className="right-0 top-16 h-[22rem] w-[26rem] translate-x-1/2"
           />
           <Container>
             <div className="flex flex-col items-center gap-4 text-center">
@@ -51,22 +57,37 @@ export default async function CharityCatalogPage() {
           <Container className="flex flex-col gap-14 pt-6">
             {active.length > 0 && (
               <div>
-                <h2 className="mb-6 text-2xl font-bold">Активні збори</h2>
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                  {active.map((f) => (
+                <div className="mb-8">
+                  <SectionTitle className="text-3xl sm:text-4xl lg:text-4xl">
+                    Активні збори
+                  </SectionTitle>
+                </div>
+                <LoadMoreList
+                  pageSize={9}
+                  className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
+                  items={active.map((f) => (
                     <FundraiserCard key={f.id} fundraiser={f} />
                   ))}
-                </div>
+                />
               </div>
             )}
             {closed.length > 0 && (
               <div>
-                <h2 className="mb-6 text-2xl font-bold text-subtle">Завершені</h2>
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                  {closed.map((f) => (
+                <div className="mb-8">
+                  <SectionTitle
+                    className="text-3xl sm:text-4xl lg:text-4xl"
+                    gradient="bg-neutral-600"
+                  >
+                    Завершені
+                  </SectionTitle>
+                </div>
+                <LoadMoreList
+                  pageSize={9}
+                  className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
+                  items={closed.map((f) => (
                     <FundraiserCard key={f.id} fundraiser={f} />
                   ))}
-                </div>
+                />
               </div>
             )}
           </Container>
