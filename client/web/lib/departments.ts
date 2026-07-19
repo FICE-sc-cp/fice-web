@@ -23,8 +23,10 @@ export interface DepartmentData {
   glow: [string, string];
   cover: string | null;
   memberCount: number | null;
-  // Renders the "Люди проєктного" people wall (heart). Set only for projects.
-  heart: boolean | null;
+  // Title of the department people wall («сердечко»). The wall renders on the
+  // department page whenever the bot has harvested participants for it;
+  // when heartTitle is null the department name is used.
+  heartTitle: string | null;
   slogan: string | null;
   about: string[] | null;
   responsibilities: Responsibility[] | null;
@@ -43,7 +45,7 @@ interface DeptInput {
   glow: [string, string];
   cover?: string | null;
   memberCount?: number | null;
-  heart?: boolean | null;
+  heartTitle?: string | null;
   slogan?: string | null;
   about?: string[] | null;
   responsibilities?: Responsibility[] | null;
@@ -63,7 +65,7 @@ function dept(input: DeptInput): DepartmentData {
     glow: input.glow,
     cover: input.cover ?? null,
     memberCount: input.memberCount ?? null,
-    heart: input.heart ?? null,
+    heartTitle: input.heartTitle ?? null,
     slogan: input.slogan ?? null,
     about: input.about ?? null,
     responsibilities: input.responsibilities ?? null,
@@ -118,7 +120,7 @@ export const DEPARTMENTS: Record<string, DepartmentData> = {
     gradient: "bg-gradient-blue",
     glow: ["#36DFFF", "#2B7FFF"],
     memberCount: 45,
-    heart: true,
+    heartTitle: "Люди проєктного",
     slogan: "Твори свої ідеї 💫",
     about: [
       "Проєктний департамент - це простір для створення, розвитку і реалізації студентських ініціатив. Ми працюємо над тим, щоб кожна ідея отримала шанс на втілення: від перших обговорень до фінального проведення заходу.",
@@ -166,6 +168,7 @@ export const DEPARTMENTS: Record<string, DepartmentData> = {
     gradient: "bg-gradient-blue",
     glow: ["#00E3F3", "#2B7FFF"],
     memberCount: 46,
+    heartTitle: "Медійка",
     slogan:
       "Ми робимо життя факультету видимим, зрозумілим і ближчим до студентів.",
     about: [
