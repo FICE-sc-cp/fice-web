@@ -77,7 +77,7 @@ async function reset() {
   await prisma.user.deleteMany();
 }
 
-// Демо-учасники проєктного департаменту для стінки «Люди проєктного».
+// Демо-учасники стінок («сердечок») департаментів.
 const PROJECT_PEOPLE = [
   'Anny', 'Вероніка Нуар', 'sonya', 'TimΔ', 'Julìa', 'Apolinarik', 'Veronika',
   'Катерина', 'Toshka', 'Daria', 'Artem Zhmura', 'Софія', 'Макс Koval', 'rina',
@@ -85,6 +85,15 @@ const PROJECT_PEOPLE = [
   'Соня', 'dna', 'Юлія Зелюк', 'Nightcore', 'Maryna', 'arina', 'Тарас', 'marina',
   'Maksym', 'Laanji', 'льошик', 'Влад', 'Sherlochek', 'Ілюша', 'Android hacker',
   'Гена Цидрусні', 'tanossska',
+];
+
+const MEDIA_PEOPLE = [
+  'Борис', 'Leona', 'Бодян', 'Денис', 'Максим мемер', 'Artem', 'Maxim Belikov',
+  'Vicxxmn', 'Анна Любченко', 'margo', 'Freakman', 'Кіра', 'сшка', 'Даша',
+  'Іван', 'Sherlochek', 'Liza Kolinko', 'дашдаш', 'Маруся', 'Nightcore', 'IWAN',
+  'алина', 'Maksym', 'Катерина', 'Anny', 'Ярина Ліщук', 'martella', 'Aaaaa',
+  'nika', 'Anastasiia', 'Надія Марчук', 'Аня Куц', 'Yana', 'Ігор', 'Лєна',
+  'Yehor', 'Діана', 'v1aggra', 'ZBK', 'Юлія', 'Phoenix', 'аня', 'teti',
 ];
 
 // ── Departments (each with a 1:1 head + 1:1 details) ──────────────────────────
@@ -682,13 +691,22 @@ async function main() {
     partnerIds[p.name] = created.id;
   }
 
-  // Project department participants (photos left null → frontend placeholder).
+  // Department people walls (photos left null → frontend placeholder).
   await prisma.projectParticipant.createMany({
-    data: PROJECT_PEOPLE.map((fullName, i) => ({
-      telegramId: BigInt(900000 + i),
-      fullName,
-      source: 'HARVESTED' as const,
-    })),
+    data: [
+      ...PROJECT_PEOPLE.map((fullName, i) => ({
+        telegramId: BigInt(900000 + i),
+        fullName,
+        departmentId: deptIds.projects,
+        source: 'HARVESTED' as const,
+      })),
+      ...MEDIA_PEOPLE.map((fullName, i) => ({
+        telegramId: BigInt(910000 + i),
+        fullName,
+        departmentId: deptIds.media,
+        source: 'HARVESTED' as const,
+      })),
+    ],
   });
 
   // Events (nested details + program + questions), then link a few partners.
