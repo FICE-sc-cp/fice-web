@@ -38,9 +38,8 @@ services:
       # Partnerships chat — partner applications are sent here. For a forum
       # topic (гілка) use "chatId/threadId", e.g. -1001234567890/12.
       PARTNERSHIP_CHAT_ID: ${PARTNERSHIP_CHAT_ID:-}
-      # Project chat the bot harvests participants from. For a forum topic use
-      # "chatId/threadId" (only messages in that topic are harvested).
-      PROJECT_CHAT_ID: ${PROJECT_CHAT_ID:-}
+      # Department people-wall chats are configured in the admin panel
+      # (Департаменти → Telegram chat ID), not via env.
       # Public origin of the web site, used to build event registration links.
       PUBLIC_WEB_URL: ${PUBLIC_WEB_URL:-}
       # Telegram usernames pinged on a new partner application.
