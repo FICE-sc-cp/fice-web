@@ -40,7 +40,7 @@ admins through a **Telegram Mini App**, backed by a NestJS API.
                  │  Next.js     │         │ Telegram MA  │
                  └──────┬───────┘         └──────┬───────┘
                         │  GET (public)          │  GET + write (x-telegram-init-data)
-                        ▼                         ▼
+                        ▼                        ▼
                      ┌───────────────────────────────┐
                      │        server (3001)          │
                      │   NestJS REST API + bot       │
