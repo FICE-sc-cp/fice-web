@@ -33,7 +33,7 @@ export async function PartnersSection() {
   return (
     <section
       id="partners"
-      className="relative isolate scroll-mt-28 py-20 lg:py-28"
+      className="relative isolate scroll-mt-36 py-12 lg:py-16"
     >
       <Glow
         color="#3BCA5B"

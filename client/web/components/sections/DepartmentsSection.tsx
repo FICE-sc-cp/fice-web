@@ -74,15 +74,15 @@ export function DepartmentsSection() {
   return (
     <section
       id="departments"
-      className="relative isolate scroll-mt-28 py-20 lg:py-28"
+      className="relative isolate scroll-mt-36 py-12 lg:py-16"
     >
       <Glow
         color="#AD46FF"
-        className="left-1/2 top-2/5 h-[25rem] w-[30rem] -translate-x-1/5 -translate-y-1/2 -ml-[18rem]"
+        className="left-1/2 top-1/3 h-[18rem] w-[22rem] -translate-x-1/5 -translate-y-1/2 -ml-[14rem]"
       />
       <Glow
         color="#AD46FF"
-        className="left-1/2 top-2/3 h-[25rem] w-[30rem] -translate-x-full -translate-y-1/5 -ml-[18rem]"
+        className="left-1/2 top-1/2 h-[18rem] w-[22rem] -translate-x-full -translate-y-1/2 -ml-[14rem]"
       />
 
       <Container>
@@ -94,16 +94,19 @@ export function DepartmentsSection() {
           />
         </Reveal>
 
-        <RevealGroup className="mt-14 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <RevealGroup className="mt-10 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 md:grid md:grid-cols-2 md:gap-6 md:overflow-visible md:pb-0 lg:grid-cols-3">
           {DEPARTMENTS.map((dept) => (
-            <AccentCard
+            <div
               key={dept.name}
-              accent={dept.accent}
-              interactive
               className={cn(
-                "flex flex-col gap-4 px-6 py-8",
+                "w-[85vw] max-w-[22rem] shrink-0 snap-center md:w-auto md:max-w-none md:shrink",
                 dept.wide && "lg:col-span-2",
               )}
+            >
+            <AccentCard
+              accent={dept.accent}
+              interactive
+              className="flex h-full flex-col gap-4 px-6 py-8"
             >
               <h3 className="text-2xl font-bold text-white">{dept.name}</h3>
               {/*<p className={cn("text-xl font-bold", accentText[dept.accent])}>
@@ -122,6 +125,7 @@ export function DepartmentsSection() {
                 </span>
               </Link>
             </AccentCard>
+            </div>
           ))}
         </RevealGroup>
       </Container>
