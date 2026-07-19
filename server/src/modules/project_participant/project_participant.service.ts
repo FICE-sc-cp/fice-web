@@ -20,6 +20,7 @@ const adminSelect = {
   photo: true,
   source: true,
   hidden: true,
+  departmentId: true,
   lastSeenAt: true,
   createdAt: true,
 } as const;
@@ -33,12 +34,13 @@ export class ProjectParticipantService {
   // ---- Bot-facing (harvesting) -------------------------------------------
 
   /**
-   * Upsert a participant seen in the project chat. Returns the row id and
+   * Upsert a participant seen in a department chat. Returns the row id and
    * whether it was newly created (the bot fetches an avatar only for new rows,
    * to avoid an API call on every message).
    */
   async upsertFromTelegram(
     user: TelegramUserLike,
+    departmentId: string,
   ): Promise<{ id: string; created: boolean }> {
     const telegramId = BigInt(user.id);
     const fullName =
@@ -47,7 +49,7 @@ export class ProjectParticipantService {
     const telegramTag = user.username ? `@${user.username}` : null;
 
     const existing = await this.prisma.projectParticipant.findUnique({
-      where: { telegramId },
+      where: { departmentId_telegramId: { departmentId, telegramId } },
       select: { id: true },
     });
 
@@ -59,16 +61,25 @@ export class ProjectParticipantService {
       return { id: existing.id, created: false };
     }
 
+    // Reuse an already-downloaded avatar of the same person from another chat.
+    const twin = await this.prisma.projectParticipant.findFirst({
+      where: { telegramId, photo: { not: null } },
+      select: { photo: true, avatarFileId: true },
+    });
+
     const created = await this.prisma.projectParticipant.create({
       data: {
         telegramId,
         fullName,
         telegramTag,
+        departmentId,
+        photo: twin?.photo,
+        avatarFileId: twin?.avatarFileId,
         source: ProjectParticipantSource.HARVESTED,
       },
-      select: { id: true },
+      select: { id: true, photo: true },
     });
-    return { id: created.id, created: true };
+    return { id: created.id, created: !created.photo };
   }
 
   async setAvatar(
@@ -115,11 +126,11 @@ export class ProjectParticipantService {
     });
   }
 
-  // ---- Public read (for the "Люди проєктного" wall) -----------------------
+  // ---- Public read (department people walls) ------------------------------
 
-  findPublic() {
+  findPublic(departmentId?: string) {
     return this.prisma.projectParticipant.findMany({
-      where: { hidden: false },
+      where: { hidden: false, ...(departmentId ? { departmentId } : {}) },
       select: { fullName: true, telegramTag: true, photo: true },
       orderBy: { fullName: 'asc' },
     });

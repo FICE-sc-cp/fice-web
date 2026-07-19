@@ -253,8 +253,10 @@ export const fice = {
   departments: () => request<Department[]>('/department'),
   department: (id: string) => request<Department>(`/department/${id}`),
   members: () => request<DepartmentMember[]>('/department-member'),
-  projectParticipants: () =>
-    request<ProjectParticipant[]>('/project-participant/public'),
+  projectParticipants: (departmentId?: string) =>
+    request<ProjectParticipant[]>(
+      `/project-participant/public${departmentId ? `?departmentId=${departmentId}` : ''}`,
+    ),
   events: (limit = 6, page = 1) =>
     request<Paginated<EventItem>>(`/event?limit=${limit}&page=${page}`),
   event: (id: string) => request<EventItem>(`/event/${id}`),

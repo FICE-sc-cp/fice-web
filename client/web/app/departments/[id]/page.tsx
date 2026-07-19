@@ -171,9 +171,12 @@ export default async function DepartmentPage({
   const dbHead = dbDept?.head ?? null;
   // Admin-set member count overrides the template default when present.
   const memberCount = dbDept?.memberCount ?? d.memberCount;
-  // People wall ("сердечко") — only for departments with heart set (projects).
-  const projectPeople = d.heart
-    ? await safe(fice.projectParticipants(), [] as ProjectParticipant[])
+  // People wall ("сердечко") — this department's harvested participants.
+  const projectPeople = dbDept
+    ? await safe(
+        fice.projectParticipants(dbDept.id),
+        [] as ProjectParticipant[],
+      )
     : [];
   const head = dbHead
     ? {
@@ -341,10 +344,10 @@ export default async function DepartmentPage({
           </section>
         )}
 
-        {d.heart && projectPeople.length > 0 && (
+        {projectPeople.length > 0 && (
           <ProjectPeopleWall
+            title={d.heartTitle ?? d.name}
             people={projectPeople}
-            gradient={d.gradient}
             glow={d.glow}
           />
         )}

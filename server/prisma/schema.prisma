@@ -93,9 +93,12 @@ model DepartmentHead {
 }
 
 model Department {
-  id          String @id @default(uuid()) @db.Uuid
-  name        String @db.VarChar(50)
-  memberCount Int?
+  id             String  @id @default(uuid()) @db.Uuid
+  name           String  @db.VarChar(50)
+  memberCount    Int?
+  // Telegram chat the bot harvests this department's people wall from.
+  // "chatId" or "chatId/threadId" for a forum topic. Set from the admin panel.
+  telegramChatId String? @db.VarChar(64)
 
   headId String?         @unique @db.Uuid
   head   DepartmentHead? @relation(fields: [headId], references: [id], onDelete: SetNull)
@@ -103,6 +106,7 @@ model Department {
   applicantDepartments        ApplicantDepartment[]
   departmentMemberAssignments DepartmentMemberAssignment[]
   eventDetails                EventDetails[]
+  projectParticipants         ProjectParticipant[]
 }
 
 enum DepartmentMemberRole {
@@ -292,7 +296,7 @@ enum ProjectParticipantSource {
 // "Люди проєктного" wall (frontend added separately).
 model ProjectParticipant {
   id           String                   @id @default(uuid()) @db.Uuid
-  telegramId   BigInt?                  @unique // null for MANUAL entries
+  telegramId   BigInt? // null for MANUAL entries
   fullName     String                   @db.VarChar(120)
   telegramTag  String?                  @db.VarChar(50)
   photo        String? // "/uploads/<uuid>.jpg"
@@ -301,4 +305,10 @@ model ProjectParticipant {
   hidden       Boolean                  @default(false)
   lastSeenAt   DateTime                 @default(now())
   createdAt    DateTime                 @default(now())
+
+  departmentId String?     @db.Uuid
+  department   Department? @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  // The same person may sit in several department chats.
+  @@unique([departmentId, telegramId])
 }

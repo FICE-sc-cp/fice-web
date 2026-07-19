@@ -29,6 +29,7 @@ export default function NewDepartmentPage() {
       return api.createDepartment({
         name: v.name,
         memberCount: v.memberCount?.trim() ? Number(v.memberCount) : undefined,
+        telegramChatId: v.telegramChatId?.trim() || undefined,
         headId,
       });
     },

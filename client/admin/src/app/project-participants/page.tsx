@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, mediaUrl, type ProjectParticipant } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
 import { ImageUpload } from '@/components/ImageUpload';
 import { Spinner } from '@/components/ui/Spinner';
 import { hapticNotify } from '@/lib/telegram';
@@ -19,14 +20,39 @@ export default function ProjectParticipantsPage() {
     queryKey: ['project-participants'],
     queryFn: () => api.projectParticipants(),
   });
+  const { data: departments } = useQuery({
+    queryKey: ['departments'],
+    queryFn: () => api.departments(),
+  });
 
+  const deptName = useMemo(() => {
+    const m = new Map<string, string>();
+    departments?.forEach((d) => m.set(d.id, d.name));
+    return m;
+  }, [departments]);
+
+  const deptOptions = useMemo(
+    () => [
+      { value: '', label: 'Усі департаменти' },
+      ...(departments ?? []).map((d) => ({ value: d.id, label: d.name })),
+    ],
+    [departments],
+  );
+
+  const [filterDept, setFilterDept] = useState('');
   const [fullName, setFullName] = useState('');
+  const [addDept, setAddDept] = useState('');
   const [photo, setPhoto] = useState<string | null>(null);
+
+  const shown = (people ?? []).filter(
+    (p) => !filterDept || p.departmentId === filterDept,
+  );
 
   const addMutation = useMutation({
     mutationFn: () =>
       api.createProjectParticipant({
         fullName: fullName.trim(),
+        departmentId: addDept || undefined,
         photo: photo ?? undefined,
       }),
     onSuccess: () => {
@@ -54,11 +80,12 @@ export default function ProjectParticipantsPage() {
 
   return (
     <main className="mx-auto max-w-xl px-4 py-6">
-      <PageHeader title="Люди проєктного" />
+      <PageHeader title="Люди департаментів" />
 
       <p className="mb-4 text-sm text-muted">
-        Учасники з тегом «авто» додаються ботом із чату проєктного. Можна додати
-        людину вручну або приховати будь-кого з публічного списку.
+        Учасники з тегом «авто» додаються ботом із чатів департаментів (chat ID
+        налаштовується у формі департаменту). Можна додати людину вручну або
+        приховати будь-кого з публічної стінки.
       </p>
 
       <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-border bg-bg-soft p-4">
@@ -67,6 +94,12 @@ export default function ProjectParticipantsPage() {
           label="ПІБ"
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
+        />
+        <Select
+          label="Департамент"
+          options={[{ value: '', label: 'Без департаменту' }, ...deptOptions.slice(1)]}
+          value={addDept}
+          onChange={(e) => setAddDept(e.target.value)}
         />
         <ImageUpload label="Аватарка" value={photo} onChange={setPhoto} />
         {addMutation.error && (
@@ -85,18 +118,27 @@ export default function ProjectParticipantsPage() {
         </Button>
       </div>
 
+      <div className="mb-4">
+        <Select
+          label="Показати"
+          options={deptOptions}
+          value={filterDept}
+          onChange={(e) => setFilterDept(e.target.value)}
+        />
+      </div>
+
       {isLoading ? (
         <div className="flex justify-center py-12">
           <Spinner />
         </div>
-      ) : !people?.length ? (
+      ) : !shown.length ? (
         <p className="py-8 text-center text-sm text-subtle">
-          Ще нікого немає. Додай бота в чат проєктного (адміном, з вимкненим
-          privacy mode) — і він почне збирати учасників.
+          Ще нікого немає. Вкажи Telegram chat ID у формі департаменту й додай
+          бота в той чат (адміном, з вимкненим privacy mode).
         </p>
       ) : (
         <ul className="flex flex-col gap-2">
-          {people.map((p) => {
+          {shown.map((p) => {
             const avatar = mediaUrl(p.photo);
             return (
               <li
@@ -125,6 +167,9 @@ export default function ProjectParticipantsPage() {
                     )}
                   </p>
                   <p className="truncate text-xs text-subtle">
+                    {(p.departmentId && deptName.get(p.departmentId)) ||
+                      'без департаменту'}
+                    {' · '}
                     {p.telegramTag ?? '—'} ·{' '}
                     {p.source === 'MANUAL' ? 'вручну' : 'авто'}
                   </p>

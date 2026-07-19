@@ -22,6 +22,16 @@ export class CreateDepartmentDto {
   @Min(0)
   memberCount?: number;
 
+  @ApiPropertyOptional({
+    maxLength: 64,
+    description:
+      'Telegram chat id, звідки бот збирає людей департаменту ("chatId" або "chatId/threadId" для гілки)',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  telegramChatId?: string;
+
   @ApiPropertyOptional({ format: 'uuid', description: 'Department head id' })
   @IsOptional()
   @IsUUID()

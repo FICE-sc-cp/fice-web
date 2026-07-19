@@ -42,6 +42,7 @@ export default function EditDepartmentPage() {
       return api.updateDepartment(id, {
         name: v.name,
         memberCount: v.memberCount?.trim() ? Number(v.memberCount) : undefined,
+        telegramChatId: v.telegramChatId?.trim() || undefined,
         headId,
       });
     },
@@ -77,6 +78,7 @@ export default function EditDepartmentPage() {
                     name: dep.name,
                     memberCount:
                       dep.memberCount != null ? String(dep.memberCount) : '',
+                    telegramChatId: dep.telegramChatId ?? '',
                     headFirstName: dep.head?.firstName ?? '',
                     headLastName: dep.head?.lastName ?? '',
                     headTelegramTag: dep.head?.telegramTag ?? '',

@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import { ViewAllLink } from '@/components/ui/ViewAllLink';
 import { Container } from '@/components/ui/Container';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { Glow } from '@/components/ui/Glow';
@@ -13,7 +13,7 @@ export async function EventsSection() {
   const events = data.items;
 
   return (
-    <section id="events" className="relative isolate scroll-mt-28 py-20 lg:py-28">
+    <section id="events" className="relative isolate scroll-mt-36 py-12 lg:py-16">
       <Glow
         color="#00E3F3"
         className="bottom-0 left-1/2 h-[20rem] w-[36rem] -translate-x-full -translate-y-1/4 rotate-30"
@@ -32,20 +32,26 @@ export async function EventsSection() {
             Незабаром анонсуємо нові заходи 👀
           </p>
         ) : (
-          <RevealGroup className="mt-14 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <RevealGroup className="mt-10 flex snap-x snap-mandatory gap-5 overflow-x-auto pb-4 sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 lg:grid-cols-3">
             {events.map((e) => (
-              <EventCard key={e.id} event={e} />
+              <div
+                key={e.id}
+                className="w-[85vw] max-w-[22rem] shrink-0 snap-center sm:w-auto sm:max-w-none sm:shrink sm:[&>*]:h-full"
+              >
+                <EventCard event={e} />
+              </div>
             ))}
           </RevealGroup>
         )}
 
-        <div className="mt-14 flex justify-center">
-          <Link
+        <div className="mt-10 flex justify-center">
+          <ViewAllLink
             href="/events"
-            className="rounded-2xl bg-neutral-600/40 px-10 py-4 text-xl font-bold text-white transition-all hover:bg-neutral-600/60 hover:scale-[1.02] active:scale-95 sm:px-16 sm:py-5 sm:text-2xl lg:text-3xl"
+            gradient="bg-gradient-green"
+            accent="text-brand-green"
           >
             Переглянути всі
-          </Link>
+          </ViewAllLink>
         </div>
       </Container>
     </section>

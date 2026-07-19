@@ -13,6 +13,7 @@ import { ConfigService } from '@nestjs/config';
 import { Bot, GrammyError, InputFile } from 'grammy';
 import type { User } from 'grammy/types';
 import { UPLOAD_DIR, UPLOAD_URL_PREFIX } from '../upload/upload.constants';
+import { PrismaService } from '../database/prisma.service';
 import { ProjectParticipantService } from '../modules/project_participant/project_participant.service';
 
 export interface ChannelPostOptions {
@@ -44,6 +45,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
 
   constructor(
     private readonly configService: ConfigService,
+    private readonly prisma: PrismaService,
     private readonly projectParticipants: ProjectParticipantService,
   ) {
     const token = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
@@ -113,51 +115,83 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
 
   // ---- Project-chat participant harvesting ("Люди проєктного") ------------
 
-  private projectRef() {
-    return parseChatRef(this.configService.get<string>('PROJECT_CHAT_ID'));
+  // Department chat ids are configured in the admin panel (Department.telegramChatId),
+  // so the mapping is read from the DB with a short cache instead of env vars.
+  private deptChats: { id: string; chatId: string; threadId?: number }[] = [];
+  private deptChatsLoadedAt = 0;
+
+  private async departmentForChat(
+    chatId: number,
+    threadId?: number,
+    requireNoThread = false,
+  ): Promise<string | undefined> {
+    if (Date.now() - this.deptChatsLoadedAt > 60_000) {
+      const rows = await this.prisma.department.findMany({
+        where: { telegramChatId: { not: null } },
+        select: { id: true, telegramChatId: true },
+      });
+      this.deptChats = rows.flatMap((r) => {
+        const ref = parseChatRef(r.telegramChatId ?? undefined);
+        return ref ? [{ id: r.id, ...ref }] : [];
+      });
+      this.deptChatsLoadedAt = Date.now();
+    }
+    const match = this.deptChats.find((d) => d.chatId === String(chatId));
+    if (!match) return undefined;
+    if (match.threadId !== undefined) {
+      // Topic-scoped chat: joins aren't topic-scoped, so skip them entirely,
+      // and only count messages posted in that topic.
+      if (requireNoThread || threadId !== match.threadId) return undefined;
+    }
+    return match.id;
   }
 
   private registerProjectChatHarvesting(bot: Bot) {
-    // Anyone who writes in the project chat (or its configured topic/гілка).
+    // Anyone who writes in a department chat (or its configured topic/гілка).
     bot.on('message', async (ctx) => {
-      const ref = this.projectRef();
-      if (!ref || String(ctx.chat?.id) !== ref.chatId) return;
-      if (ref.threadId !== undefined && ctx.message.message_thread_id !== ref.threadId)
-        return;
-      if (ctx.from) await this.harvestUser(ctx.from);
+      if (!ctx.chat || ctx.chat.type === 'private' || !ctx.from) return;
+      const deptId = await this.departmentForChat(
+        ctx.chat.id,
+        ctx.message.message_thread_id,
+      );
+      if (deptId) await this.harvestUser(ctx.from, deptId);
     });
 
-    // Joins are supergroup-wide, not topic-scoped — only harvest them when the
-    // project chat is a whole chat, not a single topic.
+    // People added to a department chat (may never send a message).
     bot.on('message:new_chat_members', async (ctx) => {
-      const ref = this.projectRef();
-      if (!ref || ref.threadId !== undefined) return;
-      if (String(ctx.chat?.id) !== ref.chatId) return;
+      const deptId = await this.departmentForChat(ctx.chat.id, undefined, true);
+      if (!deptId) return;
       for (const member of ctx.message.new_chat_members) {
-        await this.harvestUser(member);
+        await this.harvestUser(member, deptId);
       }
     });
 
     bot.on('chat_member', async (ctx) => {
-      const ref = this.projectRef();
-      if (!ref || ref.threadId !== undefined) return;
-      if (String(ctx.chatMember.chat.id) !== ref.chatId) return;
+      const deptId = await this.departmentForChat(
+        ctx.chatMember.chat.id,
+        undefined,
+        true,
+      );
+      if (!deptId) return;
       const status = ctx.chatMember.new_chat_member.status;
       if (status === 'member' || status === 'administrator') {
-        await this.harvestUser(ctx.chatMember.new_chat_member.user);
+        await this.harvestUser(ctx.chatMember.new_chat_member.user, deptId);
       }
     });
   }
 
-  private async harvestUser(user: User) {
+  private async harvestUser(user: User, departmentId: string) {
     if (user.is_bot) return;
     try {
-      const { id, created } = await this.projectParticipants.upsertFromTelegram({
-        id: user.id,
-        first_name: user.first_name,
-        last_name: user.last_name,
-        username: user.username,
-      });
+      const { id, created } = await this.projectParticipants.upsertFromTelegram(
+        {
+          id: user.id,
+          first_name: user.first_name,
+          last_name: user.last_name,
+          username: user.username,
+        },
+        departmentId,
+      );
       // Fetch the avatar only for newly-seen participants to avoid a
       // getUserProfilePhotos call on every message in a busy chat. A refresh
       // can be triggered manually from the admin later.

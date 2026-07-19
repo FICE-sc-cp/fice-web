@@ -11,6 +11,7 @@ import { useMainButton } from '@/lib/telegram';
 const schema = z.object({
   name: z.string().min(1, 'Вкажи назву').max(50),
   memberCount: z.string().optional(),
+  telegramChatId: z.string().max(64).optional(),
   headFirstName: z.string().max(30).optional(),
   headLastName: z.string().max(30).optional(),
   headTelegramTag: z.string().max(50).optional(),
@@ -41,6 +42,7 @@ export function DepartmentForm({
     defaultValues: {
       name: '',
       memberCount: '',
+      telegramChatId: '',
       headFirstName: '',
       headLastName: '',
       headTelegramTag: '',
@@ -63,6 +65,17 @@ export function DepartmentForm({
         placeholder="напр. 45"
         {...register('memberCount')}
       />
+      <div className="flex flex-col gap-1">
+        <Input
+          label="Telegram chat ID (для «сердечка»)"
+          placeholder="-1001234567890 або -1001234567890/12"
+          {...register('telegramChatId')}
+        />
+        <p className="text-xs text-subtle">
+          Чат, звідки бот збирає людей департаменту. Для гілки додай /threadId.
+          Бот має бути адміном чату.
+        </p>
+      </div>
 
       <div className="rounded-2xl border border-border bg-bg-soft p-4">
         <p className="mb-3 text-sm font-semibold text-muted">Керівник</p>

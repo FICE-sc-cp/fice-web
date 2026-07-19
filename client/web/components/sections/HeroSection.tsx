@@ -1,40 +1,10 @@
 import { Container } from "@/components/ui/Container";
-import { PhotoCard } from "@/components/ui/PhotoCard";
-
-const PHOTOS = [
-  { src: "/photo-2.png", className: "left-0 top-12 h-56 w-80 rotate-[7deg]" },
-  {
-    src: "/photo-4.png",
-    className: "left-6 top-[40%] h-56 w-72 -rotate-[6deg]",
-  },
-  { src: "/photo-6.png", className: "bottom-8 left-0 h-52 w-72 rotate-[8deg]" },
-  { src: "/photo-1.png", className: "right-0 top-10 h-56 w-80 -rotate-[8deg]" },
-  {
-    src: "/photo-3.png",
-    className: "right-0 top-[42%] h-56 w-80 rotate-[4deg]",
-  },
-  {
-    src: "/photo-5.png",
-    className: "bottom-2 left-[78%] h-52 w-72 -translate-x-1/2 -rotate-[4deg]",
-  },
-];
+import { HeroPhotos } from "@/components/sections/HeroPhotos";
 
 export function HeroSection() {
   return (
-    <section className="relative flex min-h-[calc(100svh_-_5rem)] items-center overflow-hidden py-16 sm:py-20 lg:min-h-[44rem] lg:py-24">
-      <div className="pointer-events-none absolute inset-0 hidden lg:block">
-        <div className="relative mx-auto h-full max-w-7xl">
-          {PHOTOS.map((p, i) => (
-            <PhotoCard
-              key={p.src}
-              src={p.src}
-              alt=""
-              className={`absolute animate-fade ${p.className}`}
-              style={{ animationDelay: `${250 + i * 120}ms` }}
-            />
-          ))}
-        </div>
-      </div>
+    <section className="relative flex min-h-[calc(85svh_-_5rem)] items-center overflow-hidden pb-10 pt-24 sm:min-h-[calc(100svh_-_5rem)] sm:pb-20 sm:pt-28 lg:min-h-[44rem] lg:pb-24 lg:pt-32">
+      <HeroPhotos />
 
       <Container className="relative z-10">
         <div className="mx-auto flex max-w-3xl flex-col items-center gap-8 text-center">
