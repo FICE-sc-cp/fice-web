@@ -70,44 +70,20 @@ export interface FundraiserTheme {
   glowB: string;
 }
 
-const FUNDRAISER_THEMES: FundraiserTheme[] = [
-  {
-    gradient: 'bg-gradient-orange',
-    accentText: 'text-brand-orange',
-    border: 'border-brand-orange',
-    borderFocus: 'focus:border-brand-orange/60',
-    borderHover: 'hover:border-brand-orange/60',
-    glowA: '#FF8904',
-    glowB: '#FB2C36',
-  },
-  {
-    gradient: 'bg-gradient-blue',
-    accentText: 'text-brand-blue',
-    border: 'border-brand-blue',
-    borderFocus: 'focus:border-brand-blue/60',
-    borderHover: 'hover:border-brand-blue/60',
-    glowA: '#00E3F3',
-    glowB: '#2B7FFF',
-  },
-  {
-    gradient: 'bg-gradient-magenta',
-    accentText: 'text-brand-magenta',
-    border: 'border-brand-magenta',
-    borderFocus: 'focus:border-brand-magenta/60',
-    borderHover: 'hover:border-brand-magenta/60',
-    glowA: '#F6339A',
-    glowB: '#9810FA',
-  },
-];
+// One consistent brand palette for every fundraiser — per-card random colours
+// made the cards stand out from the rest of the site.
+const FUNDRAISER_THEME: FundraiserTheme = {
+  gradient: 'bg-gradient-main',
+  accentText: 'text-brand-green',
+  border: 'border-brand-green',
+  borderFocus: 'focus:border-brand-green/60',
+  borderHover: 'hover:border-brand-green/60',
+  glowA: '#2EFF97',
+  glowB: '#00E3F3',
+};
 
-/**
- * Stable colour palette for a fundraiser, derived from its id so the catalog
- * card and the detail page always share the same colours.
- */
-export function fundraiserTheme(id: string): FundraiserTheme {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-  return FUNDRAISER_THEMES[h % FUNDRAISER_THEMES.length];
+export function fundraiserTheme(_id: string): FundraiserTheme {
+  return FUNDRAISER_THEME;
 }
 
 /**
