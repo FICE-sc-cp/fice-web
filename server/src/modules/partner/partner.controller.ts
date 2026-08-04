@@ -19,6 +19,7 @@ import { Throttle } from '@nestjs/throttler';
 import { Admin } from '../../auth/admin.decorator';
 import { ApiPaginatedResponse } from '../../common/dto/paginated.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { ApplyPartnerDto } from './dto/apply-partner.dto';
 import { CreatePartnerDto } from './dto/create-partner.dto';
 import { UpdatePartnerDto } from './dto/update-partner.dto';
 import { PartnerEntity } from './entities/partner.entity';
@@ -33,7 +34,7 @@ export class PartnerController {
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({ summary: 'Submit a partner application (public)' })
   @ApiCreatedResponse({ type: PartnerEntity })
-  apply(@Body() dto: CreatePartnerDto) {
+  apply(@Body() dto: ApplyPartnerDto) {
     return this.partnerService.apply(dto);
   }
 

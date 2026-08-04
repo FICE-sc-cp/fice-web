@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Glow } from "@/components/ui/Glow";
@@ -78,12 +79,12 @@ export async function PartnersSection() {
                   майбутнє, можливість підтримати молодь та розвиток освіти, а
                   також вихід на цільову аудиторію талановитих студентів.
                 </p>
-                <a
-                  href="#"
+                <Link
+                  href="/partners/join"
                   className="rounded-2xl bg-gradient-main px-6 py-5 text-center text-xl font-bold text-black transition-transform hover:scale-[1.02] hover:opacity-95 active:scale-95 sm:px-12 sm:py-6 sm:text-2xl lg:text-3xl"
                 >
                   Стати партнером
-                </a>
+                </Link>
               </div>
 
               <div className="grid flex-1 grid-cols-1 gap-4 sm:grid-cols-2">

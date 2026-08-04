@@ -9,7 +9,7 @@ import { ImageUpload } from '../ImageUpload';
 import { useMainButton } from '@/lib/telegram';
 
 const schema = z.object({
-  name: z.string().min(1, 'Вкажи назву').max(30, 'Максимум 30 символів'),
+  name: z.string().min(1, 'Вкажи назву').max(100, 'Максимум 100 символів'),
   websiteLink: z.union([z.string().url('Невалідний URL'), z.literal('')]).optional(),
   logoImage: z.string().nullable().optional(),
 });

@@ -90,6 +90,9 @@ export interface Partner {
   name: string;
   logoImage: string | null;
   websiteLink: string | null;
+  contactName: string | null;
+  contactMethod: string | null;
+  proposal: string | null;
   isApproved: boolean;
 }
 
@@ -226,6 +229,14 @@ export interface CreateApplicationPayload {
   motivation?: string;
   experience?: string;
   departments: { departmentId: string; question?: string }[];
+}
+
+export interface ApplyPartnerPayload {
+  name: string;
+  websiteLink: string;
+  contactName: string;
+  contactMethod: string;
+  proposal: string;
 }
 
 export type RegistrationPayment = 'NONE' | 'DONATED' | 'AT_EVENT';

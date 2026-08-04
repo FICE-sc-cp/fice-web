@@ -264,11 +264,14 @@ model EventRegistrationAnswer {
 }
 
 model Partner {
-  id          String  @id @default(uuid()) @db.Uuid
-  name        String  @db.VarChar(30)
-  logoImage   String?
-  websiteLink String?
-  isApproved  Boolean @default(false)
+  id            String  @id @default(uuid()) @db.Uuid
+  name          String  @db.VarChar(100)
+  logoImage     String?
+  websiteLink   String?
+  contactName   String? @db.VarChar(100)
+  contactMethod String? @db.VarChar(150)
+  proposal      String? @db.Text
+  isApproved    Boolean @default(false)
 
   eventPartners EventPartner[]
 }
