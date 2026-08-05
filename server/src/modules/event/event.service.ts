@@ -25,7 +25,19 @@ export class EventService {
 
   private readonly include: Prisma.EventInclude = {
     details: { include: { department: true } },
-    eventPartners: { include: { partner: true } },
+    eventPartners: {
+      include: {
+        partner: {
+          select: {
+            id: true,
+            name: true,
+            logoImage: true,
+            websiteLink: true,
+            isApproved: true,
+          },
+        },
+      },
+    },
     program: { orderBy: { order: 'asc' } },
     questions: { orderBy: { order: 'asc' } },
   };

@@ -4,6 +4,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { BotService, parseChatRef } from '../../bot/bot.service';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { paginated, skipFor } from '../../common/pagination';
+import { ApplyPartnerDto } from './dto/apply-partner.dto';
 import { CreatePartnerDto } from './dto/create-partner.dto';
 import { UpdatePartnerDto } from './dto/update-partner.dto';
 
@@ -17,7 +18,15 @@ export class PartnerService {
     private readonly config: ConfigService,
   ) {}
 
-  async apply(dto: CreatePartnerDto) {
+  private readonly publicSelect = {
+    id: true,
+    name: true,
+    logoImage: true,
+    websiteLink: true,
+    isApproved: true,
+  } as const;
+
+  async apply(dto: ApplyPartnerDto) {
     const partner = await this.prisma.partner.create({
       data: { ...dto, isApproved: false },
     });
@@ -26,12 +35,21 @@ export class PartnerService {
       this.logger.warn('Partner notification failed: ' + String(err)),
     );
 
-    return partner;
+    return {
+      id: partner.id,
+      name: partner.name,
+      logoImage: partner.logoImage,
+      websiteLink: partner.websiteLink,
+      isApproved: partner.isApproved,
+    };
   }
 
   private async notifyHeads(partner: {
     name: string;
     websiteLink: string | null;
+    contactName: string | null;
+    contactMethod: string | null;
+    proposal: string | null;
   }) {
     const mentions = [
       this.config.get<string>('PARTNERSHIP_HEAD_TG'),
@@ -41,10 +59,18 @@ export class PartnerService {
       .map((t) => (t.startsWith('@') ? t : `@${t}`))
       .join(' ');
 
+    const proposal =
+      partner.proposal && partner.proposal.length > 3000
+        ? `${partner.proposal.slice(0, 3000)}…`
+        : partner.proposal;
+
     const text = [
       '🤝 Нова заявка на партнерство',
       partner.name,
       partner.websiteLink ? `Сайт: ${partner.websiteLink}` : '',
+      partner.contactName ? `Контакт: ${partner.contactName}` : '',
+      partner.contactMethod ? `Звʼязок: ${partner.contactMethod}` : '',
+      proposal ? `Пропозиція: ${proposal}` : '',
       'Деталі — в адмінці.',
       mentions ? `${mentions} — погляньте, будь ласка` : '',
     ]
@@ -72,6 +98,7 @@ export class PartnerService {
     const [items, total] = await this.prisma.$transaction([
       this.prisma.partner.findMany({
         where,
+        select: includePending ? undefined : this.publicSelect,
         skip: skipFor(page, limit),
         take: limit,
         orderBy: { name: 'asc' },
@@ -82,7 +109,10 @@ export class PartnerService {
   }
 
   async findOne(id: string) {
-    const partner = await this.prisma.partner.findUnique({ where: { id } });
+    const partner = await this.prisma.partner.findUnique({
+      where: { id },
+      select: this.publicSelect,
+    });
     if (!partner) {
       throw new NotFoundException(`Partner ${id} not found`);
     }
