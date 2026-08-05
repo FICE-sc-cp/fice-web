@@ -84,7 +84,7 @@ export async function TeamSection() {
   ].filter((g) => g.cards.length > 0);
 
   return (
-    <section id="team" className="relative isolate scroll-mt-28 py-20 lg:py-28">
+    <section id="team" className="relative isolate scroll-mt-28 py-20 lg:py-15">
       <Container className="flex flex-col gap-16">
         {groups.length === 0 ? (
           <p className="text-center text-lg text-muted">
@@ -105,18 +105,6 @@ export async function TeamSection() {
             </div>
           ))
         )}
-
-        <div className="flex flex-col items-center gap-4 text-center">
-          <p className="text-lg text-muted">
-            Хочеш долучитись до нашої команди?
-          </p>
-          <a
-            href="/join"
-            className="inline-flex items-center justify-center rounded-2xl bg-gradient-main px-10 py-4 text-lg font-bold text-black transition-opacity hover:opacity-90"
-          >
-            Долучайся до команди
-          </a>
-        </div>
       </Container>
     </section>
   );

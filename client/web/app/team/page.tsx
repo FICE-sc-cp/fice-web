@@ -27,26 +27,19 @@ export default function TeamPage() {
                 Команда <GradientText>Студради ФІОТ</GradientText>
               </h1>
               <p className="max-w-xl text-lg text-muted sm:text-xl">
-                Ті, хто створює майбутнє нашого інституту вже сьогодні. Твоє
+                Ті, хто створює майбутнє нашого факультету вже сьогодні. Твоє
                 самоврядування, твій простір, твоя команда. Лідери, які роблять
                 зміни
               </p>
-              <a
-                href="/join"
-                className="mt-2 inline-flex items-center justify-center rounded-2xl bg-gradient-main px-10 py-4 text-lg font-bold text-black transition-opacity hover:opacity-90"
-              >
-                Приєднатись до команди
-              </a>
             </div>
           </Container>
         </section>
 
         {/* team section */}
         <TeamSection />
-        <Marquee />
-        <br />
-        <br />
-        <br />
+        <div className="pb-12">
+          <Marquee />
+        </div>
       </main>
       <Footer />
     </>

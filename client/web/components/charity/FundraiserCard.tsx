@@ -29,20 +29,6 @@ export function FundraiserCard({ fundraiser }: { fundraiser: Fundraiser }) {
         ) : (
           <div className={cn("absolute inset-0 opacity-25", fill)} />
         )}
-        <span
-          className={cn(
-            "absolute right-4 top-4 inline-flex items-center gap-2.5 rounded-lg px-4 py-2 text-sm font-bold text-black",
-            closed ? "bg-brand-red/30" : "bg-brand-green/30",
-          )}
-        >
-          <span
-            className={cn(
-              "size-2.5 rounded-full",
-              closed ? "bg-brand-red" : "bg-brand-green",
-            )}
-          />
-          {closed ? "Закритий" : "Активний"}
-        </span>
       </div>
 
       <div className="flex flex-1 flex-col gap-6">

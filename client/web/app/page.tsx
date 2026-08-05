@@ -4,7 +4,7 @@ import { Footer } from "@/components/layout/Footer";
 import { HeroSection } from "@/components/sections/HeroSection";
 import { StatementSection } from "@/components/sections/StatementSection";
 import { AboutSection } from "@/components/sections/AboutSection";
-import { ValuesSection } from "@/components/sections/ValuesSection";
+//import { ValuesSection } from "@/components/sections/ValuesSection";
 import { FactsSection } from "@/components/sections/FactsSection";
 import { DepartmentsSection } from "@/components/sections/DepartmentsSection";
 //import { TeamSection } from '@/components/sections/TeamSection';
@@ -25,7 +25,6 @@ export default function HomePage() {
         <HeroSection />
         <StatementSection />
         <AboutSection />
-        <ValuesSection />
         <FactsSection />
         <DepartmentsSection />
         <Marquee />

@@ -40,26 +40,6 @@ export function fundraiserPct(current: number | string, goal: number | string): 
   return Math.min(100, Math.round((c / g) * 100));
 }
 
-const rtf = new Intl.RelativeTimeFormat('uk', { numeric: 'auto' });
-const RT_STEPS: [Intl.RelativeTimeFormatUnit, number][] = [
-  ['year', 31_536_000],
-  ['month', 2_592_000],
-  ['day', 86_400],
-  ['hour', 3_600],
-  ['minute', 60],
-];
-
-/** "2 хвилини тому", "щойно", … from a timestamp. */
-export function relativeTimeUk(dateStr: string): string {
-  const diffS = Math.round((new Date(dateStr).getTime() - Date.now()) / 1000);
-  const abs = Math.abs(diffS);
-  if (abs < 45) return 'щойно';
-  for (const [unit, secs] of RT_STEPS) {
-    if (abs >= secs) return rtf.format(Math.round(diffS / secs), unit);
-  }
-  return 'щойно';
-}
-
 export interface FundraiserTheme {
   gradient: string;
   accentText: string;

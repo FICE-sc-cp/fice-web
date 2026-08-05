@@ -33,7 +33,7 @@ const CONTACTS: FooterLink[] = [
   },
   {
     Icon: LinkedinIcon,
-    text: "Student council FICE",
+    text: "LinkedIn",
     link: "https://www.linkedin.com/company/fice-student-council/",
   },
 ];

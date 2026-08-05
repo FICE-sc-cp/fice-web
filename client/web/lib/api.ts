@@ -149,15 +149,6 @@ export interface EventItem {
 
 export type FundraiserStatus = 'ACTIVE' | 'CLOSED';
 
-export interface Donation {
-  id: string;
-  fundraiserId: string;
-  name: string | null;
-  amount: string;
-  comment: string | null;
-  createdAt: string;
-}
-
 export interface Fundraiser {
   id: string;
   name: string;
@@ -175,7 +166,6 @@ export interface Fundraiser {
   startDate: string;
   endDate: string;
   detailsLink: string | null;
-  donations?: Donation[];
 }
 
 export type NewsCategory =
@@ -290,8 +280,6 @@ export const fice = {
   fundraisers: (limit = 6, page = 1) =>
     request<Paginated<Fundraiser>>(`/fundraiser?limit=${limit}&page=${page}`),
   fundraiser: (id: string) => request<Fundraiser>(`/fundraiser/${id}`),
-  fundraiserDonations: (id: string) =>
-    request<Donation[]>(`/fundraiser/${id}/donations`),
   partners: (limit = 12, page = 1) =>
     request<Paginated<Partner>>(`/partner?limit=${limit}&page=${page}`),
   news: (limit = 6, page = 1) =>
