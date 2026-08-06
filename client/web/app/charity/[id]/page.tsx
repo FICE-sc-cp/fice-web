@@ -51,6 +51,9 @@ export default async function CharityDetailsPage({
   const metaChips = (
     <>
       <span className={chip}>
+        🗓 {fmtDay(fundraiser.startDate)} – {fmtDay(fundraiser.endDate)}
+      </span>
+      <span className={chip}>
         <span
           className={cn(
             "size-2 rounded-full",
@@ -166,6 +169,15 @@ export default async function CharityDetailsPage({
       <Footer />
     </>
   );
+}
+
+function fmtDay(iso: string): string {
+  return new Intl.DateTimeFormat('uk-UA', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    timeZone: 'Europe/Kyiv',
+  }).format(new Date(iso));
 }
 
 function pluralDays(n: number): string {

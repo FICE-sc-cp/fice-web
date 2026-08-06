@@ -6,16 +6,19 @@ import { z } from 'zod';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
+import { FormError } from '@/components/ui/FormError';
 import { ImageUpload } from '../ImageUpload';
 import { useMainButton } from '@/lib/telegram';
 
 const schema = z.object({
-  role: z.enum(['HEAD', 'FIRST_DEPUTY', 'SECRETARY', 'DEPUTY', 'HR']),
-  firstName: z.string().min(1, 'Вкажи імʼя').max(30),
-  lastName: z.string().min(1, 'Вкажи прізвище').max(30),
-  specialization: z.string().max(100).optional(),
+  role: z.enum(['HEAD', 'FIRST_DEPUTY', 'SECRETARY', 'DEPUTY', 'HR'], {
+    error: 'Обери роль зі списку',
+  }),
+  firstName: z.string().min(1, 'Вкажи імʼя').max(30, 'Максимум 30 символів'),
+  lastName: z.string().min(1, 'Вкажи прізвище').max(30, 'Максимум 30 символів'),
+  specialization: z.string().max(100, 'Максимум 100 символів').optional(),
   photo: z.string().nullable().optional(),
-  telegramTag: z.string().max(50).optional(),
+  telegramTag: z.string().max(50, 'Максимум 50 символів').optional(),
 });
 
 export type MemberFormValues = z.infer<typeof schema>;
@@ -33,11 +36,13 @@ export function MemberForm({
   onSubmit,
   submitting,
   submitLabel,
+  error,
 }: {
   defaultValues?: Partial<MemberFormValues>;
   onSubmit: (values: MemberFormValues) => void;
   submitting: boolean;
   submitLabel: string;
+  error?: unknown;
 }) {
   const {
     register,
@@ -64,14 +69,23 @@ export function MemberForm({
 
   return (
     <form onSubmit={submit} className="flex flex-col gap-4">
-      <Select label="Роль" options={ROLE_OPTIONS} {...register('role')} />
-      <div className="grid grid-cols-2 gap-3">
-        <Input label="Імʼя" {...register('firstName')} error={errors.firstName?.message} />
-        <Input
-          label="Прізвище"
-          {...register('lastName')}
-          error={errors.lastName?.message}
-        />
+      <Select
+        label="Роль"
+        options={ROLE_OPTIONS}
+        {...register('role')}
+        error={errors.role?.message}
+      />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="min-w-0">
+          <Input label="Імʼя" {...register('firstName')} error={errors.firstName?.message} />
+        </div>
+        <div className="min-w-0">
+          <Input
+            label="Прізвище"
+            {...register('lastName')}
+            error={errors.lastName?.message}
+          />
+        </div>
       </div>
       <ImageUpload
         label="Фото"
@@ -88,7 +102,9 @@ export function MemberForm({
         label="Напрям / спеціалізація"
         placeholder="напр. технічний напрям (для заступників)"
         {...register('specialization')}
+        error={errors.specialization?.message}
       />
+      <FormError error={error} />
       <Button type="submit" disabled={submitting} className="mt-1">
         {submitting ? 'Збереження…' : submitLabel}
       </Button>

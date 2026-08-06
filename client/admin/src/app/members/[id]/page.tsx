@@ -26,8 +26,8 @@ export default function EditMemberPage() {
         role: v.role,
         firstName: v.firstName,
         lastName: v.lastName,
-        specialization: v.specialization?.trim() ? v.specialization : undefined,
-        photo: v.photo ?? undefined,
+        specialization: v.specialization?.trim() ? v.specialization : null,
+        photo: v.photo || null,
         telegramTag: v.telegramTag?.trim() ? v.telegramTag.trim() : undefined,
       }),
     onSuccess: () => {
@@ -46,15 +46,11 @@ export default function EditMemberPage() {
         </div>
       ) : (
         <>
-          {mutation.error && (
-            <p className="mb-4 rounded-xl border border-brand-red/40 bg-brand-red/10 px-4 py-3 text-sm text-brand-red">
-              {mutation.error instanceof Error ? mutation.error.message : 'Помилка'}
-            </p>
-          )}
           <MemberForm
             submitLabel="Зберегти"
             submitting={mutation.isPending}
             onSubmit={(v) => mutation.mutate(v)}
+            error={mutation.error}
             defaultValues={
               member
                 ? {

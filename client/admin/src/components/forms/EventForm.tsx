@@ -8,22 +8,23 @@ import { type EventInput, type EventQuestionType } from '@/lib/api';
 import { Input } from '../ui/Input';
 import { RichTextArea } from '../RichTextArea';
 import { Button } from '../ui/Button';
+import { FormError } from '@/components/ui/FormError';
 import { ImageUpload } from '../ImageUpload';
 import { useMainButton } from '@/lib/telegram';
 
 const schema = z.object({
-  name: z.string().min(1, 'Вкажи назву').max(50),
+  name: z.string().min(1, 'Вкажи назву').max(50, 'Максимум 50 символів'),
   date: z.string().min(1, 'Вкажи дату'),
   photoUrl: z.string().nullable().optional(),
   description: z.string().optional(),
-  location: z.string().max(120).optional(),
+  location: z.string().max(120, 'Максимум 120 символів').optional(),
   locationNote: z.string().optional(),
-  timeNote: z.string().max(120).optional(),
+  timeNote: z.string().max(120, 'Максимум 120 символів').optional(),
   registrationCloseDate: z.string().optional(),
   photoAlbumUrl: z.string().optional(),
   feeAmount: z.string().optional(),
   feeAtEventAmount: z.string().optional(),
-  feeRequisites: z.string().max(255).optional(),
+  feeRequisites: z.string().max(255, 'Максимум 255 символів').optional(),
   moneyCollected: z.string().optional(),
   charityAmount: z.string().optional(),
   visitorsAmount: z.string().optional(),
@@ -99,11 +100,13 @@ export function EventForm({
   onSubmit,
   submitting,
   submitLabel,
+  error,
 }: {
   defaultValues?: Partial<EventFormValues>;
   onSubmit: (values: EventFormValues) => void;
   submitting: boolean;
   submitLabel: string;
+  error?: unknown;
 }) {
   const {
     program: dfProgram,
@@ -194,53 +197,71 @@ export function EventForm({
       <div className="rounded-2xl border border-border bg-bg-soft p-4">
         <p className="mb-3 text-sm font-semibold text-muted">Деталі сторінки</p>
         <div className="flex flex-col gap-4">
-          <Input label="Локація" {...register('location')} />
+          <Input
+            label="Локація"
+            {...register('location')}
+            error={errors.location?.message}
+          />
           <Input
             label="Посилання на Google Maps"
             placeholder="https://maps.app.goo.gl/…"
             {...register('locationNote')}
+            error={errors.locationNote?.message}
           />
-          <Input label="Час — уточнення (напр. «Збір з 16:30»)" {...register('timeNote')} />
+          <Input
+            label="Час — уточнення (напр. «Збір з 16:30»)"
+            {...register('timeNote')}
+            error={errors.timeNote?.message}
+          />
           <Input
             label="Закриття реєстрації"
             type="datetime-local"
             {...register('registrationCloseDate')}
+            error={errors.registrationCloseDate?.message}
           />
           <Input
             label="Посилання на фотоальбом (після заходу)"
             placeholder="https://…"
             {...register('photoAlbumUrl')}
+            error={errors.photoAlbumUrl?.message}
           />
-          <div className="grid grid-cols-2 gap-3">
-            <Input
-              label="Внесок онлайн, ₴ (0 = безкоштовно)"
-              type="number"
-              min="0"
-              inputMode="numeric"
-              {...register('feeAmount')}
-            />
-            <Input
-              label="Внесок на заході, ₴"
-              type="number"
-              min="0"
-              inputMode="numeric"
-              {...register('feeAtEventAmount')}
-            />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="min-w-0">
+              <Input
+                label="Внесок онлайн, ₴ (0 = безкоштовно)"
+                type="number"
+                min="0"
+                inputMode="numeric"
+                {...register('feeAmount')}
+                error={errors.feeAmount?.message}
+              />
+            </div>
+            <div className="min-w-0">
+              <Input
+                label="Внесок на заході, ₴"
+                type="number"
+                min="0"
+                inputMode="numeric"
+                {...register('feeAtEventAmount')}
+                error={errors.feeAtEventAmount?.message}
+              />
+            </div>
           </div>
           <Input
             label="Реквізити для донату (текст або посилання)"
             {...register('feeRequisites')}
+            error={errors.feeRequisites?.message}
           />
         </div>
       </div>
 
       <div className="rounded-2xl border border-border bg-bg-soft p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <p className="text-sm font-semibold text-muted">Програма</p>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <p className="min-w-0 text-sm font-semibold text-muted">Програма</p>
           <button
             type="button"
             onClick={addProgram}
-            className="rounded-lg bg-surface px-3 py-1.5 text-sm font-semibold text-brand-cyan"
+            className="shrink-0 rounded-lg bg-surface px-3 py-1.5 text-sm font-semibold text-brand-cyan"
           >
             + Пункт
           </button>
@@ -248,15 +269,16 @@ export function EventForm({
         <div className="flex flex-col gap-3">
           {programItems.map((item, i) => (
             <div key={i} className="flex items-end gap-2">
-              <div className="w-24 shrink-0">
+              <div className="w-20 shrink-0 sm:w-24">
                 <Input
                   label="Час"
                   placeholder="17:00"
+                  className="px-3"
                   value={item.time}
                   onChange={(e) => updateProgram(i, 'time', e.target.value)}
                 />
               </div>
-              <div className="flex-1">
+              <div className="min-w-0 flex-1">
                 <Input
                   label="Пункт"
                   value={item.title}
@@ -280,12 +302,12 @@ export function EventForm({
       </div>
 
       <div className="rounded-2xl border border-border bg-bg-soft p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <p className="text-sm font-semibold text-muted">Питання реєстрації</p>
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <p className="min-w-0 text-sm font-semibold text-muted">Питання реєстрації</p>
           <button
             type="button"
             onClick={addQuestion}
-            className="rounded-lg bg-surface px-3 py-1.5 text-sm font-semibold text-brand-cyan"
+            className="shrink-0 rounded-lg bg-surface px-3 py-1.5 text-sm font-semibold text-brand-cyan"
           >
             + Питання
           </button>
@@ -296,8 +318,8 @@ export function EventForm({
               key={i}
               className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-3"
             >
-              <div className="flex items-start gap-2">
-                <div className="flex-1">
+              <div className="flex items-end gap-2">
+                <div className="min-w-0 flex-1">
                   <Input
                     label={`Питання ${i + 1}`}
                     value={q.label}
@@ -307,21 +329,21 @@ export function EventForm({
                 <button
                   type="button"
                   onClick={() => removeQuestion(i)}
-                  className="mt-7 shrink-0 rounded-lg border border-brand-red/40 px-3 py-2.5 text-sm font-bold text-brand-red"
+                  className="mb-1 shrink-0 rounded-lg border border-brand-red/40 px-3 py-2.5 text-sm font-bold text-brand-red"
                   aria-label="Видалити питання"
                 >
                   ✕
                 </button>
               </div>
-              <div className="grid grid-cols-2 items-end gap-3">
-                <div className="flex flex-col gap-1.5">
+              <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2">
+                <div className="flex min-w-0 flex-col gap-1.5">
                   <label className="text-sm font-semibold text-muted">Тип</label>
                   <select
                     value={q.type}
                     onChange={(e) =>
                       updateQuestion(i, { type: e.target.value as EventQuestionType })
                     }
-                    className="rounded-xl border border-border bg-bg-soft px-4 py-3 text-fg outline-none"
+                    className="w-full rounded-xl border border-border bg-bg-soft px-4 py-3 text-fg outline-none"
                   >
                     {QUESTION_TYPES.map((t) => (
                       <option key={t.value} value={t.value}>
@@ -330,10 +352,10 @@ export function EventForm({
                     ))}
                   </select>
                 </div>
-                <label className="mb-3 flex items-center gap-2 text-sm text-muted">
+                <label className="flex min-w-0 items-center gap-2 text-sm text-muted sm:mb-3">
                   <input
                     type="checkbox"
-                    className="size-4 accent-brand-green"
+                    className="size-4 shrink-0 accent-brand-green"
                     checked={q.required}
                     onChange={(e) => updateQuestion(i, { required: e.target.checked })}
                   />
@@ -363,28 +385,37 @@ export function EventForm({
         <p className="mb-3 text-sm font-semibold text-muted">
           Результати (необовʼязково)
         </p>
-        <div className="grid grid-cols-2 gap-3">
-          <Input
-            label="Зібрано, ₴"
-            type="number"
-            min="0"
-            inputMode="numeric"
-            {...register('moneyCollected')}
-          />
-          <Input
-            label="На благодійність, ₴"
-            type="number"
-            min="0"
-            inputMode="numeric"
-            {...register('charityAmount')}
-          />
-          <Input
-            label="Відвідувачів"
-            type="number"
-            min="0"
-            inputMode="numeric"
-            {...register('visitorsAmount')}
-          />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="min-w-0">
+            <Input
+              label="Зібрано, ₴"
+              type="number"
+              min="0"
+              inputMode="numeric"
+              {...register('moneyCollected')}
+              error={errors.moneyCollected?.message}
+            />
+          </div>
+          <div className="min-w-0">
+            <Input
+              label="На благодійність, ₴"
+              type="number"
+              min="0"
+              inputMode="numeric"
+              {...register('charityAmount')}
+              error={errors.charityAmount?.message}
+            />
+          </div>
+          <div className="min-w-0">
+            <Input
+              label="Відвідувачів"
+              type="number"
+              min="0"
+              inputMode="numeric"
+              {...register('visitorsAmount')}
+              error={errors.visitorsAmount?.message}
+            />
+          </div>
         </div>
       </div>
 
@@ -393,6 +424,8 @@ export function EventForm({
           Перевір поля, виділені червоним, і спробуй ще раз.
         </p>
       )}
+
+      <FormError error={error} />
 
       <Button type="submit" disabled={submitting} className="mt-1">
         {submitting ? 'Збереження…' : submitLabel}

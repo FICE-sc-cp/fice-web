@@ -58,9 +58,9 @@ export default function FundraisersListPage() {
                 className="rounded-2xl border border-border bg-surface p-4"
               >
                 <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="truncate font-semibold">{f.name}</p>
+                      <p className="min-w-0 truncate font-semibold">{f.name}</p>
                       <span
                         className={`shrink-0 rounded px-2 py-0.5 text-xs font-medium ${
                           f.status === 'ACTIVE'
@@ -71,7 +71,7 @@ export default function FundraisersListPage() {
                         {f.status === 'ACTIVE' ? 'активний' : 'закритий'}
                       </span>
                     </div>
-                    <p className="mt-0.5 text-xs text-subtle">
+                    <p className="mt-0.5 break-words text-xs text-subtle">
                       {current.toLocaleString('uk-UA')} / {goal.toLocaleString('uk-UA')} ₴
                     </p>
                   </div>
@@ -84,7 +84,10 @@ export default function FundraisersListPage() {
                     </Link>
                     <button
                       type="button"
-                      onClick={() => setPending(f)}
+                      onClick={() => {
+                        del.reset();
+                        setPending(f);
+                      }}
                       aria-label="Видалити"
                       className="rounded-lg px-2 py-1.5 text-brand-red"
                     >
@@ -106,7 +109,11 @@ export default function FundraisersListPage() {
         title="Видалити збір?"
         message={pending?.name}
         loading={del.isPending}
-        onCancel={() => setPending(null)}
+        error={del.error}
+        onCancel={() => {
+          del.reset();
+          setPending(null);
+        }}
         onConfirm={() => pending && del.mutate(pending.id)}
       />
     </main>

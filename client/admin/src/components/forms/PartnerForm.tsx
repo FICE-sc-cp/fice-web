@@ -6,11 +6,14 @@ import { z } from 'zod';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { ImageUpload } from '../ImageUpload';
+import { FormError } from '@/components/ui/FormError';
 import { useMainButton } from '@/lib/telegram';
 
 const schema = z.object({
   name: z.string().min(1, 'Вкажи назву').max(100, 'Максимум 100 символів'),
-  websiteLink: z.union([z.string().url('Невалідний URL'), z.literal('')]).optional(),
+  websiteLink: z
+    .union([z.string().url('Невалідне посилання, приклад: https://example.com'), z.literal('')])
+    .optional(),
   logoImage: z.string().nullable().optional(),
 });
 
@@ -21,11 +24,13 @@ export function PartnerForm({
   onSubmit,
   submitting,
   submitLabel,
+  error,
 }: {
   defaultValues?: Partial<PartnerFormValues>;
   onSubmit: (values: PartnerFormValues) => void;
   submitting: boolean;
   submitLabel: string;
+  error?: unknown;
 }) {
   const {
     register,
@@ -61,6 +66,7 @@ export function PartnerForm({
         value={logo}
         onChange={(url) => setValue('logoImage', url, { shouldDirty: true })}
       />
+      <FormError error={error} />
       <Button type="submit" disabled={submitting} className="mt-1">
         {submitting ? 'Збереження…' : submitLabel}
       </Button>

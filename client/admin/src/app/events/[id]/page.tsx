@@ -46,7 +46,14 @@ export default function EditEventPage() {
         const d = await api.createEventDetails(body);
         detailsId = d.id;
       }
-      return api.updateEvent(id, { ...eventValuesToInput(v), detailsId });
+      return api.updateEvent(id, {
+        ...eventValuesToInput(v),
+        detailsId,
+        photoUrl: v.photoUrl?.trim() || null,
+        location: v.location?.trim() || null,
+        locationNote: v.locationNote?.trim() || null,
+        photoAlbumUrl: v.photoAlbumUrl?.trim() || null,
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['events'] });
@@ -71,15 +78,11 @@ export default function EditEventPage() {
         </div>
       ) : (
         <>
-          {mutation.error && (
-            <p className="mb-4 rounded-xl border border-brand-red/40 bg-brand-red/10 px-4 py-3 text-sm text-brand-red">
-              {mutation.error instanceof Error ? mutation.error.message : 'Помилка'}
-            </p>
-          )}
           <EventForm
             submitLabel="Зберегти"
             submitting={mutation.isPending}
             onSubmit={(v) => mutation.mutate(v)}
+            error={mutation.error}
             defaultValues={
               event
                 ? {

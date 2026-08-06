@@ -8,6 +8,7 @@ import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
 import { ImageUpload } from '../ImageUpload';
 import { RichTextArea } from '../RichTextArea';
+import { FormError } from '@/components/ui/FormError';
 import { useMainButton } from '@/lib/telegram';
 
 const CATEGORY_OPTIONS = [
@@ -19,22 +20,40 @@ const CATEGORY_OPTIONS = [
   { value: 'ACHIEVEMENTS', label: 'Досягнення' },
 ];
 
+const linkSchema = z.string().url();
+
+const isLink = (value?: string) => !value || linkSchema.safeParse(value).success;
+
 const schema = z
   .object({
     title: z.string().min(1, 'Вкажи заголовок').max(50, 'Максимум 50 символів'),
     details: z.string().optional(),
     image: z.string().nullable().optional(),
     category: z
-      .enum(['', 'EVENTS', 'EDUCATION', 'PARTNERS', 'CHARITY', 'ACHIEVEMENTS'])
+      .enum(['', 'EVENTS', 'EDUCATION', 'PARTNERS', 'CHARITY', 'ACHIEVEMENTS'], {
+        error: 'Обери категорію зі списку',
+      })
       .optional(),
     isEvent: z.boolean().optional(),
     eventDate: z.string().optional(),
-    eventLocation: z.string().max(100, 'Максимум 100 символів').optional(),
+    eventLocation: z.string().optional(),
     registrationLink: z.string().optional(),
   })
-  .refine((v) => !v.isEvent || !!v.eventDate, {
+  .refine((v) => !v.isEvent || !!v.eventDate?.trim(), {
     message: 'Вкажи дату й час заходу',
     path: ['eventDate'],
+  })
+  .refine((v) => !v.isEvent || !v.eventDate || !Number.isNaN(Date.parse(v.eventDate)), {
+    message: 'Невалідна дата й час заходу',
+    path: ['eventDate'],
+  })
+  .refine((v) => !v.isEvent || (v.eventLocation?.trim().length ?? 0) <= 100, {
+    message: 'Максимум 100 символів',
+    path: ['eventLocation'],
+  })
+  .refine((v) => !v.isEvent || isLink(v.registrationLink?.trim()), {
+    message: 'Невалідне посилання, приклад: https://example.com',
+    path: ['registrationLink'],
   });
 
 export type NewsFormValues = z.infer<typeof schema>;
@@ -44,11 +63,13 @@ export function NewsForm({
   onSubmit,
   submitting,
   submitLabel,
+  error,
 }: {
   defaultValues?: Partial<NewsFormValues>;
   onSubmit: (values: NewsFormValues) => void;
   submitting: boolean;
   submitLabel: string;
+  error?: unknown;
 }) {
   const {
     register,
@@ -85,7 +106,13 @@ export function NewsForm({
         {...register('title')}
         error={errors.title?.message}
       />
-      <Select label="Категорія" options={CATEGORY_OPTIONS} {...register('category')} />
+      <Select
+        label="Категорія"
+        options={CATEGORY_OPTIONS}
+        className="min-w-0"
+        {...register('category')}
+        error={errors.category?.message}
+      />
       <RichTextArea
         label="Текст"
         placeholder="Деталі новини…"
@@ -102,18 +129,19 @@ export function NewsForm({
         <input
           type="checkbox"
           {...register('isEvent')}
-          className="size-5 accent-brand-cyan"
+          className="size-5 shrink-0 accent-brand-cyan"
         />
-        <span className="text-sm font-semibold text-muted">
+        <span className="min-w-0 text-sm font-semibold text-muted">
           Це оголошення про захід
         </span>
       </label>
 
       {isEvent && (
-        <div className="flex flex-col gap-4 rounded-xl border border-brand-cyan/40 bg-brand-cyan/5 p-4">
+        <div className="flex min-w-0 flex-col gap-4 rounded-xl border border-brand-cyan/40 bg-brand-cyan/5 p-4">
           <Input
             label="Дата й час заходу"
             type="datetime-local"
+            className="min-w-0"
             {...register('eventDate')}
             error={errors.eventDate?.message}
           />
@@ -131,6 +159,8 @@ export function NewsForm({
           />
         </div>
       )}
+
+      <FormError error={error} />
 
       <Button type="submit" disabled={submitting} className="mt-1">
         {submitting ? 'Збереження…' : submitLabel}

@@ -14,8 +14,8 @@ import { hapticNotify } from '@/lib/telegram';
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-3 py-1.5 text-sm">
-      <span className="text-subtle">{label}</span>
-      <span className="text-right font-medium">{value}</span>
+      <span className="shrink-0 text-subtle">{label}</span>
+      <span className="min-w-0 break-words text-right font-medium">{value}</span>
     </div>
   );
 }
@@ -51,16 +51,16 @@ export default function ApplicantDetailPage() {
       ) : (
         <div className="flex flex-col gap-4">
           <Card>
-            <p className="mb-2 text-lg font-bold">
+            <p className="mb-2 break-words text-lg font-bold">
               {a.lastName} {a.firstName} {a.middleName}
             </p>
             <div className="flex justify-between gap-3 py-1.5 text-sm">
-              <span className="text-subtle">Telegram</span>
+              <span className="shrink-0 text-subtle">Telegram</span>
               <a
                 href={`https://t.me/${a.telegramTag.replace(/^@/, '')}`}
                 target="_blank"
                 rel="noreferrer"
-                className="text-right font-medium text-brand-cyan underline-offset-2 hover:underline"
+                className="min-w-0 break-all text-right font-medium text-brand-cyan underline-offset-2 hover:underline"
               >
                 {a.telegramTag}
               </a>
@@ -114,7 +114,11 @@ export default function ApplicantDetailPage() {
         title="Видалити заявку?"
         message={a ? `${a.lastName} ${a.firstName}` : undefined}
         loading={del.isPending}
-        onCancel={() => setConfirm(false)}
+        error={del.error}
+        onCancel={() => {
+          setConfirm(false);
+          del.reset();
+        }}
         onConfirm={() => del.mutate()}
       />
     </main>

@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { ImageUpload } from '@/components/ImageUpload';
 import { Spinner } from '@/components/ui/Spinner';
+import { FormError } from '@/components/ui/FormError';
 import { hapticNotify } from '@/lib/telegram';
 
 export default function ProjectParticipantsPage() {
@@ -102,13 +103,7 @@ export default function ProjectParticipantsPage() {
           onChange={(e) => setAddDept(e.target.value)}
         />
         <ImageUpload label="Аватарка" value={photo} onChange={setPhoto} />
-        {addMutation.error && (
-          <p className="text-sm text-brand-red">
-            {addMutation.error instanceof Error
-              ? addMutation.error.message
-              : 'Помилка'}
-          </p>
-        )}
+        <FormError error={addMutation.error} />
         <Button
           type="button"
           disabled={!fullName.trim() || addMutation.isPending}
@@ -126,6 +121,12 @@ export default function ProjectParticipantsPage() {
           onChange={(e) => setFilterDept(e.target.value)}
         />
       </div>
+
+      {toggleHidden.error || removeMutation.error ? (
+        <div className="mb-3">
+          <FormError error={toggleHidden.error ?? removeMutation.error} />
+        </div>
+      ) : null}
 
       {isLoading ? (
         <div className="flex justify-center py-12">
@@ -174,20 +175,24 @@ export default function ProjectParticipantsPage() {
                     {p.source === 'MANUAL' ? 'вручну' : 'авто'}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => toggleHidden.mutate(p)}
-                  className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted transition-colors hover:text-fg"
-                >
-                  {p.hidden ? 'Показати' : 'Сховати'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => removeMutation.mutate(p.id)}
-                  className="rounded-lg border border-brand-red/40 px-3 py-1.5 text-sm text-brand-red transition-colors hover:bg-brand-red/10"
-                >
-                  ✕
-                </button>
+                <div className="flex shrink-0 items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => toggleHidden.mutate(p)}
+                    disabled={toggleHidden.isPending}
+                    className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted transition-colors hover:text-fg disabled:pointer-events-none disabled:opacity-50"
+                  >
+                    {p.hidden ? 'Показати' : 'Сховати'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeMutation.mutate(p.id)}
+                    disabled={removeMutation.isPending}
+                    className="rounded-lg border border-brand-red/40 px-3 py-1.5 text-sm text-brand-red transition-colors hover:bg-brand-red/10 disabled:pointer-events-none disabled:opacity-50"
+                  >
+                    ✕
+                  </button>
+                </div>
               </li>
             );
           })}

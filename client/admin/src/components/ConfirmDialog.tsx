@@ -1,6 +1,7 @@
 'use client';
 
 import { Button } from './ui/Button';
+import { FormError } from './ui/FormError';
 
 export function ConfirmDialog({
   open,
@@ -8,6 +9,7 @@ export function ConfirmDialog({
   message,
   confirmLabel = 'Видалити',
   loading = false,
+  error,
   onConfirm,
   onCancel,
 }: {
@@ -16,6 +18,7 @@ export function ConfirmDialog({
   message?: string;
   confirmLabel?: string;
   loading?: boolean;
+  error?: unknown;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
@@ -31,7 +34,12 @@ export function ConfirmDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="text-lg font-semibold">{title}</h3>
-        {message && <p className="mt-1 text-sm text-muted">{message}</p>}
+        {message && <p className="mt-1 break-words text-sm text-muted">{message}</p>}
+        {error ? (
+          <div className="mt-3">
+            <FormError error={error} />
+          </div>
+        ) : null}
         <div className="mt-4 flex gap-2">
           <Button variant="outline" className="flex-1" onClick={onCancel}>
             Скасувати

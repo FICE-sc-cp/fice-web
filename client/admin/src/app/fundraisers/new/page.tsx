@@ -43,15 +43,11 @@ export default function NewFundraiserPage() {
   return (
     <main className="mx-auto max-w-xl px-4 py-6">
       <PageHeader title="Новий збір" />
-      {mutation.error && (
-        <p className="mb-4 rounded-xl border border-brand-red/40 bg-brand-red/10 px-4 py-3 text-sm text-brand-red">
-          {mutation.error instanceof Error ? mutation.error.message : 'Помилка'}
-        </p>
-      )}
       <FundraiserForm
         submitLabel="Створити"
         submitting={mutation.isPending}
         onSubmit={(v) => mutation.mutate(v)}
+        error={mutation.error}
       />
     </main>
   );

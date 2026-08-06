@@ -68,20 +68,22 @@ export default function MembersListPage() {
                     : ''}
                 </p>
               </div>
-              <Link
-                href={`/members/${m.id}`}
-                className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted transition-colors hover:text-fg"
-              >
-                Ред.
-              </Link>
-              <button
-                type="button"
-                onClick={() => setPending(m)}
-                aria-label="Видалити"
-                className="rounded-lg px-2 py-1.5 text-brand-red"
-              >
-                ✕
-              </button>
+              <div className="flex shrink-0 items-center gap-3">
+                <Link
+                  href={`/members/${m.id}`}
+                  className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted transition-colors hover:text-fg"
+                >
+                  Ред.
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setPending(m)}
+                  aria-label="Видалити"
+                  className="rounded-lg px-2 py-1.5 text-brand-red"
+                >
+                  ✕
+                </button>
+              </div>
             </li>
           ))}
         </ul>
@@ -92,7 +94,11 @@ export default function MembersListPage() {
         title="Видалити з президії?"
         message={pending ? `${pending.lastName} ${pending.firstName}` : undefined}
         loading={del.isPending}
-        onCancel={() => setPending(null)}
+        error={del.error}
+        onCancel={() => {
+          setPending(null);
+          del.reset();
+        }}
         onConfirm={() => pending && del.mutate(pending.id)}
       />
     </main>

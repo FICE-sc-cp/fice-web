@@ -69,24 +69,29 @@ export default function EventsListPage() {
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-semibold">{e.name}</p>
-                  <p className="text-xs text-subtle">
+                  <p className="truncate text-xs text-subtle">
                     {new Date(e.date).toLocaleDateString('uk-UA')}
                   </p>
                 </div>
-                <Link
-                  href={`/events/${e.id}`}
-                  className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted transition-colors hover:text-fg"
-                >
-                  Ред.
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => setPending(e)}
-                  aria-label="Видалити"
-                  className="rounded-lg px-2 py-1.5 text-brand-red"
-                >
-                  ✕
-                </button>
+                <div className="flex shrink-0 items-center gap-3">
+                  <Link
+                    href={`/events/${e.id}`}
+                    className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted transition-colors hover:text-fg"
+                  >
+                    Ред.
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      del.reset();
+                      setPending(e);
+                    }}
+                    aria-label="Видалити"
+                    className="rounded-lg px-2 py-1.5 text-brand-red"
+                  >
+                    ✕
+                  </button>
+                </div>
               </li>
             );
           })}
@@ -98,7 +103,11 @@ export default function EventsListPage() {
         title="Видалити захід?"
         message={pending?.name}
         loading={del.isPending}
-        onCancel={() => setPending(null)}
+        error={del.error}
+        onCancel={() => {
+          del.reset();
+          setPending(null);
+        }}
         onConfirm={() => pending && del.mutate(pending.id)}
       />
     </main>

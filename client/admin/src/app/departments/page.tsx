@@ -61,20 +61,25 @@ export default function DepartmentsListPage() {
                   </p>
                 )}
               </div>
-              <Link
-                href={`/departments/${d.id}`}
-                className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted transition-colors hover:text-fg"
-              >
-                Ред.
-              </Link>
-              <button
-                type="button"
-                onClick={() => setPending(d)}
-                aria-label="Видалити"
-                className="rounded-lg px-2 py-1.5 text-brand-red"
-              >
-                ✕
-              </button>
+              <div className="flex shrink-0 items-center gap-3">
+                <Link
+                  href={`/departments/${d.id}`}
+                  className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted transition-colors hover:text-fg"
+                >
+                  Ред.
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    del.reset();
+                    setPending(d);
+                  }}
+                  aria-label="Видалити"
+                  className="rounded-lg px-2 py-1.5 text-brand-red"
+                >
+                  ✕
+                </button>
+              </div>
             </li>
           ))}
         </ul>
@@ -85,7 +90,11 @@ export default function DepartmentsListPage() {
         title="Видалити департамент?"
         message={pending?.name}
         loading={del.isPending}
-        onCancel={() => setPending(null)}
+        error={del.error}
+        onCancel={() => {
+          del.reset();
+          setPending(null);
+        }}
         onConfirm={() => pending && del.mutate(pending.id)}
       />
     </main>
