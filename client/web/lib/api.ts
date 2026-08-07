@@ -140,6 +140,8 @@ export interface EventItem {
   feeAmount: string | null;
   feeAtEventAmount: string | null;
   feeRequisites: string | null;
+  isAbitfest: boolean;
+  noRegistration: boolean;
   detailsId: string | null;
   details?: EventDetails | null;
   eventPartners?: EventPartner[];
@@ -258,8 +260,12 @@ export const fice = {
     request<ProjectParticipant[]>(
       `/project-participant/public${departmentId ? `?departmentId=${departmentId}` : ''}`,
     ),
-  events: (limit = 6, page = 1) =>
-    request<Paginated<EventItem>>(`/event?limit=${limit}&page=${page}`),
+  events: (limit = 6, page = 1, past?: boolean, abitfest?: boolean) =>
+    request<Paginated<EventItem>>(
+      `/event?limit=${limit}&page=${page}` +
+        `${past === undefined ? '' : `&past=${past}`}` +
+        `${abitfest === undefined ? '' : `&abitfest=${abitfest}`}`,
+    ),
   event: (id: string) => request<EventItem>(`/event/${id}`),
   registerEvent: (id: string, body: EventRegistrationPayload) =>
     request<unknown>(`/event/${id}/register`, {
@@ -277,13 +283,23 @@ export const fice = {
     if (!res.ok) throw new Error(`Upload failed ${res.status}`);
     return res.json() as Promise<{ url: string }>;
   },
-  fundraisers: (limit = 6, page = 1) =>
-    request<Paginated<Fundraiser>>(`/fundraiser?limit=${limit}&page=${page}`),
+  fundraisers: (limit = 6, page = 1, status?: FundraiserStatus) =>
+    request<Paginated<Fundraiser>>(
+      `/fundraiser?limit=${limit}&page=${page}${status ? `&status=${status}` : ''}`,
+    ),
   fundraiser: (id: string) => request<Fundraiser>(`/fundraiser/${id}`),
   partners: (limit = 12, page = 1) =>
     request<Paginated<Partner>>(`/partner?limit=${limit}&page=${page}`),
-  news: (limit = 6, page = 1) =>
-    request<Paginated<News>>(`/news?limit=${limit}&page=${page}`),
+  news: (
+    limit = 6,
+    page = 1,
+    filters?: { search?: string; category?: NewsCategory },
+  ) =>
+    request<Paginated<News>>(
+      `/news?limit=${limit}&page=${page}` +
+        `${filters?.search ? `&search=${encodeURIComponent(filters.search)}` : ''}` +
+        `${filters?.category ? `&category=${filters.category}` : ''}`,
+    ),
   newsItem: (id: string) => request<News>(`/news/${id}`),
 
   applyPartner: (body: unknown) =>

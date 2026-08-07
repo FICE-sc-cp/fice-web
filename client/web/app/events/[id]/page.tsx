@@ -6,7 +6,7 @@ import { Glow } from "@/components/ui/Glow";
 import { EventRegistrationForm } from "@/components/sections/EventRegistrationForm";
 import { fice, mediaUrl, safe } from "@/lib/api";
 import { renderRichInline } from "@/lib/richText";
-import { eventRegistrationOpen } from "@/lib/utils";
+import { cn, eventRegistrationOpen, isEventPast } from "@/lib/utils";
 
 const TZ = "Europe/Kyiv";
 const fmtDate = (d: Date) =>
@@ -100,6 +100,15 @@ export default async function EventDetailPage({
 
   const date = new Date(event.date);
   const registrationOpen = eventRegistrationOpen(event);
+  const past = isEventPast(event.date);
+  const statusActive = event.noRegistration ? !past : registrationOpen;
+  const statusLabel = event.noRegistration
+    ? past
+      ? "Подія вже відбулася"
+      : "Подія скоро відбудеться"
+    : registrationOpen
+      ? "Реєстрація триває"
+      : "Реєстрацію завершено";
   const fee = event.feeAmount != null ? Number(event.feeAmount) : 0;
   const cover = mediaUrl(event.photoUrl);
   const partners = (event.eventPartners ?? [])
@@ -143,14 +152,22 @@ export default async function EventDetailPage({
               </div>
             )}
             <div className={cover ? "mt-6" : ""}>
-              <div className="mb-4 flex flex-wrap items-center gap-3">
-                <span className="rounded-full bg-gradient-main px-4 py-1.5 text-xs font-extrabold uppercase tracking-wide text-black">
-                  Захід
-                </span>
-                <span className="rounded-full border border-white/15 bg-surface px-4 py-1.5 text-xs font-bold">
-                  {registrationOpen
-                    ? "🎟 Триває реєстрація"
-                    : "Реєстрацію завершено"}
+              <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm font-bold uppercase tracking-wide">
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-2",
+                    statusActive ? "text-brand-green" : "text-subtle",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "size-2 rounded-full",
+                      statusActive
+                        ? "bg-brand-green shadow-[0_0_10px_#2eff97]"
+                        : "bg-subtle",
+                    )}
+                  />
+                  {statusLabel}
                 </span>
               </div>
               <h1 className="text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl">
@@ -332,41 +349,45 @@ export default async function EventDetailPage({
         )}
 
         {/* registration / closed */}
-        <section
-          id="register"
-          className="relative isolate z-[1] scroll-mt-28 pt-12"
-        >
-          {registrationOpen && (
-            <Glow
-              color="#36DFFF"
-              className="left-1/2 top-1/2 h-[26rem] w-[44rem] -translate-x-1/2 -translate-y-1/2"
-            />
-          )}
-          <Container>
-            {registrationOpen ? (
-              <EventRegistrationForm event={event} />
-            ) : (
-              <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 rounded-3xl border border-white/5 bg-surface/40 p-10 text-center">
-                <h2 className="text-3xl font-bold">Реєстрацію завершено</h2>
-                <p className="max-w-md text-muted">
-                  {event.photoAlbumUrl
-                    ? "Дякуємо всім, хто був із нами! Дивись, як це було:"
-                    : "Слідкуй за анонсами, щоб не пропустити наступний захід."}
-                </p>
-                {event.photoAlbumUrl && (
-                  <a
-                    href={event.photoAlbumUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-2xl bg-gradient-main px-8 py-4 text-lg font-bold text-black transition-opacity hover:opacity-90"
-                  >
-                    Переглянути фото
-                  </a>
-                )}
-              </div>
+        {(!event.noRegistration || event.photoAlbumUrl) && (
+          <section
+            id={event.noRegistration ? undefined : "register"}
+            className="relative isolate z-[1] scroll-mt-28 pt-12"
+          >
+            {registrationOpen && (
+              <Glow
+                color="#36DFFF"
+                className="left-1/2 top-1/2 h-[26rem] w-[44rem] -translate-x-1/2 -translate-y-1/2"
+              />
             )}
-          </Container>
-        </section>
+            <Container>
+              {registrationOpen ? (
+                <EventRegistrationForm event={event} />
+              ) : (
+                <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 rounded-3xl border border-white/5 bg-surface/40 p-10 text-center">
+                  <h2 className="text-3xl font-bold">
+                    {event.noRegistration ? "Фотозвіт" : "Реєстрацію завершено"}
+                  </h2>
+                  <p className="max-w-md text-muted">
+                    {event.photoAlbumUrl
+                      ? "Дякуємо всім, хто був із нами! Дивись, як це було:"
+                      : "Слідкуй за анонсами, щоб не пропустити наступний захід."}
+                  </p>
+                  {event.photoAlbumUrl && (
+                    <a
+                      href={event.photoAlbumUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-2xl bg-gradient-main px-8 py-4 text-lg font-bold text-black transition-opacity hover:opacity-90"
+                    >
+                      Переглянути фото
+                    </a>
+                  )}
+                </div>
+              )}
+            </Container>
+          </section>
+        )}
       </main>
       <Footer />
     </>

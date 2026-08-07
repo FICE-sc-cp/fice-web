@@ -81,17 +81,25 @@ const RULES: { test: RegExp; text: (m: RegExpMatchArray) => string }[] = [
   { test: /property .* should not exist/i, text: () => 'недопустиме поле' },
 ];
 
-export function translateDetail(detail: string): string {
+export function describeDetail(detail: string): {
+  field: string;
+  message: string;
+} {
   const field = detail.trim().split(/\s+/)[0];
-  const label = FIELD_LABELS[field];
   for (const rule of RULES) {
     const match = detail.match(rule.test);
     if (match) {
       const text = rule.text(match);
-      return label ? `${label}: ${text}` : text;
+      return { field, message: text.charAt(0).toUpperCase() + text.slice(1) };
     }
   }
-  return detail;
+  return { field, message: detail };
+}
+
+export function translateDetail(detail: string): string {
+  const { field, message } = describeDetail(detail);
+  const label = FIELD_LABELS[field];
+  return label ? `${label}: ${message.toLowerCase()}` : message;
 }
 
 const BY_STATUS: Record<number, string> = {

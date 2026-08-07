@@ -49,8 +49,12 @@ export function FundraiserCard({ fundraiser }: { fundraiser: Fundraiser }) {
             />
           </div>
           <div className="flex justify-between text-lg text-white">
-            <span className="font-bold">{formatUAH(fundraiser.currentAmount)} ₴</span>
-            <span className="text-subtle">з {formatUAH(fundraiser.goalAmount)} ₴</span>
+            <span className="font-bold">
+              {formatUAH(fundraiser.currentAmount)} ₴
+            </span>
+            <span className="text-subtle">
+              {formatUAH(fundraiser.goalAmount)} ₴
+            </span>
           </div>
         </div>
 

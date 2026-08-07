@@ -9,6 +9,7 @@ import { RichTextArea } from '../RichTextArea';
 import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
 import { FormError } from '@/components/ui/FormError';
+import { useFormErrors } from '@/lib/formErrors';
 import { ImageUpload } from '../ImageUpload';
 import { useMainButton } from '@/lib/telegram';
 
@@ -55,6 +56,7 @@ export function FundraiserForm({
     handleSubmit,
     watch,
     setValue,
+    setError,
     formState: { errors },
   } = useForm<FundraiserFormValues>({
     resolver: zodResolver(schema),
@@ -80,11 +82,17 @@ export function FundraiserForm({
 
   const imageUrl = watch('imageUrl');
   const story = watch('story');
-  const submit = handleSubmit(onSubmit);
+  const { formRef, onInvalid, serverMessages } = useFormErrors(
+    error,
+    setError,
+    Object.keys(schema.shape),
+  );
+
+  const submit = handleSubmit(onSubmit, onInvalid);
   useMainButton({ text: submitLabel, onClick: () => void submit(), loading: submitting });
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4">
+    <form ref={formRef} onSubmit={submit} className="flex flex-col gap-4">
       <Input label="Назва" {...register('name')} error={errors.name?.message} />
       <Select
         label="Статус"
@@ -199,7 +207,7 @@ export function FundraiserForm({
         {...register('detailsLink')}
         error={errors.detailsLink?.message}
       />
-      <FormError error={error} />
+      <FormError messages={serverMessages} />
       <Button type="submit" disabled={submitting} className="mt-1">
         {submitting ? 'Збереження…' : submitLabel}
       </Button>

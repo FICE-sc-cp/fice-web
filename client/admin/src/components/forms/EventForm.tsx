@@ -9,6 +9,7 @@ import { Input } from '../ui/Input';
 import { RichTextArea } from '../RichTextArea';
 import { Button } from '../ui/Button';
 import { FormError } from '@/components/ui/FormError';
+import { focusFirstOf, useFormErrors } from '@/lib/formErrors';
 import { ImageUpload } from '../ImageUpload';
 import { useMainButton } from '@/lib/telegram';
 
@@ -17,6 +18,8 @@ const schema = z.object({
   date: z.string().min(1, 'Вкажи дату'),
   photoUrl: z.string().nullable().optional(),
   description: z.string().optional(),
+  isAbitfest: z.boolean().optional(),
+  noRegistration: z.boolean().optional(),
   location: z.string().max(120, 'Максимум 120 символів').optional(),
   locationNote: z.string().optional(),
   timeNote: z.string().max(120, 'Максимум 120 символів').optional(),
@@ -119,6 +122,7 @@ export function EventForm({
     handleSubmit,
     watch,
     setValue,
+    setError,
     formState: { errors },
   } = useForm<ScalarValues>({
     resolver: zodResolver(schema),
@@ -127,6 +131,8 @@ export function EventForm({
       date: '',
       photoUrl: null,
       description: '',
+      isAbitfest: false,
+      noRegistration: false,
       location: '',
       locationNote: '',
       timeNote: '',
@@ -149,9 +155,55 @@ export function EventForm({
 
   const photo = watch('photoUrl');
   const description = watch('description');
-  const submit = handleSubmit((scalars) =>
-    onSubmit({ ...scalars, program: programItems, questions: questionItems }),
+  const { formRef, onInvalid, fieldErrors, serverMessages } = useFormErrors(
+    error,
+    setError,
+    [...Object.keys(schema.shape), 'program', 'questions'],
   );
+  const [itemErrors, setItemErrors] = useState<Record<string, string>>({});
+
+  const itemError = (key: string) => itemErrors[key] ?? fieldErrors[key];
+
+  const clearItemError = (key: string) =>
+    setItemErrors((prev) => {
+      if (!prev[key]) return prev;
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+
+  const validateItems = () => {
+    const found: Record<string, string> = {};
+    programItems.forEach((item, i) => {
+      if (item.time.trim().length > 20) {
+        found[`program.${i}.time`] = 'Максимум 20 символів';
+      }
+      if (!item.title.trim()) {
+        found[`program.${i}.title`] = 'Вкажи назву пункту';
+      } else if (item.title.trim().length > 120) {
+        found[`program.${i}.title`] = 'Максимум 120 символів';
+      }
+    });
+    questionItems.forEach((q, i) => {
+      if (!q.label.trim()) {
+        found[`questions.${i}.label`] = 'Вкажи текст питання';
+      } else if (q.label.trim().length > 200) {
+        found[`questions.${i}.label`] = 'Максимум 200 символів';
+      }
+    });
+    return found;
+  };
+
+  const submit = handleSubmit((scalars) => {
+    const found = validateItems();
+    setItemErrors(found);
+    const keys = Object.keys(found);
+    if (keys.length > 0) {
+      focusFirstOf(formRef.current, keys);
+      return;
+    }
+    onSubmit({ ...scalars, program: programItems, questions: questionItems });
+  }, onInvalid);
   useMainButton({ text: submitLabel, onClick: () => void submit(), loading: submitting });
 
   const addProgram = () => setProgramItems((p) => [...p, { time: '', title: '' }]);
@@ -172,10 +224,9 @@ export function EventForm({
   const updateQuestion = (i: number, patch: Partial<QuestionItem>) =>
     setQuestionItems((q) => q.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
 
-  const hasErrors = Object.keys(errors).length > 0;
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4">
+    <form ref={formRef} onSubmit={submit} className="flex flex-col gap-4">
       <Input label="Назва" {...register('name')} error={errors.name?.message} />
       <Input
         label="Дата і час"
@@ -193,6 +244,39 @@ export function EventForm({
         value={description ?? ''}
         onChange={(v) => setValue('description', v, { shouldDirty: true })}
       />
+
+      <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-bg-soft px-4 py-3">
+        <input
+          type="checkbox"
+          {...register('isAbitfest')}
+          className="mt-0.5 size-5 shrink-0 accent-brand-cyan"
+        />
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold text-muted">
+            Ця подія є Абітфестом
+          </span>
+          <span className="mt-1 block text-xs text-subtle">
+            Така подія додатково показується на сторінці департаменту роботи з
+            абітурієнтами.
+          </span>
+        </span>
+      </label>
+
+      <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-bg-soft px-4 py-3">
+        <input
+          type="checkbox"
+          {...register('noRegistration')}
+          className="mt-0.5 size-5 shrink-0 accent-brand-cyan"
+        />
+        <span className="min-w-0">
+          <span className="block text-sm font-semibold text-muted">
+            Подія не має реєстрації
+          </span>
+          <span className="mt-1 block text-xs text-subtle">
+            На сторінці події не буде форми реєстрації.
+          </span>
+        </span>
+      </label>
 
       <div className="rounded-2xl border border-border bg-bg-soft p-4">
         <p className="mb-3 text-sm font-semibold text-muted">Деталі сторінки</p>
@@ -274,15 +358,25 @@ export function EventForm({
                   label="Час"
                   placeholder="17:00"
                   className="px-3"
+                  name={`program.${i}.time`}
                   value={item.time}
-                  onChange={(e) => updateProgram(i, 'time', e.target.value)}
+                  error={itemError(`program.${i}.time`)}
+                  onChange={(e) => {
+                    clearItemError(`program.${i}.time`);
+                    updateProgram(i, 'time', e.target.value);
+                  }}
                 />
               </div>
               <div className="min-w-0 flex-1">
                 <Input
                   label="Пункт"
+                  name={`program.${i}.title`}
                   value={item.title}
-                  onChange={(e) => updateProgram(i, 'title', e.target.value)}
+                  error={itemError(`program.${i}.title`)}
+                  onChange={(e) => {
+                    clearItemError(`program.${i}.title`);
+                    updateProgram(i, 'title', e.target.value);
+                  }}
                 />
               </div>
               <button
@@ -322,8 +416,13 @@ export function EventForm({
                 <div className="min-w-0 flex-1">
                   <Input
                     label={`Питання ${i + 1}`}
+                    name={`questions.${i}.label`}
                     value={q.label}
-                    onChange={(e) => updateQuestion(i, { label: e.target.value })}
+                    error={itemError(`questions.${i}.label`)}
+                    onChange={(e) => {
+                      clearItemError(`questions.${i}.label`);
+                      updateQuestion(i, { label: e.target.value });
+                    }}
                   />
                 </div>
                 <button
@@ -419,13 +518,7 @@ export function EventForm({
         </div>
       </div>
 
-      {hasErrors && (
-        <p className="rounded-xl border border-brand-red/40 bg-brand-red/10 px-4 py-3 text-sm text-brand-red">
-          Перевір поля, виділені червоним, і спробуй ще раз.
-        </p>
-      )}
-
-      <FormError error={error} />
+      <FormError messages={serverMessages} />
 
       <Button type="submit" disabled={submitting} className="mt-1">
         {submitting ? 'Збереження…' : submitLabel}

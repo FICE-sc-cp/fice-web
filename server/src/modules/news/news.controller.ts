@@ -19,6 +19,7 @@ import { Admin } from '../../auth/admin.decorator';
 import { ApiPaginatedResponse } from '../../common/dto/paginated.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { CreateNewsDto } from './dto/create-news.dto';
+import { NewsQueryDto } from './dto/news-query.dto';
 import { UpdateNewsDto } from './dto/update-news.dto';
 import { NewsEntity } from './entities/news.entity';
 import { NewsService } from './news.service';
@@ -39,8 +40,8 @@ export class NewsController {
   @Get()
   @ApiOperation({ summary: 'List news, newest first' })
   @ApiPaginatedResponse(NewsEntity)
-  findAll(@Query() pagination: PaginationQueryDto) {
-    return this.newsService.findAll(pagination);
+  findAll(@Query() query: NewsQueryDto) {
+    return this.newsService.findAll(query);
   }
 
   @Get(':id')

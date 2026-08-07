@@ -7,6 +7,7 @@ import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
 import { FormError } from '../ui/FormError';
 import { ImageUpload } from '../ImageUpload';
+import { useFormErrors } from '@/lib/formErrors';
 import { useMainButton } from '@/lib/telegram';
 
 const schema = z.object({
@@ -39,6 +40,7 @@ export function DepartmentForm({
     handleSubmit,
     watch,
     setValue,
+    setError,
     formState: { errors },
   } = useForm<DepartmentFormValues>({
     resolver: zodResolver(schema),
@@ -55,11 +57,17 @@ export function DepartmentForm({
   });
 
   const photo = watch('headPhoto');
-  const submit = handleSubmit(onSubmit);
+  const { formRef, onInvalid, serverMessages } = useFormErrors(
+    error,
+    setError,
+    Object.keys(schema.shape),
+  );
+
+  const submit = handleSubmit(onSubmit, onInvalid);
   useMainButton({ text: submitLabel, onClick: () => void submit(), loading: submitting });
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4">
+    <form ref={formRef} onSubmit={submit} className="flex flex-col gap-4">
       <Input label="Назва" {...register('name')} error={errors.name?.message} />
       <Input
         label="Кількість учасників"
@@ -111,7 +119,7 @@ export function DepartmentForm({
         </div>
       </div>
 
-      <FormError error={error} />
+      <FormError messages={serverMessages} />
 
       <Button type="submit" disabled={submitting} className="mt-1">
         {submitting ? 'Збереження…' : submitLabel}

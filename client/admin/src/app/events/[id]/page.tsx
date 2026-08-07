@@ -53,6 +53,8 @@ export default function EditEventPage() {
         location: v.location?.trim() || null,
         locationNote: v.locationNote?.trim() || null,
         photoAlbumUrl: v.photoAlbumUrl?.trim() || null,
+        isAbitfest: v.isAbitfest ?? false,
+        noRegistration: v.noRegistration ?? false,
       });
     },
     onSuccess: () => {
@@ -90,6 +92,8 @@ export default function EditEventPage() {
                     date: toLocalInput(event.date),
                     photoUrl: event.photoUrl,
                     description: event.description ?? event.details?.description ?? '',
+                    isAbitfest: event.isAbitfest ?? false,
+                    noRegistration: event.noRegistration ?? false,
                     location: event.location ?? '',
                     locationNote: event.locationNote ?? '',
                     timeNote: event.timeNote ?? '',

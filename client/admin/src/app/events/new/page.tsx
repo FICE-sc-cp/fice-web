@@ -28,7 +28,12 @@ export default function NewEventPage() {
         });
         detailsId = details.id;
       }
-      return api.createEvent({ ...eventValuesToInput(v), detailsId });
+      return api.createEvent({
+        ...eventValuesToInput(v),
+        detailsId,
+        isAbitfest: v.isAbitfest ?? false,
+        noRegistration: v.noRegistration ?? false,
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['events'] });

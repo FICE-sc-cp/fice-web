@@ -21,7 +21,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="uk" className={`${mulish.variable} scroll-smooth`}>
-      <body className="min-h-screen bg-bg font-sans text-fg antialiased">
+      <body className="flex min-h-screen flex-col bg-bg font-sans text-fg antialiased">
         <noscript>
           <style>{`.reveal,.reveal-stagger>*{opacity:1!important;transform:none!important}`}</style>
         </noscript>

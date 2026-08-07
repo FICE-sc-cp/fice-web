@@ -7,6 +7,7 @@ import { GradientText } from '@/components/ui/GradientText';
 import { SectionTitle } from '@/components/ui/SectionTitle';
 import { FundraiserCard } from '@/components/charity/FundraiserCard';
 import { LoadMoreList } from '@/components/ui/LoadMoreList';
+import { ClosedFundraisers } from '@/components/charity/ClosedFundraisers';
 import { fice, safe, type Fundraiser } from '@/lib/api';
 
 export const metadata: Metadata = {
@@ -15,11 +16,16 @@ export const metadata: Metadata = {
 };
 
 const EMPTY = { items: [] as Fundraiser[], total: 0, page: 1, limit: 60, totalPages: 0 };
+const CLOSED_PAGE_SIZE = 6;
 
 export default async function CharityCatalogPage() {
-  const data = await safe(fice.fundraisers(60, 1), EMPTY);
-  const active = data.items.filter((f) => f.status === 'ACTIVE');
-  const closed = data.items.filter((f) => f.status === 'CLOSED');
+  const [activeData, closedData] = await Promise.all([
+    safe(fice.fundraisers(60, 1, 'ACTIVE'), EMPTY),
+    safe(fice.fundraisers(CLOSED_PAGE_SIZE, 1, 'CLOSED'), EMPTY),
+  ]);
+  const active = activeData.items;
+  const closed = closedData.items;
+  const hasAny = active.length > 0 || closed.length > 0;
 
   return (
     <>
@@ -47,7 +53,7 @@ export default async function CharityCatalogPage() {
           </Container>
         </section>
 
-        {data.items.length === 0 ? (
+        {!hasAny ? (
           <Container>
             <p className="py-16 text-center text-muted">
               Активних зборів поки немає — скоро анонсуємо 💛
@@ -81,12 +87,10 @@ export default async function CharityCatalogPage() {
                     Завершені
                   </SectionTitle>
                 </div>
-                <LoadMoreList
-                  pageSize={9}
-                  className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
-                  items={closed.map((f) => (
-                    <FundraiserCard key={f.id} fundraiser={f} />
-                  ))}
+                <ClosedFundraisers
+                  initial={closed}
+                  total={closedData.total}
+                  pageSize={CLOSED_PAGE_SIZE}
                 />
               </div>
             )}

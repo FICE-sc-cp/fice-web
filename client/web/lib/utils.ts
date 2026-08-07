@@ -8,7 +8,9 @@ export function cn(...inputs: ClassValue[]){
 export function eventRegistrationOpen(event: {
   date: string;
   registrationCloseDate: string | null;
+  noRegistration?: boolean;
 }): boolean {
+  if (event.noRegistration) return false;
   const closeTs = event.registrationCloseDate
     ? new Date(event.registrationCloseDate).getTime()
     : new Date(event.date).getTime();

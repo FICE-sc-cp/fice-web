@@ -136,6 +136,8 @@ export interface EventItem {
   feeAmount: string | null;
   feeAtEventAmount: string | null;
   feeRequisites: string | null;
+  isAbitfest: boolean;
+  noRegistration: boolean;
   detailsId: string | null;
   details?: EventDetails | null;
   eventPartners?: EventPartner[];
@@ -290,6 +292,8 @@ export interface EventInput {
   feeAmount?: number;
   feeAtEventAmount?: number;
   feeRequisites?: string;
+  isAbitfest?: boolean;
+  noRegistration?: boolean;
   program?: EventProgramInput[];
   questions?: EventQuestionInput[];
 }

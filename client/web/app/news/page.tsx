@@ -1,29 +1,32 @@
-import type { Metadata } from 'next';
-import { IconDefs } from '@/components/ui/icons';
-import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
-import { Container } from '@/components/ui/Container';
-import { Glow } from '@/components/ui/Glow';
-import { GradientText } from '@/components/ui/GradientText';
-import { NewsCatalog } from '@/components/news/NewsCatalog';
-import { fice, safe, type News, type Paginated } from '@/lib/api';
+import type { Metadata } from "next";
+import { IconDefs } from "@/components/ui/icons";
+import { Header } from "@/components/layout/Header";
+import { Footer } from "@/components/layout/Footer";
+import { Container } from "@/components/ui/Container";
+import { Glow } from "@/components/ui/Glow";
+import { GradientText } from "@/components/ui/GradientText";
+import { MoreNews } from "@/components/sections/MoreNews";
+import { fice, safe, type News, type Paginated } from "@/lib/api";
 
 export const metadata: Metadata = {
-  title: 'Новини ФІОТ — Студентська рада',
+  title: "Новини ФІОТ — Студентська рада",
   description:
-    'Події, досягнення, партнерства та все, чим живе факультет. Стеж за оновленнями ФІОТ.',
+    "Події, досягнення, партнерства та все, чим живе факультет. Стеж за оновленнями ФІОТ.",
 };
 
 const EMPTY: Paginated<News> = {
   items: [],
   total: 0,
   page: 1,
-  limit: 100,
+  limit: 10,
   totalPages: 0,
 };
 
+const INITIAL_PAGE_SIZE = 10;
+const MORE_PAGE_SIZE = 9;
+
 export default async function NewsCatalogPage() {
-  const { items } = await safe(fice.news(100, 1), EMPTY);
+  const { items, total } = await safe(fice.news(INITIAL_PAGE_SIZE, 1), EMPTY);
 
   return (
     <>
@@ -42,7 +45,7 @@ export default async function NewsCatalogPage() {
         <section className="relative z-[1] px-4 pb-6 pt-16 text-center sm:px-6 lg:pt-20">
           <Container>
             <h1 className="mx-auto max-w-3xl text-5xl font-extrabold leading-[1.05] tracking-tight sm:text-6xl">
-              Новини <GradientText>ФІОТ</GradientText>
+              <GradientText>Новини</GradientText>
             </h1>
             <p className="mx-auto mt-5 max-w-xl text-lg text-muted sm:text-xl">
               Події, досягнення, партнерства та все, чим живе факультет. Стеж за
@@ -52,7 +55,11 @@ export default async function NewsCatalogPage() {
         </section>
 
         {items.length > 0 ? (
-          <NewsCatalog items={items} />
+          <MoreNews
+            initial={items}
+            total={total}
+            pageSize={MORE_PAGE_SIZE}
+          />
         ) : (
           <section className="py-20">
             <Container>

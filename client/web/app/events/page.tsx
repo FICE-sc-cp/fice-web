@@ -1,30 +1,37 @@
-import type { Metadata } from 'next';
-import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
-import { Container } from '@/components/ui/Container';
-import { Glow } from '@/components/ui/Glow';
-import { GradientText } from '@/components/ui/GradientText';
-import { SectionTitle } from '@/components/ui/SectionTitle';
-import { EventCard } from '@/components/sections/EventCard';
-import { LoadMoreList } from '@/components/ui/LoadMoreList';
-import { fice, safe, type EventItem } from '@/lib/api';
-import { isEventPast } from '@/lib/utils';
+import type { Metadata } from "next";
+import { Header } from "@/components/layout/Header";
+import { Footer } from "@/components/layout/Footer";
+import { Container } from "@/components/ui/Container";
+import { Glow } from "@/components/ui/Glow";
+import { GradientText } from "@/components/ui/GradientText";
+import { SectionTitle } from "@/components/ui/SectionTitle";
+import { EventCard } from "@/components/sections/EventCard";
+import { LoadMoreList } from "@/components/ui/LoadMoreList";
+import { PastEvents } from "@/components/sections/PastEvents";
+import { fice, safe, type EventItem } from "@/lib/api";
 
 export const metadata: Metadata = {
-  title: 'Заходи — Студрада ФІОТ',
-  description: 'Майбутні та минулі заходи Студентської ради ФІОТ.',
+  title: "Заходи — Студрада ФІОТ",
+  description: "Майбутні та минулі заходи Студентської ради ФІОТ.",
 };
 
-const EMPTY = { items: [] as EventItem[], total: 0, page: 1, limit: 60, totalPages: 0 };
+const EMPTY = {
+  items: [] as EventItem[],
+  total: 0,
+  page: 1,
+  limit: 60,
+  totalPages: 0,
+};
+const PAST_PAGE_SIZE = 6;
 
 export default async function EventsCatalogPage() {
-  const data = await safe(fice.events(60, 1), EMPTY);
-  const upcoming = data.items
-    .filter((e) => !isEventPast(e.date))
-    .sort((a, b) => +new Date(a.date) - +new Date(b.date));
-  const past = data.items
-    .filter((e) => isEventPast(e.date))
-    .sort((a, b) => +new Date(b.date) - +new Date(a.date));
+  const [upcomingData, pastData] = await Promise.all([
+    safe(fice.events(60, 1, false), EMPTY),
+    safe(fice.events(PAST_PAGE_SIZE, 1, true), EMPTY),
+  ]);
+  const upcoming = upcomingData.items;
+  const past = pastData.items;
+  const hasAny = upcoming.length > 0 || past.length > 0;
 
   return (
     <>
@@ -52,7 +59,7 @@ export default async function EventsCatalogPage() {
           </Container>
         </section>
 
-        {data.items.length === 0 ? (
+        {!hasAny ? (
           <Container>
             <p className="py-16 text-center text-muted">
               Поки що немає запланованих заходів. Зазирни трохи пізніше 👀
@@ -86,12 +93,10 @@ export default async function EventsCatalogPage() {
                     Минулі
                   </SectionTitle>
                 </div>
-                <LoadMoreList
-                  pageSize={9}
-                  className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
-                  items={past.map((e) => (
-                    <EventCard key={e.id} event={e} />
-                  ))}
+                <PastEvents
+                  initial={past}
+                  total={pastData.total}
+                  pageSize={PAST_PAGE_SIZE}
                 />
               </div>
             )}

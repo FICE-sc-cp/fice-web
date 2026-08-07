@@ -137,6 +137,16 @@ export class CreateEventDto {
   @MaxLength(255)
   feeRequisites?: string;
 
+  @ApiPropertyOptional({ description: 'Show this event on the applicants page' })
+  @IsOptional()
+  @IsBoolean()
+  isAbitfest?: boolean;
+
+  @ApiPropertyOptional({ description: 'Event has no registration form' })
+  @IsOptional()
+  @IsBoolean()
+  noRegistration?: boolean;
+
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
   @IsUUID()

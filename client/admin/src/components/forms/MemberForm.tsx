@@ -7,6 +7,7 @@ import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
 import { FormError } from '@/components/ui/FormError';
+import { useFormErrors } from '@/lib/formErrors';
 import { ImageUpload } from '../ImageUpload';
 import { useMainButton } from '@/lib/telegram';
 
@@ -49,6 +50,7 @@ export function MemberForm({
     handleSubmit,
     watch,
     setValue,
+    setError,
     formState: { errors },
   } = useForm<MemberFormValues>({
     resolver: zodResolver(schema),
@@ -64,11 +66,17 @@ export function MemberForm({
   });
 
   const photo = watch('photo');
-  const submit = handleSubmit(onSubmit);
+  const { formRef, onInvalid, serverMessages } = useFormErrors(
+    error,
+    setError,
+    Object.keys(schema.shape),
+  );
+
+  const submit = handleSubmit(onSubmit, onInvalid);
   useMainButton({ text: submitLabel, onClick: () => void submit(), loading: submitting });
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4">
+    <form ref={formRef} onSubmit={submit} className="flex flex-col gap-4">
       <Select
         label="Роль"
         options={ROLE_OPTIONS}
@@ -104,7 +112,7 @@ export function MemberForm({
         {...register('specialization')}
         error={errors.specialization?.message}
       />
-      <FormError error={error} />
+      <FormError messages={serverMessages} />
       <Button type="submit" disabled={submitting} className="mt-1">
         {submitting ? 'Збереження…' : submitLabel}
       </Button>
