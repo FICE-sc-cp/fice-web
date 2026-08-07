@@ -76,20 +76,22 @@ export default function PartnersListPage() {
                       </p>
                     )}
                   </div>
-                  <Link
-                    href={`/partners/${p.id}`}
-                    className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted transition-colors hover:text-fg"
-                  >
-                    Ред.
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => setPending(p)}
-                    aria-label="Видалити"
-                    className="rounded-lg px-2 py-1.5 text-brand-red"
-                  >
-                    ✕
-                  </button>
+                  <div className="flex shrink-0 items-center gap-3">
+                    <Link
+                      href={`/partners/${p.id}`}
+                      className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted transition-colors hover:text-fg"
+                    >
+                      Ред.
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => setPending(p)}
+                      aria-label="Видалити"
+                      className="rounded-lg px-2 py-1.5 text-brand-red"
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
               </li>
             );
@@ -102,7 +104,11 @@ export default function PartnersListPage() {
         title="Видалити партнера?"
         message={pending?.name}
         loading={del.isPending}
-        onCancel={() => setPending(null)}
+        error={del.error}
+        onCancel={() => {
+          setPending(null);
+          del.reset();
+        }}
         onConfirm={() => pending && del.mutate(pending.id)}
       />
     </main>

@@ -15,6 +15,7 @@ import {
   ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
@@ -23,6 +24,7 @@ import { ApiPaginatedResponse } from '../../common/dto/paginated.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { AddEventPartnerDto } from './dto/add-event-partner.dto';
 import { CreateEventDto } from './dto/create-event.dto';
+import { EventQueryDto } from './dto/event-query.dto';
 import { CreateEventRegistrationDto } from './dto/create-event-registration.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { EventEntity } from './entities/event.entity';
@@ -44,8 +46,8 @@ export class EventController {
   @Get()
   @ApiOperation({ summary: 'List events with details and partners' })
   @ApiPaginatedResponse(EventEntity)
-  findAll(@Query() pagination: PaginationQueryDto) {
-    return this.eventService.findAll(pagination);
+  findAll(@Query() query: EventQueryDto) {
+    return this.eventService.findAll(query, query.past, query.abitfest);
   }
 
   @Get(':id')

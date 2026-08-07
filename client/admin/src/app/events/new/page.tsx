@@ -28,7 +28,12 @@ export default function NewEventPage() {
         });
         detailsId = details.id;
       }
-      return api.createEvent({ ...eventValuesToInput(v), detailsId });
+      return api.createEvent({
+        ...eventValuesToInput(v),
+        detailsId,
+        isAbitfest: v.isAbitfest ?? false,
+        noRegistration: v.noRegistration ?? false,
+      });
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['events'] });
@@ -40,15 +45,11 @@ export default function NewEventPage() {
   return (
     <main className="mx-auto max-w-xl px-4 py-6">
       <PageHeader title="Новий захід" />
-      {mutation.error && (
-        <p className="mb-4 rounded-xl border border-brand-red/40 bg-brand-red/10 px-4 py-3 text-sm text-brand-red">
-          {mutation.error instanceof Error ? mutation.error.message : 'Помилка'}
-        </p>
-      )}
       <EventForm
         submitLabel="Створити"
         submitting={mutation.isPending}
         onSubmit={(v) => mutation.mutate(v)}
+        error={mutation.error}
       />
     </main>
   );

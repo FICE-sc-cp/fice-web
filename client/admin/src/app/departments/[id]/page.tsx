@@ -29,7 +29,7 @@ export default function EditDepartmentPage() {
           firstName: v.headFirstName,
           lastName: v.headLastName,
           telegramTag: v.headTelegramTag?.trim() ? v.headTelegramTag.trim() : undefined,
-          photo: v.headPhoto || undefined,
+          photo: v.headPhoto || null,
         };
         if (dep?.headId) {
           await api.updateDepartmentHead(dep.headId, body);
@@ -42,7 +42,7 @@ export default function EditDepartmentPage() {
       return api.updateDepartment(id, {
         name: v.name,
         memberCount: v.memberCount?.trim() ? Number(v.memberCount) : undefined,
-        telegramChatId: v.telegramChatId?.trim() || undefined,
+        telegramChatId: v.telegramChatId?.trim() || null,
         headId,
       });
     },
@@ -62,32 +62,26 @@ export default function EditDepartmentPage() {
           <Spinner />
         </div>
       ) : (
-        <>
-          {mutation.error && (
-            <p className="mb-4 rounded-xl border border-brand-red/40 bg-brand-red/10 px-4 py-3 text-sm text-brand-red">
-              {mutation.error instanceof Error ? mutation.error.message : 'Помилка'}
-            </p>
-          )}
-          <DepartmentForm
-            submitLabel="Зберегти"
-            submitting={mutation.isPending}
-            onSubmit={(v) => mutation.mutate(v)}
-            defaultValues={
-              dep
-                ? {
-                    name: dep.name,
-                    memberCount:
-                      dep.memberCount != null ? String(dep.memberCount) : '',
-                    telegramChatId: dep.telegramChatId ?? '',
-                    headFirstName: dep.head?.firstName ?? '',
-                    headLastName: dep.head?.lastName ?? '',
-                    headTelegramTag: dep.head?.telegramTag ?? '',
-                    headPhoto: dep.head?.photo ?? null,
-                  }
-                : undefined
-            }
-          />
-        </>
+        <DepartmentForm
+          submitLabel="Зберегти"
+          submitting={mutation.isPending}
+          onSubmit={(v) => mutation.mutate(v)}
+          error={mutation.error}
+          defaultValues={
+            dep
+              ? {
+                  name: dep.name,
+                  memberCount:
+                    dep.memberCount != null ? String(dep.memberCount) : '',
+                  telegramChatId: dep.telegramChatId ?? '',
+                  headFirstName: dep.head?.firstName ?? '',
+                  headLastName: dep.head?.lastName ?? '',
+                  headTelegramTag: dep.head?.telegramTag ?? '',
+                  headPhoto: dep.head?.photo ?? null,
+                }
+              : undefined
+          }
+        />
       )}
     </main>
   );

@@ -1,13 +1,27 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Glow } from "@/components/ui/Glow";
 import { Reveal, RevealGroup } from "@/components/ui/Reveal";
 import { CountUp } from "@/components/ui/CountUp";
-import { EMPTY_FACTS, fice, safe, type Facts } from "@/lib/api";
+import {
+  EMPTY_FACTS,
+  fice,
+  mediaUrl,
+  safe,
+  type Facts,
+  type Partner,
+} from "@/lib/api";
 
-const LOGO_ROWS = [4, 3, 4];
+const MAX_LOGOS = 10;
+
+const EMPTY_PARTNERS = {
+  items: [] as Partner[],
+  total: 0,
+  page: 1,
+  limit: MAX_LOGOS,
+  totalPages: 0,
+};
 
 const STAT_DEFS: { key: keyof Facts; label: string; gradient: string }[] = [
   {
@@ -29,7 +43,20 @@ const STAT_DEFS: { key: keyof Facts; label: string; gradient: string }[] = [
 ];
 
 export async function PartnersSection() {
-  const facts = await safe(fice.facts(), EMPTY_FACTS);
+  const [facts, partnersPage] = await Promise.all([
+    safe(fice.facts(), EMPTY_FACTS),
+    safe(fice.partners(50), EMPTY_PARTNERS),
+  ]);
+
+  const logos = partnersPage.items
+    .map((p) => ({
+      id: p.id,
+      name: p.name,
+      websiteLink: p.websiteLink,
+      logo: mediaUrl(p.logoImage),
+    }))
+    .filter((p): p is typeof p & { logo: string } => !!p.logo)
+    .slice(0, MAX_LOGOS);
 
   return (
     <section
@@ -46,25 +73,35 @@ export async function PartnersSection() {
           <SectionHeader title="Наші партнери" gradient="bg-gradient-blue" />
         </Reveal>
 
-        <RevealGroup className="mt-14 flex flex-col items-center gap-8">
-          {LOGO_ROWS.map((count, r) => (
-            <div
-              key={r}
-              className="flex flex-wrap justify-center gap-x-12 gap-y-8"
-            >
-              {Array.from({ length: count }).map((_, i) => (
-                <Image
-                  key={i}
-                  src="/logo_white.png"
-                  alt="Логотип партнера"
-                  width={184}
-                  height={101}
-                  className="h-auto w-28 opacity-50 grayscale transition-all duration-300 hover:opacity-100 hover:grayscale-0 sm:w-36 lg:w-44"
+        {logos.length > 0 && (
+          <RevealGroup className="mt-14 flex flex-wrap items-center justify-center gap-x-12 gap-y-8">
+            {logos.map((p) => {
+              const logo = (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={p.logo}
+                  alt={p.name}
+                  className="h-14 w-28 object-contain transition-transform duration-300 hover:-translate-y-1 hover:scale-110 sm:h-16 sm:w-36 lg:h-20 lg:w-44"
                 />
-              ))}
-            </div>
-          ))}
-        </RevealGroup>
+              );
+              return p.websiteLink ? (
+                <a
+                  key={p.id}
+                  href={p.websiteLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={p.name}
+                >
+                  {logo}
+                </a>
+              ) : (
+                <div key={p.id} title={p.name}>
+                  {logo}
+                </div>
+              );
+            })}
+          </RevealGroup>
+        )}
 
         <Reveal className="mt-12 rounded-lg bg-gradient-main p-0.5">
           <div className="rounded-lg bg-bg px-6 pb-12 pt-8 lg:px-16">

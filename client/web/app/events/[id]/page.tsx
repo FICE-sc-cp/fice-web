@@ -1,27 +1,27 @@
-import Link from 'next/link';
-import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
-import { Container } from '@/components/ui/Container';
-import { Glow } from '@/components/ui/Glow';
-import { EventRegistrationForm } from '@/components/sections/EventRegistrationForm';
-import { fice, mediaUrl, safe } from '@/lib/api';
-import { renderRichInline } from '@/lib/richText';
-import { eventRegistrationOpen } from '@/lib/utils';
+import Link from "next/link";
+import { Header } from "@/components/layout/Header";
+import { Footer } from "@/components/layout/Footer";
+import { Container } from "@/components/ui/Container";
+import { Glow } from "@/components/ui/Glow";
+import { EventRegistrationForm } from "@/components/sections/EventRegistrationForm";
+import { fice, mediaUrl, safe } from "@/lib/api";
+import { renderRichInline } from "@/lib/richText";
+import { cn, eventRegistrationOpen, isEventPast } from "@/lib/utils";
 
-const TZ = 'Europe/Kyiv';
+const TZ = "Europe/Kyiv";
 const fmtDate = (d: Date) =>
-  new Intl.DateTimeFormat('uk-UA', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
+  new Intl.DateTimeFormat("uk-UA", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
     timeZone: TZ,
   }).format(d);
 const fmtWeekday = (d: Date) =>
-  new Intl.DateTimeFormat('uk-UA', { weekday: 'long', timeZone: TZ }).format(d);
+  new Intl.DateTimeFormat("uk-UA", { weekday: "long", timeZone: TZ }).format(d);
 const fmtTime = (d: Date) =>
-  new Intl.DateTimeFormat('uk-UA', {
-    hour: '2-digit',
-    minute: '2-digit',
+  new Intl.DateTimeFormat("uk-UA", {
+    hour: "2-digit",
+    minute: "2-digit",
     timeZone: TZ,
   }).format(d);
 
@@ -42,7 +42,10 @@ function Fact({
 }) {
   return (
     <div className="flex flex-col gap-1.5 rounded-2xl border border-white/8 bg-surface/45 p-5">
-      <span className="text-xs font-bold uppercase tracking-wide" style={{ color }}>
+      <span
+        className="text-xs font-bold uppercase tracking-wide"
+        style={{ color }}
+      >
         {label}
       </span>
       {href ? (
@@ -97,12 +100,21 @@ export default async function EventDetailPage({
 
   const date = new Date(event.date);
   const registrationOpen = eventRegistrationOpen(event);
+  const past = isEventPast(event.date);
+  const statusActive = event.noRegistration ? !past : registrationOpen;
+  const statusLabel = event.noRegistration
+    ? past
+      ? "Подія вже відбулася"
+      : "Подія скоро відбудеться"
+    : registrationOpen
+      ? "Реєстрація триває"
+      : "Реєстрацію завершено";
   const fee = event.feeAmount != null ? Number(event.feeAmount) : 0;
   const cover = mediaUrl(event.photoUrl);
   const partners = (event.eventPartners ?? [])
     .map((ep) => ({
       id: ep.id,
-      name: ep.name ?? ep.partner?.name ?? '',
+      name: ep.name ?? ep.partner?.name ?? "",
       logoImage: ep.logoImage ?? ep.partner?.logoImage ?? null,
       websiteLink: ep.websiteLink ?? ep.partner?.websiteLink ?? null,
     }))
@@ -139,13 +151,23 @@ export default async function EventDetailPage({
                 />
               </div>
             )}
-            <div className={cover ? 'mt-6' : ''}>
-              <div className="mb-4 flex flex-wrap items-center gap-3">
-                <span className="rounded-full bg-gradient-main px-4 py-1.5 text-xs font-extrabold uppercase tracking-wide text-black">
-                  Захід
-                </span>
-                <span className="rounded-full border border-white/15 bg-surface px-4 py-1.5 text-xs font-bold">
-                  {registrationOpen ? '🎟 Триває реєстрація' : 'Реєстрацію завершено'}
+            <div className={cover ? "mt-6" : ""}>
+              <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm font-bold uppercase tracking-wide">
+                <span
+                  className={cn(
+                    "inline-flex items-center gap-2",
+                    statusActive ? "text-brand-green" : "text-subtle",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "size-2 rounded-full",
+                      statusActive
+                        ? "bg-brand-green shadow-[0_0_10px_#2eff97]"
+                        : "bg-subtle",
+                    )}
+                  />
+                  {statusLabel}
                 </span>
               </div>
               <h1 className="text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl">
@@ -165,10 +187,15 @@ export default async function EventDetailPage({
                 note={fmtWeekday(date)}
                 color="#36dfff"
               />
-              <Fact label="Час" value={fmtTime(date)} note={event.timeNote ?? undefined} color="#2eff97" />
+              <Fact
+                label="Час"
+                value={fmtTime(date)}
+                note={event.timeNote ?? undefined}
+                color="#2eff97"
+              />
               <Fact
                 label="Локація"
-                value={event.location ?? 'Уточнюється'}
+                value={event.location ?? "Уточнюється"}
                 href={
                   event.locationNote && isUrl(event.locationNote)
                     ? event.locationNote
@@ -176,15 +203,15 @@ export default async function EventDetailPage({
                 }
                 note={
                   event.locationNote && isUrl(event.locationNote)
-                    ? 'Відкрити на карті ↗'
+                    ? "Відкрити на карті ↗"
                     : undefined
                 }
                 color="#ad46ff"
               />
               <Fact
                 label="Внесок"
-                value={fee > 0 ? `${fee} грн` : 'Безкоштовно'}
-                note={fee > 0 ? 'Донат на ЗСУ' : undefined}
+                value={fee > 0 ? `${fee} грн` : "Безкоштовно"}
+                note={fee > 0 ? "Донат на ЗСУ" : undefined}
                 color="#ff8904"
               />
             </div>
@@ -205,7 +232,10 @@ export default async function EventDetailPage({
                         Зібрано
                       </span>
                       <span className="text-2xl font-extrabold">
-                        {Number(event.details.moneyCollected).toLocaleString('uk-UA')} грн
+                        {Number(event.details.moneyCollected).toLocaleString(
+                          "uk-UA",
+                        )}{" "}
+                        грн
                       </span>
                     </div>
                   )}
@@ -215,7 +245,10 @@ export default async function EventDetailPage({
                         На благодійність
                       </span>
                       <span className="text-2xl font-extrabold">
-                        {Number(event.details.charityAmount).toLocaleString('uk-UA')} грн
+                        {Number(event.details.charityAmount).toLocaleString(
+                          "uk-UA",
+                        )}{" "}
+                        грн
                       </span>
                     </div>
                   )}
@@ -245,7 +278,7 @@ export default async function EventDetailPage({
                     className="whitespace-pre-wrap text-lg leading-relaxed text-gray-300"
                     dangerouslySetInnerHTML={{
                       __html: renderRichInline(
-                        event.description ?? 'Деталі скоро зʼявляться.',
+                        event.description ?? "Деталі скоро зʼявляться.",
                       ),
                     }}
                   />
@@ -258,11 +291,13 @@ export default async function EventDetailPage({
                         <div
                           key={p.id}
                           className={
-                            'flex gap-4 py-3' +
-                            (i < program.length - 1 ? ' border-b border-white/7' : '')
+                            "flex gap-4 py-3" +
+                            (i < program.length - 1
+                              ? " border-b border-white/7"
+                              : "")
                           }
                         >
-                          <span className="w-14 shrink-0 font-bold text-brand-cyan">
+                          <span className="w-27 shrink-0 font-bold text-brand-cyan">
                             {p.time}
                           </span>
                           <span className="text-gray-300">{p.title}</span>
@@ -287,7 +322,9 @@ export default async function EventDetailPage({
                   const inner = (
                     <div
                       className="h-16 w-36 rounded-xl border border-white/8 bg-white/5 bg-contain bg-center bg-no-repeat transition-colors hover:border-brand-cyan"
-                      style={{ backgroundImage: logo ? `url(${logo})` : undefined }}
+                      style={{
+                        backgroundImage: logo ? `url(${logo})` : undefined,
+                      }}
                       title={p.name}
                       role="img"
                       aria-label={p.name}
@@ -312,38 +349,45 @@ export default async function EventDetailPage({
         )}
 
         {/* registration / closed */}
-        <section id="register" className="relative isolate z-[1] scroll-mt-28 pt-12">
-          {registrationOpen && (
-            <Glow
-              color="#36DFFF"
-              className="left-1/2 top-1/2 h-[26rem] w-[44rem] -translate-x-1/2 -translate-y-1/2"
-            />
-          )}
-          <Container>
-            {registrationOpen ? (
-              <EventRegistrationForm event={event} />
-            ) : (
-              <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 rounded-3xl border border-white/5 bg-surface/40 p-10 text-center">
-                <h2 className="text-3xl font-bold">Реєстрацію завершено</h2>
-                <p className="max-w-md text-muted">
-                  {event.photoAlbumUrl
-                    ? 'Дякуємо всім, хто був із нами! Дивись, як це було:'
-                    : 'Слідкуй за анонсами, щоб не пропустити наступний захід.'}
-                </p>
-                {event.photoAlbumUrl && (
-                  <a
-                    href={event.photoAlbumUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-2xl bg-gradient-main px-8 py-4 text-lg font-bold text-black transition-opacity hover:opacity-90"
-                  >
-                    Переглянути фото
-                  </a>
-                )}
-              </div>
+        {(!event.noRegistration || event.photoAlbumUrl) && (
+          <section
+            id={event.noRegistration ? undefined : "register"}
+            className="relative isolate z-[1] scroll-mt-28 pt-12"
+          >
+            {registrationOpen && (
+              <Glow
+                color="#36DFFF"
+                className="left-1/2 top-1/2 h-[26rem] w-[44rem] -translate-x-1/2 -translate-y-1/2"
+              />
             )}
-          </Container>
-        </section>
+            <Container>
+              {registrationOpen ? (
+                <EventRegistrationForm event={event} />
+              ) : (
+                <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 rounded-3xl border border-white/5 bg-surface/40 p-10 text-center">
+                  <h2 className="text-3xl font-bold">
+                    {event.noRegistration ? "Фотозвіт" : "Реєстрацію завершено"}
+                  </h2>
+                  <p className="max-w-md text-muted">
+                    {event.photoAlbumUrl
+                      ? "Дякуємо всім, хто був із нами! Дивись, як це було:"
+                      : "Слідкуй за анонсами, щоб не пропустити наступний захід."}
+                  </p>
+                  {event.photoAlbumUrl && (
+                    <a
+                      href={event.photoAlbumUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-2xl bg-gradient-main px-8 py-4 text-lg font-bold text-black transition-opacity hover:opacity-90"
+                    >
+                      Переглянути фото
+                    </a>
+                  )}
+                </div>
+              )}
+            </Container>
+          </section>
+        )}
       </main>
       <Footer />
     </>

@@ -6,6 +6,7 @@ import { api, type Facts } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
+import { FormError } from '@/components/ui/FormError';
 import { hapticNotify } from '@/lib/telegram';
 
 const STATS: { key: keyof Facts; label: string }[] = [
@@ -76,6 +77,13 @@ export default function FactsPage() {
               value={facts[s.key]}
               overridden={overridden.has(s.key)}
               saving={saving}
+              error={
+                save.isError && save.variables?.key === s.key
+                  ? save.error
+                  : reset.isError && reset.variables === s.key
+                    ? reset.error
+                    : null
+              }
               onSave={(v) => save.mutate({ key: s.key, value: v })}
               onReset={() => reset.mutate(s.key)}
             />
@@ -91,6 +99,7 @@ function FactRow({
   value,
   overridden,
   saving,
+  error,
   onSave,
   onReset,
 }: {
@@ -98,6 +107,7 @@ function FactRow({
   value: number;
   overridden: boolean;
   saving: boolean;
+  error?: unknown;
   onSave: (value: number) => void;
   onReset: () => void;
 }) {
@@ -105,41 +115,48 @@ function FactRow({
 
   return (
     <div className="rounded-2xl border border-border bg-surface p-4">
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-muted">{label}</span>
+      <div className="flex items-center justify-between gap-2">
+        <span className="min-w-0 break-words text-sm text-muted">{label}</span>
         {overridden && (
-          <span className="rounded bg-brand-orange/20 px-2 py-0.5 text-xs font-medium text-brand-orange">
+          <span className="shrink-0 rounded bg-brand-orange/20 px-2 py-0.5 text-xs font-medium text-brand-orange">
             вручну
           </span>
         )}
       </div>
       <p className="mt-1 text-2xl font-bold">{value.toLocaleString('uk-UA')}</p>
-      <div className="mt-3 flex gap-2">
+      {error ? (
+        <div className="mt-3">
+          <FormError error={error} />
+        </div>
+      ) : null}
+      <div className="mt-3 flex flex-wrap gap-2">
         <input
           type="number"
           inputMode="numeric"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Своє значення"
-          className="min-w-0 flex-1 rounded-xl border border-border bg-bg-soft px-3 py-2 text-sm text-fg outline-none placeholder:text-subtle"
+          className="min-w-0 grow basis-40 rounded-xl border border-border bg-bg-soft px-3 py-2 text-sm text-fg outline-none placeholder:text-subtle"
         />
-        <Button
-          variant="outline"
-          disabled={input === '' || saving}
-          onClick={() => {
-            if (input !== '') {
-              onSave(Number(input));
-              setInput('');
-            }
-          }}
-        >
-          Зберегти
-        </Button>
-        {overridden && (
-          <Button variant="ghost" disabled={saving} onClick={onReset}>
-            Скинути
+        <div className="flex shrink-0 gap-2">
+          <Button
+            variant="outline"
+            disabled={input === '' || saving}
+            onClick={() => {
+              if (input !== '') {
+                onSave(Number(input));
+                setInput('');
+              }
+            }}
+          >
+            Зберегти
           </Button>
-        )}
+          {overridden && (
+            <Button variant="ghost" disabled={saving} onClick={onReset}>
+              Скинути
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

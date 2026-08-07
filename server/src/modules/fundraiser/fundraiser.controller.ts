@@ -21,6 +21,7 @@ import { Admin } from '../../auth/admin.decorator';
 import { ApiPaginatedResponse } from '../../common/dto/paginated.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { CreateFundraiserDto } from './dto/create-fundraiser.dto';
+import { FundraiserQueryDto } from './dto/fundraiser-query.dto';
 import { UpdateFundraiserDto } from './dto/update-fundraiser.dto';
 import { CreateDonationDto } from './dto/create-donation.dto';
 import { FundraiserEntity } from './entities/fundraiser.entity';
@@ -42,17 +43,9 @@ export class FundraiserController {
 
   @Get()
   @ApiOperation({ summary: 'List fundraisers, optionally filtered by status' })
-  @ApiQuery({ name: 'status', enum: FundraiserStatus, required: false })
   @ApiPaginatedResponse(FundraiserEntity)
-  findAll(
-    @Query() pagination: PaginationQueryDto,
-    @Query('status') status?: FundraiserStatus,
-  ) {
-    const filter =
-      status && Object.values(FundraiserStatus).includes(status)
-        ? status
-        : undefined;
-    return this.fundraiserService.findAll(pagination, filter);
+  findAll(@Query() query: FundraiserQueryDto) {
+    return this.fundraiserService.findAll(query, query.status);
   }
 
   @Get(':id')

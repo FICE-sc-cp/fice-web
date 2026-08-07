@@ -39,8 +39,8 @@ export default function EditNewsPage() {
   function handleSubmit(v: NewsFormValues) {
     mutation.mutate({
       title: v.title,
-      details: v.details?.trim() ? v.details : undefined,
-      image: v.image ?? undefined,
+      details: v.details?.trim() ? v.details : '',
+      image: v.image ?? null,
       category: v.category ? v.category : null,
       eventDate: v.isEvent && v.eventDate ? new Date(v.eventDate).toISOString() : null,
       eventLocation:
@@ -58,32 +58,26 @@ export default function EditNewsPage() {
           <Spinner />
         </div>
       ) : (
-        <>
-          {mutation.error && (
-            <p className="mb-4 rounded-xl border border-brand-red/40 bg-brand-red/10 px-4 py-3 text-sm text-brand-red">
-              {mutation.error instanceof Error ? mutation.error.message : 'Помилка'}
-            </p>
-          )}
-          <NewsForm
-            submitLabel="Зберегти"
-            submitting={mutation.isPending}
-            onSubmit={handleSubmit}
-            defaultValues={
-              data
-                ? {
-                    title: data.title,
-                    details: data.details ?? '',
-                    image: data.image,
-                    category: data.category ?? '',
-                    isEvent: !!data.eventDate,
-                    eventDate: data.eventDate ? toLocalInput(data.eventDate) : '',
-                    eventLocation: data.eventLocation ?? '',
-                    registrationLink: data.registrationLink ?? '',
-                  }
-                : undefined
-            }
-          />
-        </>
+        <NewsForm
+          submitLabel="Зберегти"
+          submitting={mutation.isPending}
+          onSubmit={handleSubmit}
+          error={mutation.error}
+          defaultValues={
+            data
+              ? {
+                  title: data.title,
+                  details: data.details ?? '',
+                  image: data.image,
+                  category: data.category ?? '',
+                  isEvent: !!data.eventDate,
+                  eventDate: data.eventDate ? toLocalInput(data.eventDate) : '',
+                  eventLocation: data.eventLocation ?? '',
+                  registrationLink: data.registrationLink ?? '',
+                }
+              : undefined
+          }
+        />
       )}
     </main>
   );

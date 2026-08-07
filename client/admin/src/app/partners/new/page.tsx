@@ -31,15 +31,11 @@ export default function NewPartnerPage() {
   return (
     <main className="mx-auto max-w-xl px-4 py-6">
       <PageHeader title="Новий партнер" />
-      {mutation.error && (
-        <p className="mb-4 rounded-xl border border-brand-red/40 bg-brand-red/10 px-4 py-3 text-sm text-brand-red">
-          {mutation.error instanceof Error ? mutation.error.message : 'Помилка'}
-        </p>
-      )}
       <PartnerForm
         submitLabel="Створити"
         submitting={mutation.isPending}
         onSubmit={handleSubmit}
+        error={mutation.error}
       />
     </main>
   );

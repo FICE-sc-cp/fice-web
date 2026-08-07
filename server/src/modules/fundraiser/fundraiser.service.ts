@@ -35,6 +35,17 @@ export class FundraiserService {
     });
   }
 
+  async closeExpired() {
+    const { count } = await this.prisma.fundraiser.updateMany({
+      where: {
+        status: FundraiserStatus.ACTIVE,
+        endDate: { lt: new Date() },
+      },
+      data: { status: FundraiserStatus.CLOSED },
+    });
+    return count;
+  }
+
   async findAll({ page, limit }: PaginationQueryDto, status?: FundraiserStatus) {
     const where = status ? { status } : undefined;
     const [items, total] = await this.prisma.$transaction([

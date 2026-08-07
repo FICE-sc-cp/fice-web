@@ -6,12 +6,9 @@ import { Footer } from "@/components/layout/Footer";
 import { Container } from "@/components/ui/Container";
 import { Glow } from "@/components/ui/Glow";
 import { Reveal, RevealGroup } from "@/components/ui/Reveal";
-import {
-  IconDefs,
-  CalendarIcon,
-  PinIcon,
-  PeopleIcon,
-} from "@/components/ui/icons";
+import { EventCard } from "@/components/sections/EventCard";
+import { IconDefs, PeopleIcon } from "@/components/ui/icons";
+import { fice, safe, type EventItem } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 const GRADIENT = "bg-gradient-magenta";
@@ -65,29 +62,15 @@ const QUALITIES = [
   },
 ];
 
-const FESTS = [
-  {
-    title: "Абітфест",
-    date: "14 лютого",
-    location: "Кампус КПІ",
-    description:
-      "Захід для майбутніх студентів: знайомство з факультетом, спеціальностями та студентським життям зсередини.",
-  },
-  {
-    title: "Абітфест",
-    date: "14 лютого",
-    location: "Кампус КПІ",
-    description:
-      "Захід для майбутніх студентів: знайомство з факультетом, спеціальностями та студентським життям зсередини.",
-  },
-  {
-    title: "Абітфест",
-    date: "14 лютого",
-    location: "Кампус КПІ",
-    description:
-      "Захід для майбутніх студентів: знайомство з факультетом, спеціальностями та студентським життям зсередини.",
-  },
-];
+const FESTS_LIMIT = 3;
+
+const EMPTY_EVENTS = {
+  items: [] as EventItem[],
+  total: 0,
+  page: 1,
+  limit: FESTS_LIMIT,
+  totalPages: 0,
+};
 
 export const metadata: Metadata = {
   title: "Департамент роботи з абітурієнтами — Студрада ФІОТ",
@@ -104,9 +87,15 @@ function SectionHeading({ title }: { title: string }) {
   );
 }
 
-export default function ApplicantsPage() {
+export default async function ApplicantsPage() {
   const joinHref = `/join?dept=${encodeURIComponent(NAME)}`;
   const memberCount = MEMBER_COUNT;
+
+  const [upcomingData, pastData] = await Promise.all([
+    safe(fice.events(FESTS_LIMIT, 1, false, true), EMPTY_EVENTS),
+    safe(fice.events(FESTS_LIMIT, 1, true, true), EMPTY_EVENTS),
+  ]);
+  const fests = [...upcomingData.items, ...pastData.items].slice(0, FESTS_LIMIT);
 
   return (
     <>
@@ -261,56 +250,20 @@ export default function ApplicantsPage() {
           </Container>
         </section>
 
-        <section className="relative isolate py-16 pb-24 lg:py-24 lg:pb-32">
-          <Container className="flex flex-col">
-            <Reveal className="flex flex-col items-center">
-              <SectionHeading title="Події" />
-            </Reveal>
-            <RevealGroup className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {FESTS.map((fest, i) => (
-                <article
-                  key={i}
-                  className="flex flex-col gap-6 rounded-lg border border-border p-6 transition-all duration-300 hover:-translate-y-1 hover:border-brand-magenta/40 hover:shadow-xl hover:shadow-brand-magenta/10"
-                >
-                  <div
-                    className="relative aspect-square w-full overflow-hidden rounded-lg bg-cover bg-center"
-                    style={{
-                      backgroundImage:
-                        "url(/placeholder-for-fundraisers-and-events.png)",
-                    }}
-                  />
-                  <div className="flex flex-1 flex-col gap-6">
-                    <div className="flex flex-col gap-4">
-                      <h3 className="text-xl font-bold text-white">
-                        {fest.title}
-                      </h3>
-                      <div className="flex flex-col gap-2 text-base text-stone-300">
-                        <div className="flex items-center gap-2">
-                          <span className="size-5 shrink-0">
-                            <CalendarIcon />
-                          </span>
-                          {fest.date}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="size-5 shrink-0">
-                            <PinIcon />
-                          </span>
-                          {fest.location}
-                        </div>
-                      </div>
-                      <p className="text-base leading-relaxed text-stone-300">
-                        {fest.description}
-                      </p>
-                    </div>
-                    <span className="mt-auto rounded-lg bg-neutral-600/60 px-7 py-3.5 text-center text-lg font-bold text-white">
-                      Реєстрація закрита
-                    </span>
-                  </div>
-                </article>
-              ))}
-            </RevealGroup>
-          </Container>
-        </section>
+        {fests.length > 0 && (
+          <section className="relative isolate py-16 pb-24 lg:py-24 lg:pb-32">
+            <Container className="flex flex-col">
+              <Reveal className="flex flex-col items-center">
+                <SectionHeading title="Події" />
+              </Reveal>
+              <RevealGroup className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+                {fests.map((fest) => (
+                  <EventCard key={fest.id} event={fest} />
+                ))}
+              </RevealGroup>
+            </Container>
+          </section>
+        )}
 
       </main>
       <Footer />

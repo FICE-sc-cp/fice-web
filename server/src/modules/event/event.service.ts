@@ -73,15 +73,28 @@ export class EventService {
     });
   }
 
-  async findAll({ page, limit }: PaginationQueryDto) {
+  async findAll(
+    { page, limit }: PaginationQueryDto,
+    past?: boolean,
+    abitfest?: boolean,
+  ) {
+    const now = new Date();
+    const where: Prisma.EventWhereInput = {};
+    if (past !== undefined) {
+      where.date = past ? { lt: now } : { gte: now };
+    }
+    if (abitfest !== undefined) {
+      where.isAbitfest = abitfest;
+    }
     const [items, total] = await this.prisma.$transaction([
       this.prisma.event.findMany({
+        where,
         include: this.include,
         skip: skipFor(page, limit),
         take: limit,
-        orderBy: { date: 'desc' },
+        orderBy: { date: past === false ? 'asc' : 'desc' },
       }),
-      this.prisma.event.count(),
+      this.prisma.event.count({ where }),
     ]);
     return paginated(items, total, page, limit);
   }

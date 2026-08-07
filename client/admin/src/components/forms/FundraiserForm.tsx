@@ -8,29 +8,32 @@ import { Textarea } from '../ui/Textarea';
 import { RichTextArea } from '../RichTextArea';
 import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
+import { FormError } from '@/components/ui/FormError';
+import { useFormErrors } from '@/lib/formErrors';
 import { ImageUpload } from '../ImageUpload';
 import { useMainButton } from '@/lib/telegram';
 
-const urlField = z
-  .union([z.string().url('Невалідний URL'), z.literal('')])
-  .optional();
+const urlField = (example: string) =>
+  z
+    .union([z.string().url(`Невалідне посилання, приклад: ${example}`), z.literal('')])
+    .optional();
 
 const schema = z.object({
-  name: z.string().min(1, 'Вкажи назву').max(120),
-  status: z.enum(['ACTIVE', 'CLOSED']),
+  name: z.string().min(1, 'Вкажи назву').max(120, 'Максимум 120 символів'),
+  status: z.enum(['ACTIVE', 'CLOSED'], { error: 'Обери статус зі списку' }),
   imageUrl: z.string().nullable().optional(),
-  description: z.string().min(1, 'Вкажи короткий опис').max(255),
+  description: z.string().min(1, 'Вкажи короткий опис').max(255, 'Максимум 255 символів'),
   story: z.string().optional(),
-  location: z.string().max(100).optional(),
+  location: z.string().max(100, 'Максимум 100 символів').optional(),
   goalAmount: z.string().min(1, 'Вкажи ціль'),
   currentAmount: z.string().optional(),
   donationsCount: z.string().optional(),
-  cardNumber: z.string().max(25).optional(),
-  jarUrl: urlField,
-  monoJarId: z.string().max(40).optional(),
+  cardNumber: z.string().max(25, 'Максимум 25 символів').optional(),
+  jarUrl: urlField('https://send.monobank.ua/jar/abc123'),
+  monoJarId: z.string().max(40, 'Максимум 40 символів').optional(),
   startDate: z.string().min(1, 'Вкажи дату початку'),
   endDate: z.string().min(1, 'Вкажи дату завершення'),
-  detailsLink: urlField,
+  detailsLink: urlField('https://example.com'),
 });
 
 export type FundraiserFormValues = z.infer<typeof schema>;
@@ -40,17 +43,20 @@ export function FundraiserForm({
   onSubmit,
   submitting,
   submitLabel,
+  error,
 }: {
   defaultValues?: Partial<FundraiserFormValues>;
   onSubmit: (values: FundraiserFormValues) => void;
   submitting: boolean;
   submitLabel: string;
+  error?: unknown;
 }) {
   const {
     register,
     handleSubmit,
     watch,
     setValue,
+    setError,
     formState: { errors },
   } = useForm<FundraiserFormValues>({
     resolver: zodResolver(schema),
@@ -76,11 +82,17 @@ export function FundraiserForm({
 
   const imageUrl = watch('imageUrl');
   const story = watch('story');
-  const submit = handleSubmit(onSubmit);
+  const { formRef, onInvalid, serverMessages } = useFormErrors(
+    error,
+    setError,
+    Object.keys(schema.shape),
+  );
+
+  const submit = handleSubmit(onSubmit, onInvalid);
   useMainButton({ text: submitLabel, onClick: () => void submit(), loading: submitting });
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-4">
+    <form ref={formRef} onSubmit={submit} className="flex flex-col gap-4">
       <Input label="Назва" {...register('name')} error={errors.name?.message} />
       <Select
         label="Статус"
@@ -89,6 +101,7 @@ export function FundraiserForm({
           { value: 'CLOSED', label: 'Закритий' },
         ]}
         {...register('status')}
+        error={errors.status?.message}
       />
       <ImageUpload
         label="Головне фото"
@@ -113,15 +126,25 @@ export function FundraiserForm({
         error={errors.location?.message}
       />
 
-      <div className="grid grid-cols-2 gap-3">
-        <Input
-          label="Ціль, ₴"
-          type="number"
-          min="0"
-          {...register('goalAmount')}
-          error={errors.goalAmount?.message}
-        />
-        <Input label="Зібрано, ₴" type="number" min="0" {...register('currentAmount')} />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="min-w-0">
+          <Input
+            label="Ціль, ₴"
+            type="number"
+            min="0"
+            {...register('goalAmount')}
+            error={errors.goalAmount?.message}
+          />
+        </div>
+        <div className="min-w-0">
+          <Input
+            label="Зібрано, ₴"
+            type="number"
+            min="0"
+            {...register('currentAmount')}
+            error={errors.currentAmount?.message}
+          />
+        </div>
       </div>
       <Input
         label="Кількість донатів"
@@ -129,6 +152,7 @@ export function FundraiserForm({
         min="0"
         placeholder="0"
         {...register('donationsCount')}
+        error={errors.donationsCount?.message}
       />
 
       <div className="rounded-xl border border-border bg-bg-soft p-3">
@@ -157,19 +181,25 @@ export function FundraiserForm({
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Input
-          label="Початок"
-          type="date"
-          {...register('startDate')}
-          error={errors.startDate?.message}
-        />
-        <Input
-          label="Завершення"
-          type="date"
-          {...register('endDate')}
-          error={errors.endDate?.message}
-        />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="min-w-0">
+          <Input
+            label="Початок"
+            type="date"
+            className="w-full min-w-0"
+            {...register('startDate')}
+            error={errors.startDate?.message}
+          />
+        </div>
+        <div className="min-w-0">
+          <Input
+            label="Завершення"
+            type="date"
+            className="w-full min-w-0"
+            {...register('endDate')}
+            error={errors.endDate?.message}
+          />
+        </div>
       </div>
       <Input
         label="Посилання на звітність (необовʼязково)"
@@ -177,6 +207,7 @@ export function FundraiserForm({
         {...register('detailsLink')}
         error={errors.detailsLink?.message}
       />
+      <FormError messages={serverMessages} />
       <Button type="submit" disabled={submitting} className="mt-1">
         {submitting ? 'Збереження…' : submitLabel}
       </Button>

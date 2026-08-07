@@ -192,6 +192,8 @@ model Event {
   feeAmount             Decimal?  @db.Decimal(10, 2)
   feeAtEventAmount      Decimal?  @db.Decimal(10, 2)
   feeRequisites         String?   @db.VarChar(255)
+  isAbitfest            Boolean   @default(false)
+  noRegistration        Boolean   @default(false)
 
   detailsId String?       @unique @db.Uuid
   details   EventDetails? @relation(fields: [detailsId], references: [id], onDelete: SetNull)

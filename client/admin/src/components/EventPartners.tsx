@@ -5,6 +5,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { api, mediaUrl, type EventPartner } from '@/lib/api';
 import { Input } from './ui/Input';
 import { Button } from './ui/Button';
+import { FormError } from './ui/FormError';
 import { ImageUpload } from './ImageUpload';
 import { hapticNotify } from '@/lib/telegram';
 
@@ -53,6 +54,12 @@ export function EventPartners({
       <p className="mb-3 text-xs text-subtle">
         Лише для цього заходу — у загальний список партнерів не потрапляють.
       </p>
+
+      {remove.error ? (
+        <div className="mb-3">
+          <FormError error={remove.error} />
+        </div>
+      ) : null}
 
       {attached.length ? (
         <ul className="mb-4 flex flex-col gap-2">
@@ -103,6 +110,7 @@ export function EventPartners({
           value={websiteLink}
           onChange={(e) => setWebsiteLink(e.target.value)}
         />
+        <FormError error={add.error} />
         <Button
           type="button"
           variant="outline"

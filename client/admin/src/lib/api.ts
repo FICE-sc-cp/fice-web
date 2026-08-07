@@ -1,4 +1,5 @@
 import { getInitData } from './auth';
+import { ApiError, errorText } from './errors';
 
 const BASE = '/api-proxy';
 
@@ -135,6 +136,8 @@ export interface EventItem {
   feeAmount: string | null;
   feeAtEventAmount: string | null;
   feeRequisites: string | null;
+  isAbitfest: boolean;
+  noRegistration: boolean;
   detailsId: string | null;
   details?: EventDetails | null;
   eventPartners?: EventPartner[];
@@ -158,15 +161,6 @@ export interface EventRegistration {
 
 export type FundraiserStatus = 'ACTIVE' | 'CLOSED';
 
-export interface Donation {
-  id: string;
-  fundraiserId: string;
-  name: string | null;
-  amount: string;
-  comment: string | null;
-  createdAt: string;
-}
-
 export interface Fundraiser {
   id: string;
   name: string;
@@ -184,7 +178,6 @@ export interface Fundraiser {
   startDate: string;
   endDate: string;
   detailsLink: string | null;
-  donations?: Donation[];
 }
 
 export type NewsCategory =
@@ -227,16 +220,26 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
     headers.set('Content-Type', 'application/json');
   }
 
-  const res = await fetch(`${BASE}${path}`, { ...init, headers, cache: 'no-store' });
+  let res: Response;
+  try {
+    res = await fetch(`${BASE}${path}`, { ...init, headers, cache: 'no-store' });
+  } catch {
+    throw new ApiError(
+      0,
+      [],
+      'Немає звʼязку із сервером. Перевір інтернет і спробуй ще раз.',
+    );
+  }
   if (!res.ok) {
-    let message = `Помилка ${res.status}`;
+    let details: string[] = [];
     try {
       const data = (await res.json()) as { message?: string | string[] };
       if (data?.message) {
-        message = Array.isArray(data.message) ? data.message.join(', ') : data.message;
+        details = Array.isArray(data.message) ? data.message : [data.message];
       }
     } catch {}
-    throw new Error(message);
+    const error = new ApiError(res.status, details, `Помилка ${res.status}`);
+    throw new ApiError(res.status, details, errorText(error));
   }
   if (res.status === 204) return undefined as T;
   return (await res.json()) as Promise<T>;
@@ -252,7 +255,7 @@ const json = (body: unknown): RequestInit => ({ body: JSON.stringify(body) });
 export interface NewsInput {
   title: string;
   details?: string;
-  image?: string;
+  image?: string | null;
   publishDate?: string;
   category?: NewsCategory | null;
   eventDate?: string | null;
@@ -278,17 +281,19 @@ export interface EventQuestionInput {
 export interface EventInput {
   name: string;
   date: string;
-  photoUrl?: string;
+  photoUrl?: string | null;
   detailsId?: string;
   description?: string;
-  location?: string;
-  locationNote?: string;
+  location?: string | null;
+  locationNote?: string | null;
   timeNote?: string;
   registrationCloseDate?: string;
-  photoAlbumUrl?: string;
+  photoAlbumUrl?: string | null;
   feeAmount?: number;
   feeAtEventAmount?: number;
   feeRequisites?: string;
+  isAbitfest?: boolean;
+  noRegistration?: boolean;
   program?: EventProgramInput[];
   questions?: EventQuestionInput[];
 }
@@ -303,47 +308,40 @@ export interface EventDetailsInput {
 
 export interface PartnerInput {
   name: string;
-  logoImage?: string;
-  websiteLink?: string;
+  logoImage?: string | null;
+  websiteLink?: string | null;
 }
 
 export interface FundraiserInput {
   name: string;
   status?: FundraiserStatus;
   description: string;
-  story?: string;
-  imageUrl?: string;
-  location?: string;
+  story?: string | null;
+  imageUrl?: string | null;
+  location?: string | null;
   goalAmount: number;
   currentAmount?: number;
   donationsCount?: number;
-  cardNumber?: string;
-  jarUrl?: string;
-  monoJarId?: string;
+  cardNumber?: string | null;
+  jarUrl?: string | null;
+  monoJarId?: string | null;
   startDate: string;
   endDate: string;
-  detailsLink?: string;
-}
-
-export interface DonationInput {
-  name?: string;
-  amount: number;
-  comment?: string;
-  createdAt?: string;
+  detailsLink?: string | null;
 }
 
 export interface DepartmentInput {
   name: string;
   memberCount?: number;
-  telegramChatId?: string;
+  telegramChatId?: string | null;
   headId?: string;
 }
 
 export interface DepartmentHeadInput {
   firstName: string;
   lastName: string;
-  photo?: string;
-  jobDescription?: string;
+  photo?: string | null;
+  jobDescription?: string | null;
   telegramTag?: string;
 }
 
@@ -351,8 +349,8 @@ export interface DepartmentMemberInput {
   role: DepartmentMemberRole;
   firstName: string;
   lastName: string;
-  specialization?: string;
-  photo?: string;
+  specialization?: string | null;
+  photo?: string | null;
   telegramTag?: string;
 }
 
@@ -365,7 +363,7 @@ export interface ChannelStatus {
 
 export interface ChannelPostInput {
   text: string;
-  imageUrl?: string;
+  imageUrl?: string | null;
   eventId?: string;
   buttonText?: string;
   buttonUrl?: string;
@@ -388,7 +386,7 @@ export interface ProjectParticipant {
 export interface ProjectParticipantInput {
   fullName: string;
   telegramTag?: string;
-  photo?: string;
+  photo?: string | null;
   hidden?: boolean;
   departmentId?: string;
 }
@@ -460,12 +458,6 @@ export const api = {
     request<Fundraiser>(`/fundraiser/${id}`, { method: 'PATCH', ...json(body) }),
   deleteFundraiser: (id: string) =>
     request<Fundraiser>(`/fundraiser/${id}`, { method: 'DELETE' }),
-  fundraiserDonations: (id: string) =>
-    request<Donation[]>(`/fundraiser/${id}/donations`),
-  addDonation: (id: string, body: DonationInput) =>
-    request<Donation>(`/fundraiser/${id}/donations`, { method: 'POST', ...json(body) }),
-  removeDonation: (id: string, donationId: string) =>
-    request<unknown>(`/fundraiser/${id}/donations/${donationId}`, { method: 'DELETE' }),
 
   departments: () => request<Department[]>('/department'),
   department: (id: string) => request<Department>(`/department/${id}`),

@@ -1,20 +1,20 @@
-import type { Metadata } from 'next';
-import Link from 'next/link';
-import { notFound } from 'next/navigation';
-import { IconDefs } from '@/components/ui/icons';
-import { Header } from '@/components/layout/Header';
-import { Footer } from '@/components/layout/Footer';
-import { Container } from '@/components/ui/Container';
-import { Glow } from '@/components/ui/Glow';
-import { fice, mediaUrl, safe, type News, type Paginated } from '@/lib/api';
-import { renderRichInline } from '@/lib/richText';
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { IconDefs } from "@/components/ui/icons";
+import { Header } from "@/components/layout/Header";
+import { Footer } from "@/components/layout/Footer";
+import { Container } from "@/components/ui/Container";
+import { Glow } from "@/components/ui/Glow";
+import { fice, mediaUrl, safe, type News, type Paginated } from "@/lib/api";
+import { renderRichInline } from "@/lib/richText";
 import {
   bodyParagraphs,
   categoryLabel,
   formatEventDateTime,
   formatNewsDate,
   readingTime,
-} from '@/lib/news';
+} from "@/lib/news";
 
 const EMPTY: Paginated<News> = {
   items: [],
@@ -31,7 +31,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const item = await safe<News | null>(fice.newsItem(id), null);
-  if (!item) return { title: 'Новина — ФІОТ' };
+  if (!item) return { title: "Новина — ФІОТ" };
   return { title: `${item.title} — Новини ФІОТ` };
 }
 
@@ -104,7 +104,7 @@ export default async function NewsArticlePage({
               className="mb-11 overflow-hidden rounded-2xl border border-brand-cyan p-7 sm:p-8"
               style={{
                 backgroundImage:
-                  'linear-gradient(135deg, rgba(54,223,255,0.08), rgba(173,70,255,0.06))',
+                  "linear-gradient(135deg, rgba(54,223,255,0.08), rgba(173,70,255,0.06))",
               }}
             >
               <span className="mb-4 inline-flex items-center gap-2 text-[12.5px] font-extrabold uppercase tracking-wider text-brand-cyan">
@@ -115,7 +115,7 @@ export default async function NewsArticlePage({
                 <EventField label="Час" value={event.time} />
                 <EventField
                   label="Локація"
-                  value={item.eventLocation ?? 'Уточнюється'}
+                  value={item.eventLocation ?? "Уточнюється"}
                 />
               </div>
               {item.registrationLink && (
@@ -159,12 +159,6 @@ export default async function NewsArticlePage({
                 <h2 className="text-3xl font-extrabold tracking-tight">
                   Інші новини
                 </h2>
-                <Link
-                  href="/news"
-                  className="text-[15px] font-extrabold text-brand-cyan transition-opacity hover:opacity-70"
-                >
-                  Усі новини →
-                </Link>
               </div>
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {related.map((n) => {
@@ -179,7 +173,9 @@ export default async function NewsArticlePage({
                         <div
                           className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
                           style={
-                            url ? { backgroundImage: `url("${url}")` } : undefined
+                            url
+                              ? { backgroundImage: `url("${url}")` }
+                              : undefined
                           }
                         >
                           {!url && (

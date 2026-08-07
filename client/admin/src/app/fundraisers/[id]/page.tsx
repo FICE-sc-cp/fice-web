@@ -8,7 +8,6 @@ import {
   FundraiserForm,
   type FundraiserFormValues,
 } from '@/components/forms/FundraiserForm';
-import { FundraiserDonations } from '@/components/FundraiserDonations';
 import { Spinner } from '@/components/ui/Spinner';
 import { hapticNotify } from '@/lib/telegram';
 
@@ -28,18 +27,18 @@ export default function EditFundraiserPage() {
         name: v.name,
         status: v.status,
         description: v.description,
-        story: v.story || undefined,
-        imageUrl: v.imageUrl || undefined,
-        location: v.location || undefined,
+        story: v.story || null,
+        imageUrl: v.imageUrl || null,
+        location: v.location || null,
         goalAmount: Number(v.goalAmount) || 0,
         currentAmount: v.currentAmount ? Number(v.currentAmount) : undefined,
         donationsCount: v.donationsCount ? Number(v.donationsCount) : undefined,
-        cardNumber: v.cardNumber || undefined,
-        jarUrl: v.jarUrl || undefined,
-        monoJarId: v.monoJarId || undefined,
+        cardNumber: v.cardNumber || null,
+        jarUrl: v.jarUrl || null,
+        monoJarId: v.monoJarId || null,
         startDate: new Date(v.startDate).toISOString(),
         endDate: new Date(v.endDate).toISOString(),
-        detailsLink: v.detailsLink || undefined,
+        detailsLink: v.detailsLink || null,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['fundraisers'] });
@@ -57,40 +56,30 @@ export default function EditFundraiserPage() {
           <Spinner />
         </div>
       ) : (
-        <>
-          {mutation.error && (
-            <p className="mb-4 rounded-xl border border-brand-red/40 bg-brand-red/10 px-4 py-3 text-sm text-brand-red">
-              {mutation.error instanceof Error ? mutation.error.message : 'Помилка'}
-            </p>
-          )}
-          <FundraiserForm
-            key={`${data.currentAmount}-${data.donationsCount}`}
-            submitLabel="Зберегти"
-            submitting={mutation.isPending}
-            onSubmit={(v) => mutation.mutate(v)}
-            defaultValues={{
-              name: data.name,
-              status: data.status,
-              imageUrl: data.imageUrl,
-              description: data.description,
-              story: data.story ?? '',
-              location: data.location ?? '',
-              goalAmount: String(data.goalAmount),
-              currentAmount: String(data.currentAmount),
-              donationsCount: String(data.donationsCount),
-              cardNumber: data.cardNumber ?? '',
-              jarUrl: data.jarUrl ?? '',
-              monoJarId: data.monoJarId ?? '',
-              startDate: data.startDate.slice(0, 10),
-              endDate: data.endDate.slice(0, 10),
-              detailsLink: data.detailsLink ?? '',
-            }}
-          />
-          <FundraiserDonations
-            fundraiserId={id}
-            donations={data.donations ?? []}
-          />
-        </>
+        <FundraiserForm
+          key={`${data.currentAmount}-${data.donationsCount}`}
+          submitLabel="Зберегти"
+          submitting={mutation.isPending}
+          onSubmit={(v) => mutation.mutate(v)}
+          error={mutation.error}
+          defaultValues={{
+            name: data.name,
+            status: data.status,
+            imageUrl: data.imageUrl,
+            description: data.description,
+            story: data.story ?? '',
+            location: data.location ?? '',
+            goalAmount: String(data.goalAmount),
+            currentAmount: String(data.currentAmount),
+            donationsCount: String(data.donationsCount),
+            cardNumber: data.cardNumber ?? '',
+            jarUrl: data.jarUrl ?? '',
+            monoJarId: data.monoJarId ?? '',
+            startDate: data.startDate.slice(0, 10),
+            endDate: data.endDate.slice(0, 10),
+            detailsLink: data.detailsLink ?? '',
+          }}
+        />
       )}
     </main>
   );

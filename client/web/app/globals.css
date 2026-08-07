@@ -189,3 +189,11 @@
 .frog-step-b {
   animation: frog-step-b 0.52s linear infinite;
 }
+
+body > main {
+  flex: 1 0 auto;
+}
+
+body > footer {
+  margin-top: auto;
+}
