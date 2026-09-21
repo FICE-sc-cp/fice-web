@@ -21,6 +21,10 @@ import { ApplicantModule } from './modules/applicant/applicant.module';
 import { FactsModule } from './modules/facts/facts.module';
 import { ChannelModule } from './modules/channel/channel.module';
 import { ProjectParticipantModule } from './modules/project_participant/project_participant.module';
+import { BotUserModule } from './modules/bot-user/bot-user.module';
+import { VotingModule } from './modules/voting/voting.module';
+import { BroadcastModule } from './modules/broadcast/broadcast.module';
+import { BlockedUsersModule } from './modules/blocked-users/blocked-users.module';
 
 @Module({
   imports: [
@@ -43,6 +47,10 @@ import { ProjectParticipantModule } from './modules/project_participant/project_
     FactsModule,
     ChannelModule,
     ProjectParticipantModule,
+    BotUserModule,
+    VotingModule,
+    BroadcastModule,
+    BlockedUsersModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

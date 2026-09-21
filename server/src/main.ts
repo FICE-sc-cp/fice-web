@@ -9,6 +9,11 @@ import { AppModule } from './app.module';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
 import { UPLOAD_DIR, UPLOAD_URL_PREFIX } from './upload/upload.constants';
 
+// Polyfill BigInt JSON serialization globally
+(BigInt.prototype as any).toJSON = function () {
+  return this.toString();
+};
+
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
