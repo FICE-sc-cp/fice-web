@@ -56,6 +56,28 @@
     font-size: 87.5%;
     scroll-behavior: smooth;
   }
+  html:has(#mini-app-root) {
+    font-size: 100%;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  html:has(#mini-app-root),
+  body:has(#mini-app-root),
+  #mini-app-root,
+  #mini-app-root * {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  html:has(#mini-app-root)::-webkit-scrollbar,
+  body:has(#mini-app-root)::-webkit-scrollbar,
+  #mini-app-root::-webkit-scrollbar,
+  #mini-app-root *::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
   body {
     background-color: var(--color-bg);
     color: var(--color-fg);
