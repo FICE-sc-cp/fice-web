@@ -47,7 +47,7 @@ export class FundraiserService {
   }
 
   async findAll({ page, limit }: PaginationQueryDto, status?: FundraiserStatus) {
-    const where = status ? { status } : undefined;
+    const where = status ? { status } : { status: { not: FundraiserStatus.DRAFT } };
     const [items, total] = await this.prisma.$transaction([
       this.prisma.fundraiser.findMany({
         where,

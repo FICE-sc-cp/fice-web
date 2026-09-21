@@ -14,4 +14,8 @@ export class NewsQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsEnum(NewsCategory)
   category?: NewsCategory;
+
+  @ApiPropertyOptional({ description: 'Include drafts' })
+  @IsOptional()
+  draft?: boolean;
 }
