@@ -1,17 +1,23 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Prisma, RegistrationPayment } from '@prisma/client';
+import { randomUUID } from 'crypto';
 import * as ExcelJS from 'exceljs';
 import { PrismaService } from '../../database/prisma.service';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { paginated, skipFor } from '../../common/pagination';
+import { parseKpiGroup } from '../../common/kpi-groups';
 import { AddEventPartnerDto } from './dto/add-event-partner.dto';
 import { CreateEventDto } from './dto/create-event.dto';
 import { CreateEventRegistrationDto } from './dto/create-event-registration.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
+
+import { BotService } from '../../bot/bot.service';
 
 const PAYMENT_LABEL: Record<RegistrationPayment, string> = {
   NONE: '—',
@@ -19,9 +25,19 @@ const PAYMENT_LABEL: Record<RegistrationPayment, string> = {
   AT_EVENT: 'На заході',
 };
 
+const normalizeTags = (tags?: string[]) =>
+  (tags ?? [])
+    .map((t) => t.trim().toLowerCase())
+    .filter(Boolean)
+    .map((t) => (t.startsWith('@') ? t : `@${t}`));
+
 @Injectable()
 export class EventService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
+    private readonly botService: BotService,
+  ) {}
 
   private readonly include: Prisma.EventInclude = {
     details: { include: { department: true } },
@@ -43,11 +59,21 @@ export class EventService {
   };
 
   create(dto: CreateEventDto) {
-    const { detailsId, program, questions, ...rest } = dto;
+    const { detailsId, program, questions, partners, checkInStaffTags, ...rest } = dto;
     return this.prisma.event.create({
       data: {
         ...rest,
+        checkInStaffTags: checkInStaffTags ? normalizeTags(checkInStaffTags) : [],
         details: detailsId ? { connect: { id: detailsId } } : undefined,
+        eventPartners: partners?.length
+          ? {
+              create: partners.map((p) => ({
+                name: p.name,
+                logoImage: p.logoImage,
+                websiteLink: p.websiteLink,
+              })),
+            }
+          : undefined,
         program: program?.length
           ? {
               create: program.map((p, i) => ({
@@ -77,9 +103,13 @@ export class EventService {
     { page, limit }: PaginationQueryDto,
     past?: boolean,
     abitfest?: boolean,
+    includeDrafts: boolean = false,
   ) {
     const now = new Date();
     const where: Prisma.EventWhereInput = {};
+    if (!includeDrafts) {
+      where.isDraft = false;
+    }
     if (past !== undefined) {
       where.date = past ? { lt: now } : { gte: now };
     }
@@ -112,18 +142,35 @@ export class EventService {
 
   async update(id: string, dto: UpdateEventDto) {
     await this.findOne(id);
-    const { detailsId, program, questions, ...rest } = dto;
+    const { detailsId, program, questions, partners, checkInStaffTags, ...rest } = dto;
 
     return this.prisma.$transaction(async (tx) => {
       await tx.event.update({
         where: { id },
         data: {
           ...rest,
+          ...(checkInStaffTags !== undefined
+            ? { checkInStaffTags: normalizeTags(checkInStaffTags) }
+            : {}),
           ...(detailsId !== undefined
             ? { details: { connect: { id: detailsId } } }
             : {}),
         },
       });
+
+      if (partners !== undefined) {
+        await tx.eventPartner.deleteMany({ where: { eventId: id } });
+        if (partners?.length) {
+          await tx.eventPartner.createMany({
+            data: partners.map((p) => ({
+              eventId: id,
+              name: p.name,
+              logoImage: p.logoImage ?? null,
+              websiteLink: p.websiteLink ?? null,
+            })),
+          });
+        }
+      }
 
       if (program !== undefined) {
         await tx.eventProgramItem.deleteMany({ where: { eventId: id } });
@@ -217,6 +264,62 @@ export class EventService {
     const answerMap = new Map(
       answers.map((a) => [a.questionId, (a.value ?? '').trim()]),
     );
+    const cleanTag = dto.telegramTag.trim().replace(/^@+/, '');
+    const normalizedTag = `@${cleanTag.toLowerCase()}`;
+
+    // 1. Check if user is blocked
+    const blocked = await this.prisma.blockedUser.findUnique({
+      where: { telegramTag: normalizedTag },
+    });
+    if (blocked && blocked.isBlocked) {
+      throw new ForbiddenException(
+        'Ваш обліковий запис Telegram заблоковано для реєстрації на заходи. Зверніться до підтримки: @fice_robot',
+      );
+    }
+
+    // 2. Check group against event allowed faculties
+    if (event.allowedFaculties && event.allowedFaculties.length > 0) {
+      const parsed = parseKpiGroup(dto.group);
+      if (!parsed.valid) {
+        throw new BadRequestException(parsed.error || 'Невірний шифр академічної групи');
+      }
+      if (!parsed.faculty || !event.allowedFaculties.includes(parsed.faculty)) {
+        await this.prisma.blockedUser.upsert({
+          where: { telegramTag: normalizedTag },
+          create: {
+            telegramTag: normalizedTag,
+            group: dto.group.trim(),
+            faculty: parsed.faculty || null,
+            reason: `Спроба реєстрації з недозволеного факультету (${dto.group.trim()}, ${parsed.faculty ?? 'невідомий'}) на захід «${event.name}»`,
+            isBlocked: true,
+          },
+          update: {
+            group: dto.group.trim(),
+            faculty: parsed.faculty || null,
+            reason: `Спроба реєстрації з недозволеного факультету (${dto.group.trim()}, ${parsed.faculty ?? 'невідомий'}) на захід «${event.name}»`,
+            isBlocked: true,
+          },
+        });
+        throw new ForbiddenException(
+          `Реєстрація доступна лише для студентів [${event.allowedFaculties.join(', ')}]. Ваш Telegram додано до списку заблокованих. Якщо ви помилились у шифрі групи, зверніться до підтримки: @fice_robot`,
+        );
+      }
+    }
+
+    // 2.5 Check if user is already registered for this event
+    const existingRegistration = await this.prisma.eventRegistration.findFirst({
+      where: {
+        eventId,
+        OR: [
+          { telegramTag: { equals: normalizedTag, mode: 'insensitive' } },
+          ...(dto.telegramUserId ? [{ telegramUserId: BigInt(dto.telegramUserId) }] : []),
+        ],
+      },
+    });
+    if (existingRegistration) {
+      throw new BadRequestException('Ви вже зареєстровані на цей захід');
+    }
+
     for (const q of event.questions) {
       if (q.required && !answerMap.get(q.id)) {
         throw new BadRequestException(
@@ -230,11 +333,82 @@ export class EventService {
       .filter((a) => validIds.has(a.questionId) && (a.value ?? '').length > 0)
       .map((a) => ({ questionId: a.questionId, value: a.value }));
 
-    return this.prisma.eventRegistration.create({
+    let botUserId: string | undefined;
+    let telegramUserId: bigint | undefined;
+
+    if (dto.telegramUserId) {
+      telegramUserId = BigInt(dto.telegramUserId);
+
+      const user = await this.prisma.botUser.upsert({
+        where: { telegramId: telegramUserId },
+        create: {
+          telegramId: telegramUserId,
+          chatId: telegramUserId,
+          username: cleanTag || null,
+          fullName: dto.saveProfile ? dto.fullName : null,
+          group: dto.saveProfile ? dto.group : null,
+          birthDate: dto.saveProfile && dto.birthDate ? dto.birthDate : null,
+          phoneNumber: dto.saveProfile && dto.phoneNumber ? dto.phoneNumber : null,
+          isBlocked: false,
+        },
+        update: {
+          username: cleanTag || undefined,
+          ...(dto.saveProfile
+            ? {
+                fullName: dto.fullName,
+                group: dto.group,
+                birthDate: dto.birthDate ?? undefined,
+                phoneNumber: dto.phoneNumber ?? undefined,
+              }
+            : {}),
+        },
+      });
+      botUserId = user.id;
+    } else {
+      // 3. Registration from website: check if user has started the bot
+      const botUser = await this.prisma.botUser.findFirst({
+        where: {
+          username: { equals: cleanTag, mode: 'insensitive' },
+        },
+      });
+
+      if (!botUser) {
+        // Create pending web registration with token
+        const token = randomUUID().replace(/-/g, '');
+        const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+        await this.prisma.pendingWebRegistration.create({
+          data: {
+            token,
+            eventId,
+            payload: dto as any,
+            telegramTag: normalizedTag,
+            expiresAt,
+          },
+        });
+
+        const botUsername =
+          this.configService.get<string>('USER_BOT_USERNAME') || 'fice_event_bot';
+
+        return {
+          requiresBotStart: true,
+          token,
+          botUrl: `https://t.me/${botUsername}?start=reg_${token}`,
+          message: 'Для завершення реєстрації активуйте бота @' + botUsername,
+        };
+      }
+
+      botUserId = botUser.id;
+      telegramUserId = botUser.telegramId;
+    }
+
+    const reg = await this.prisma.eventRegistration.create({
       data: {
         event: { connect: { id: eventId } },
+        botUser: botUserId ? { connect: { id: botUserId } } : undefined,
+        telegramUserId,
         fullName: dto.fullName,
-        telegramTag: dto.telegramTag,
+        telegramTag: normalizedTag,
         group: dto.group,
         birthDate: dto.birthDate ?? null,
         payment: dto.payment ?? RegistrationPayment.NONE,
@@ -243,6 +417,127 @@ export class EventService {
       },
       include: { answers: true },
     });
+
+    return {
+      ...reg,
+      telegramUserId: reg.telegramUserId ? reg.telegramUserId.toString() : null,
+    };
+  }
+
+  async completePendingRegistration(
+    token: string,
+    telegramUserId: bigint,
+    username?: string,
+    firstName?: string,
+    lastName?: string,
+  ) {
+    const pending = await this.prisma.pendingWebRegistration.findUnique({
+      where: { token },
+      include: { event: true },
+    });
+
+    if (!pending) throw new NotFoundException('Реєстраційна сесія не знайдена');
+    if (pending.completed) return { alreadyCompleted: true, event: pending.event };
+    if (pending.expiresAt < new Date()) {
+      throw new BadRequestException('Термін дії посилання реєстрації минув');
+    }
+
+    const payload = pending.payload as any;
+    const cleanTag = (username || pending.telegramTag).replace(/^@+/, '');
+    const normalizedTag = `@${cleanTag.toLowerCase()}`;
+
+    // Upsert BotUser
+    const botUser = await this.prisma.botUser.upsert({
+      where: { telegramId: telegramUserId },
+      create: {
+        telegramId: telegramUserId,
+        chatId: telegramUserId,
+        username: cleanTag || null,
+        firstName: firstName || null,
+        lastName: lastName || null,
+        fullName: payload.fullName || null,
+        group: payload.group || null,
+        birthDate: payload.birthDate ? new Date(payload.birthDate) : null,
+        phoneNumber: payload.phoneNumber || null,
+        isBlocked: false,
+      },
+      update: {
+        chatId: telegramUserId,
+        username: cleanTag || undefined,
+        firstName: firstName || undefined,
+        lastName: lastName || undefined,
+      },
+    });
+
+    const existing = await this.prisma.eventRegistration.findFirst({
+      where: {
+        eventId: pending.eventId,
+        OR: [
+          { telegramUserId },
+          { telegramTag: { equals: normalizedTag, mode: 'insensitive' } },
+        ],
+      },
+    });
+
+    let reg = existing;
+    if (!reg) {
+      const questions = await this.prisma.eventQuestion.findMany({
+        where: { eventId: pending.eventId },
+      });
+      const validIds = new Set(questions.map((q) => q.id));
+      const answerData = ((payload.answers as any[]) ?? [])
+        .filter((a) => validIds.has(a.questionId) && (a.value ?? '').length > 0)
+        .map((a) => ({ questionId: a.questionId, value: a.value }));
+
+      reg = await this.prisma.eventRegistration.create({
+        data: {
+          eventId: pending.eventId,
+          botUserId: botUser.id,
+          telegramUserId,
+          fullName: payload.fullName,
+          telegramTag: normalizedTag,
+          group: payload.group,
+          birthDate: payload.birthDate ? new Date(payload.birthDate) : null,
+          payment: payload.payment ?? RegistrationPayment.NONE,
+          receiptUrl: payload.receiptUrl ?? null,
+          answers: answerData.length ? { create: answerData } : undefined,
+        },
+        include: { answers: true },
+      });
+    }
+
+    await this.prisma.pendingWebRegistration.update({
+      where: { token },
+      data: { completed: true },
+    });
+
+    return { completed: true, registration: reg, event: pending.event };
+  }
+
+  async getRegistrationSession(token: string) {
+    const pending = await this.prisma.pendingWebRegistration.findUnique({
+      where: { token },
+      include: { event: true },
+    });
+    if (!pending) throw new NotFoundException('Session not found');
+
+    let registration: any = null;
+    if (pending.completed) {
+      registration = await this.prisma.eventRegistration.findFirst({
+        where: {
+          eventId: pending.eventId,
+          telegramTag: { equals: pending.telegramTag, mode: 'insensitive' },
+        },
+      });
+    }
+
+    return {
+      token: pending.token,
+      completed: pending.completed,
+      expiresAt: pending.expiresAt,
+      event: { id: pending.event.id, name: pending.event.name },
+      registration,
+    };
   }
 
   async listRegistrations(eventId: string, { page, limit }: PaginationQueryDto) {
@@ -286,6 +581,9 @@ export class EventService {
       'Оплата',
       'Скрін оплати',
       'Зареєстровано',
+      'Присутність',
+      'Час відмітки',
+      'Хто відмітив',
     ];
     sheet.columns = [...baseHeaders, ...event.questions.map((q) => q.label)].map(
       (header) => ({ header, width: Math.min(40, Math.max(16, header.length + 4)) }),
@@ -302,11 +600,218 @@ export class EventService {
         PAYMENT_LABEL[reg.payment],
         reg.receiptUrl ?? '',
         reg.createdAt.toISOString().slice(0, 16).replace('T', ' '),
+        reg.attended ? 'ТАК' : 'НІ',
+        reg.attendedAt ? reg.attendedAt.toISOString().slice(0, 16).replace('T', ' ') : '',
+        reg.attendedBy ?? '',
         ...event.questions.map((q) => answerMap.get(q.id) ?? ''),
       ]);
     }
 
     const buffer = await workbook.xlsx.writeBuffer();
     return Buffer.from(buffer as ArrayBuffer);
+  }
+
+  async verifyCheckInAccess(eventId: string, telegramId?: bigint, username?: string) {
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+      select: { id: true, name: true, checkInStaffTags: true },
+    });
+    if (!event) throw new NotFoundException(`Event ${eventId} not found`);
+
+    let isAdmin = false;
+    const adminGroupId = this.configService.get<string>('ADMIN_GROUP_CHAT_ID');
+
+    if (telegramId && adminGroupId) {
+      isAdmin = await this.botService.isUserInChat(adminGroupId, Number(telegramId));
+    }
+
+    if (this.configService.get<string>('AUTH_DISABLED') === 'true') {
+      isAdmin = true;
+    }
+
+    let isStaff = false;
+    if (username) {
+      const cleanTag = '@' + username.trim().toLowerCase().replace(/^@+/, '');
+      isStaff = (event.checkInStaffTags || []).some(
+        (tag) => tag.trim().toLowerCase() === cleanTag,
+      );
+    }
+
+    const canCheckIn = isAdmin || isStaff;
+    return { canCheckIn, isAdmin, isStaff, event };
+  }
+
+  async getCheckInAccess(eventId: string, telegramId?: bigint, username?: string) {
+    const { canCheckIn, isAdmin, isStaff, event } = await this.verifyCheckInAccess(
+      eventId,
+      telegramId,
+      username,
+    );
+    return { canCheckIn, isAdmin, isStaff, eventName: event.name };
+  }
+
+  async getCheckInList(eventId: string, telegramId?: bigint, username?: string) {
+    const { canCheckIn, event } = await this.verifyCheckInAccess(
+      eventId,
+      telegramId,
+      username,
+    );
+    if (!canCheckIn) {
+      throw new ForbiddenException('У вас немає доступу до відмітки учасників на цьому заході');
+    }
+
+    const registrations = await this.prisma.eventRegistration.findMany({
+      where: { eventId },
+      orderBy: [
+        { attended: 'asc' },
+        { createdAt: 'desc' },
+      ],
+      include: {
+        answers: { include: { question: { select: { label: true } } } },
+      },
+    });
+
+    const total = registrations.length;
+    const attendedCount = registrations.filter((r) => r.attended).length;
+    const unattendedCount = total - attendedCount;
+
+    return {
+      event: {
+        id: event.id,
+        name: event.name,
+      },
+      total,
+      attendedCount,
+      unattendedCount,
+      percentage: total > 0 ? Math.round((attendedCount / total) * 100) : 0,
+      stats: {
+        total,
+        attendedCount,
+        unattendedCount,
+        percentage: total > 0 ? Math.round((attendedCount / total) * 100) : 0,
+      },
+      items: registrations.map((r) => ({
+        id: r.id,
+        fullName: r.fullName,
+        telegramTag: r.telegramTag,
+        group: r.group,
+        birthDate: r.birthDate,
+        payment: r.payment,
+        receiptUrl: r.receiptUrl,
+        attended: r.attended,
+        attendedAt: r.attendedAt,
+        attendedBy: r.attendedBy,
+        createdAt: r.createdAt,
+        answers: r.answers.map((a) => ({
+          id: a.id,
+          question: a.question.label,
+          value: a.value,
+        })),
+      })),
+    };
+  }
+
+  async toggleCheckIn(
+    eventId: string,
+    registrationId: string,
+    attended: boolean,
+    telegramId?: bigint,
+    username?: string,
+    staffName?: string,
+  ) {
+    const { canCheckIn } = await this.verifyCheckInAccess(
+      eventId,
+      telegramId,
+      username,
+    );
+    if (!canCheckIn) {
+      throw new ForbiddenException('У вас немає доступу до відмітки учасників на цьому заході');
+    }
+
+    const reg = await this.prisma.eventRegistration.findFirst({
+      where: { id: registrationId, eventId },
+    });
+    if (!reg) throw new NotFoundException('Реєстрацію не знайдено');
+
+    const staffTag = username ? `@${username.replace(/^@+/, '')}` : (staffName || 'Організатор');
+
+    const updated = await this.prisma.eventRegistration.update({
+      where: { id: registrationId },
+      data: {
+        attended,
+        attendedAt: attended ? new Date() : null,
+        attendedBy: attended ? staffTag : null,
+      },
+    });
+
+    const total = await this.prisma.eventRegistration.count({ where: { eventId } });
+    const attendedCount = await this.prisma.eventRegistration.count({
+      where: { eventId, attended: true },
+    });
+
+    return {
+      registration: updated,
+      total,
+      attendedCount,
+      unattendedCount: total - attendedCount,
+      percentage: total > 0 ? Math.round((attendedCount / total) * 100) : 0,
+      stats: {
+        total,
+        attendedCount,
+        unattendedCount: total - attendedCount,
+        percentage: total > 0 ? Math.round((attendedCount / total) * 100) : 0,
+      },
+    };
+  }
+
+  async getCheckInEvents(telegramId?: bigint, username?: string) {
+    const adminGroupId = this.configService.get<string>('ADMIN_GROUP_CHAT_ID');
+    let isAdmin = false;
+    if (telegramId && adminGroupId) {
+      isAdmin = await this.botService.isUserInChat(adminGroupId, Number(telegramId));
+    }
+    if (this.configService.get<string>('AUTH_DISABLED') === 'true') {
+      isAdmin = true;
+    }
+
+    if (isAdmin) {
+      const events = await this.prisma.event.findMany({
+        where: { isDraft: false },
+        orderBy: { date: 'desc' },
+        take: 30,
+        select: {
+          id: true,
+          name: true,
+          date: true,
+          location: true,
+          photoUrl: true,
+          checkInStaffTags: true,
+          _count: { select: { registrations: true } },
+        },
+      });
+      return events.map((e) => ({ ...e, isAdmin: true }));
+    }
+
+    if (!username) return [];
+    const cleanTag = '@' + username.trim().toLowerCase().replace(/^@+/, '');
+
+    const events = await this.prisma.event.findMany({
+      where: {
+        isDraft: false,
+        checkInStaffTags: { has: cleanTag },
+      },
+      orderBy: { date: 'desc' },
+      take: 30,
+      select: {
+        id: true,
+        name: true,
+        date: true,
+        location: true,
+        photoUrl: true,
+        checkInStaffTags: true,
+        _count: { select: { registrations: true } },
+      },
+    });
+    return events.map((e) => ({ ...e, isAdmin: false }));
   }
 }

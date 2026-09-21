@@ -58,6 +58,19 @@ export class CreateEventRegistrationDto {
   @IsString()
   receiptUrl?: string;
 
+  @ApiPropertyOptional({ description: 'Telegram User ID for bot linking' })
+  @IsOptional()
+  telegramUserId?: string | number;
+
+  @ApiPropertyOptional({ description: 'Save profile for next registrations' })
+  @IsOptional()
+  saveProfile?: boolean;
+
+  @ApiPropertyOptional({ description: 'Phone number' })
+  @IsOptional()
+  @IsString()
+  phoneNumber?: string;
+
   @ApiPropertyOptional({ type: [EventAnswerDto] })
   @IsOptional()
   @IsArray()

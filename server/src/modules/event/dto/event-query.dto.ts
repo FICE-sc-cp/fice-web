@@ -25,4 +25,14 @@ export class EventQueryDto extends PaginationQueryDto {
   })
   @IsBoolean()
   abitfest?: boolean;
+
+  @ApiPropertyOptional({ description: 'true — include drafts' })
+  @IsOptional()
+  @Transform(({ value }): boolean | undefined => {
+    if (value === 'true' || value === true) return true;
+    if (value === 'false' || value === false) return false;
+    return undefined;
+  })
+  @IsBoolean()
+  draft?: boolean;
 }
