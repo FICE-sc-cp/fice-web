@@ -25,13 +25,21 @@ function CardImage({
 }) {
   const url = mediaUrl(item.image);
   return (
-    <div className={cn('relative overflow-hidden', className)}>
-      <div
-        className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
-        style={url ? { backgroundImage: `url("${url}")` } : undefined}
-      >
-        {!url && <div className="absolute inset-0 bg-gradient-main opacity-20" />}
-      </div>
+    <div className={cn('relative overflow-hidden bg-white/5', className)}>
+      {url ? (
+        <div
+          className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
+          style={{ backgroundImage: `url("${url}")` }}
+        />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-brand-cyan/15 via-black/60 to-purple-600/15">
+          <img
+            src="/logo_white.png"
+            alt="Студрада ФІОТ"
+            className="h-14 lg:h-16 w-auto opacity-35 object-contain drop-shadow-[0_0_20px_rgba(0,240,255,0.3)] transition-transform duration-500 group-hover:scale-110"
+          />
+        </div>
+      )}
       {children}
     </div>
   );

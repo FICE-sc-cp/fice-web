@@ -45,19 +45,43 @@ export function formatNewsDate(iso: string): string {
 }
 
 /** Date and "HH:mm" time, for event announcements. */
-export function formatEventDateTime(iso: string): { date: string; time: string } {
+export function formatEventDateTime(iso: string): { date: string; time: string | null } {
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, '0');
+
+  let timePart = '';
+  try {
+    timePart = new Intl.DateTimeFormat('uk-UA', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Europe/Kyiv',
+    }).format(d);
+  } catch {
+    timePart = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  const isZero =
+    timePart === '00:00' ||
+    (pad(d.getUTCHours()) === '00' && pad(d.getUTCMinutes()) === '00') ||
+    (pad(d.getHours()) === '00' && pad(d.getMinutes()) === '00');
+
   return {
     date: formatNewsDate(iso),
-    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+    time: isZero ? null : timePart,
   };
 }
 
 /** First non-empty chunk of the body, trimmed to a card-friendly length. */
 export function excerpt(details: string | null, max = 160): string {
   if (!details) return '';
-  const text = details.replace(/\s+/g, ' ').trim();
+  const stripped = details
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<[^>]*>/g, '')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/__([^_]+)__/g, '$1')
+    .replace(/_([^_]+)_/g, '$1');
+  const text = stripped.replace(/\s+/g, ' ').trim();
   if (text.length <= max) return text;
   return `${text.slice(0, max).replace(/\s+\S*$/, '')}…`;
 }

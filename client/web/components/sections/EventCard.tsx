@@ -21,10 +21,19 @@ export function EventCard({ event }: { event: EventItem }) {
   const open = eventRegistrationOpen(event);
   const cover = mediaUrl(event.photoUrl);
 
+  const timeText =
+    event.hasTime === false
+      ? 'Час буде повідомлено згодом'
+      : event.time || (fmtTime(date) === '00:00' ? 'Час буде повідомлено згодом' : fmtTime(date));
+
+  const locationText = event.location?.trim()
+    ? event.location.trim()
+    : 'Локація: буде повідомлено згодом';
+
   const details = [
     { Icon: CalendarIcon, text: fmtDate(date) },
-    { Icon: ClockIcon, text: fmtTime(date) },
-    ...(event.location ? [{ Icon: PinIcon, text: event.location }] : []),
+    { Icon: ClockIcon, text: timeText },
+    { Icon: PinIcon, text: locationText },
   ];
 
   return (
