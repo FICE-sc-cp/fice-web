@@ -31,6 +31,11 @@ services:
       # Optional Telegram admin config — taken from your shell or a root .env if set.
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       MINI_APP_URL: ${MINI_APP_URL:-}
+      # User Bot Token for students and registration Mini App
+      USER_BOT_TOKEN: ${USER_BOT_TOKEN:-}
+      USER_BOT_USERNAME: ${USER_BOT_USERNAME:-}
+      USER_MINI_APP_NAME: ${USER_MINI_APP_NAME:-app}
+      USER_MINI_APP_URL: ${USER_MINI_APP_URL:-}
       # Only members of this Telegram group may change content.
       ADMIN_GROUP_CHAT_ID: ${ADMIN_GROUP_CHAT_ID:-}
       # Channel the bot posts announcements to (bot must be its admin).
@@ -89,6 +94,8 @@ services:
     build:
       context: ./client/web
       dockerfile: Dockerfile
+      args:
+        BACKEND_URL: http://server:3001
     container_name: fice-web
     restart: always
     ports:
@@ -99,6 +106,7 @@ services:
       NEXT_PUBLIC_API_URL: http://localhost:3001
       # Internal URL for server-side (SSR/RSC) data fetches on the compose network.
       INTERNAL_API_URL: http://server:3001
+      BACKEND_URL: http://server:3001
     depends_on:
       - server
 
