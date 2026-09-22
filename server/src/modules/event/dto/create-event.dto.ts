@@ -16,6 +16,7 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
+import { AddEventPartnerDto } from './add-event-partner.dto';
 
 export class EventProgramItemDto {
   @ApiProperty({ maxLength: 20, example: '17:00' })
@@ -147,6 +148,38 @@ export class CreateEventDto {
   @IsBoolean()
   noRegistration?: boolean;
 
+  @ApiPropertyOptional({ default: false, description: 'Is event in draft state' })
+  @IsOptional()
+  @IsBoolean()
+  isDraft?: boolean;
+
+  @ApiPropertyOptional({ default: true, description: 'Whether the event has a specified start time' })
+  @IsOptional()
+  @IsBoolean()
+  hasTime?: boolean;
+
+  @ApiPropertyOptional({ example: '18:30', description: 'Event time string if hasTime is true' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  time?: string;
+
+  @ApiPropertyOptional({ type: [String], description: 'Allowed faculties, e.g. ["ФІОТ"]' })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  allowedFaculties?: string[];
+
+  @ApiPropertyOptional({ type: [String], description: 'Telegram tags of organizers allowed to check-in participants, e.g. ["@moderator"]' })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  checkInStaffTags?: string[];
+
+  @ApiPropertyOptional({ description: 'Config for base registration fields' })
+  @IsOptional()
+  baseQuestionsConfig?: any;
+
   @ApiPropertyOptional({ format: 'uuid' })
   @IsOptional()
   @IsUUID()
@@ -165,4 +198,11 @@ export class CreateEventDto {
   @ValidateNested({ each: true })
   @Type(() => EventQuestionDto)
   questions?: EventQuestionDto[];
+
+  @ApiPropertyOptional({ type: [AddEventPartnerDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => AddEventPartnerDto)
+  partners?: AddEventPartnerDto[];
 }

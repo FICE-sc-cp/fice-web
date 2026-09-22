@@ -138,6 +138,12 @@ export interface EventItem {
   feeRequisites: string | null;
   isAbitfest: boolean;
   noRegistration: boolean;
+  isDraft?: boolean;
+  hasTime?: boolean;
+  time?: string | null;
+  allowedFaculties?: string[];
+  checkInStaffTags?: string[];
+  baseQuestionsConfig?: any;
   detailsId: string | null;
   details?: EventDetails | null;
   eventPartners?: EventPartner[];
@@ -155,6 +161,9 @@ export interface EventRegistration {
   birthDate: string | null;
   payment: RegistrationPayment;
   receiptUrl: string | null;
+  attended?: boolean;
+  attendedAt?: string | null;
+  attendedBy?: string | null;
   createdAt: string;
   answers?: { id: string; questionId: string; value: string }[];
 }
@@ -245,8 +254,8 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return (await res.json()) as Promise<T>;
 }
 
-export function mediaUrl(path: string | null | undefined): string | null {
-  if (!path) return null;
+export function mediaUrl(path: string | null | undefined): string | undefined {
+  if (!path) return undefined;
   return path.startsWith('http') ? path : `${BASE}${path}`;
 }
 
@@ -261,6 +270,7 @@ export interface NewsInput {
   eventDate?: string | null;
   eventLocation?: string | null;
   registrationLink?: string | null;
+  isDraft?: boolean;
 }
 
 export interface EventProgramInput {
@@ -294,8 +304,15 @@ export interface EventInput {
   feeRequisites?: string;
   isAbitfest?: boolean;
   noRegistration?: boolean;
+  isDraft?: boolean;
+  hasTime?: boolean;
+  time?: string;
+  allowedFaculties?: string[];
+  checkInStaffTags?: string[];
+  baseQuestionsConfig?: any;
   program?: EventProgramInput[];
   questions?: EventQuestionInput[];
+  partners?: { name: string; logoImage?: string; websiteLink?: string }[];
 }
 
 export interface EventDetailsInput {
@@ -526,4 +543,265 @@ export const api = {
       body: form,
     });
   },
+
+  // --- Voting ---
+  eventVotings: (eventId: string) =>
+    request<EventVoting[]>(`/voting/event/${eventId}`),
+  createVoting: (eventId: string, body: VotingInput) =>
+    request<EventVoting>(`/voting/event/${eventId}`, {
+      method: 'POST',
+      ...json(body),
+    }),
+  voting: (id: string) => request<EventVoting>(`/voting/${id}`),
+  updateVoting: (
+    id: string,
+    body: Partial<VotingInput & { status: VotingStatus }>,
+  ) =>
+    request<EventVoting>(`/voting/${id}`, {
+      method: 'PATCH',
+      ...json(body),
+    }),
+  deleteVoting: (id: string) =>
+    request<unknown>(`/voting/${id}`, { method: 'DELETE' }),
+  addCandidate: (votingId: string, body: CandidateInput) =>
+    request<VotingCandidate>(`/voting/${votingId}/candidates`, {
+      method: 'POST',
+      ...json(body),
+    }),
+  updateCandidate: (candidateId: string, body: Partial<CandidateInput>) =>
+    request<VotingCandidate>(`/voting/candidates/${candidateId}`, {
+      method: 'PATCH',
+      ...json(body),
+    }),
+  deleteCandidate: (candidateId: string) =>
+    request<unknown>(`/voting/candidates/${candidateId}`, {
+      method: 'DELETE',
+    }),
+  votingResults: (id: string) => request<VotingResults>(`/voting/${id}/results`),
+  exportVotingResultsUrl: (id: string) => `${BASE}/voting/${id}/results/export`,
+  exportVotingResultsBlob: async (id: string): Promise<Blob> => {
+    const res = await fetch(`${BASE}/voting/${id}/results/export`, {
+      headers: { 'x-telegram-init-data': getInitData() },
+      cache: 'no-store',
+    });
+    if (!res.ok) throw new Error(`Помилка ${res.status}`);
+    return res.blob();
+  },
+  notifyVotingStarted: (id: string) =>
+    request<{
+      ok: boolean;
+      recipientsCount: number;
+      sentCount: number;
+      failedCount: number;
+    }>(`/voting/${id}/notify`, { method: 'POST' }),
+  votingSubmissions: (votingId: string, status?: string) =>
+    request<VotingCandidate[]>(
+      `/voting/${votingId}/submissions${status ? `?status=${status}` : ''}`,
+    ),
+  approveSubmission: (candidateId: string) =>
+    request<VotingCandidate>(`/voting/submissions/${candidateId}/approve`, {
+      method: 'POST',
+    }),
+  rejectSubmission: (candidateId: string, reason?: string) =>
+    request<VotingCandidate>(`/voting/submissions/${candidateId}/reject`, {
+      method: 'POST',
+      ...json({ reason }),
+    }),
+
+  // --- Broadcasts ---
+  broadcastToEvent: (eventId: string, body: BroadcastInput) =>
+    request<{
+      ok: boolean;
+      recipientsCount: number;
+      sentCount: number;
+      failedCount: number;
+    }>(`/broadcast/event/${eventId}`, {
+      method: 'POST',
+      ...json(body),
+    }),
+  broadcastEventPreview: (eventId: string) =>
+    request<{
+      eventId: string;
+      recipientsCount: number;
+      botUsername?: string;
+      defaultUrls?: {
+        eventMiniApp: string;
+        votingMiniApp: string;
+        webEvent: string;
+      };
+    }>(`/broadcast/event/${eventId}/preview`),
+  checkInAccess: (eventId: string) =>
+    request<{ canCheckIn: boolean; reason?: string }>(`/event/${eventId}/checkin/access`),
+  checkInList: (eventId: string) =>
+    request<{
+      total: number;
+      attendedCount: number;
+      items: EventRegistration[];
+    }>(`/event/${eventId}/checkin/list`),
+  toggleCheckIn: (eventId: string, registrationId: string, attended: boolean) =>
+    request<EventRegistration>(`/event/${eventId}/checkin/${registrationId}`, {
+      method: 'POST',
+      ...json({ attended }),
+    }),
+  broadcastToAll: (body: BroadcastInput) =>
+    request<{
+      ok: boolean;
+      recipientsCount: number;
+      sentCount: number;
+      failedCount: number;
+    }>('/broadcast/global', {
+      method: 'POST',
+      ...json(body),
+    }),
+  broadcastStats: () => request<BroadcastStats>('/broadcast/stats'),
+  broadcastHistory: (page = 1, limit = 20) =>
+    request<Paginated<BroadcastMessage>>(
+      `/broadcast/history?page=${page}&limit=${limit}`,
+    ),
+
+  // --- Blocked Users ---
+  blockedUsers: (search?: string) =>
+    request<BlockedUser[]>(`/blocked-users${search ? `?search=${encodeURIComponent(search)}` : ''}`),
+  createBlockedUser: (body: CreateBlockedUserInput) =>
+    request<BlockedUser>('/blocked-users', { method: 'POST', ...json(body) }),
+  updateBlockedUser: (id: string, body: UpdateBlockedUserInput) =>
+    request<BlockedUser>(`/blocked-users/${id}`, { method: 'PATCH', ...json(body) }),
+  deleteBlockedUser: (id: string) =>
+    request<unknown>(`/blocked-users/${id}`, { method: 'DELETE' }),
 };
+
+export type VotingStatus = 'DRAFT' | 'ACTIVE' | 'CLOSED';
+
+export interface VotingCandidate {
+  id: string;
+  votingId?: string;
+  name: string;
+  description: string | null;
+  photoUrl: string | null;
+  order: number;
+  votesCount?: number;
+  status?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  submittedByName?: string | null;
+  submittedByTag?: string | null;
+  submittedByTelegramId?: string | null;
+  rejectionReason?: string | null;
+  createdAt?: string;
+}
+
+export interface EventVoting {
+  id: string;
+  eventId: string;
+  title: string;
+  description: string | null;
+  status: VotingStatus;
+  onlyRegistered: boolean;
+  showResultsLive: boolean;
+  allowChangeVote: boolean;
+  allowSubmissions: boolean;
+  submissionsOpen: boolean;
+  pendingSubmissionsCount?: number;
+  createdAt: string;
+  totalVotes: number;
+  candidates: VotingCandidate[];
+}
+
+export interface VotingResults {
+  voting: {
+    id: string;
+    title: string;
+    status: VotingStatus;
+    totalVotes: number;
+  };
+  candidates: {
+    id: string;
+    name: string;
+    photoUrl: string | null;
+    votesCount: number;
+    percentage: number;
+  }[];
+  votes: {
+    id: string;
+    candidateId: string;
+    candidateName: string;
+    telegramId: string;
+    voterName: string;
+    telegramTag: string | null;
+    group: string | null;
+    createdAt: string;
+  }[];
+}
+
+export interface VotingInput {
+  title: string;
+  description?: string;
+  onlyRegistered?: boolean;
+  showResultsLive?: boolean;
+  allowChangeVote?: boolean;
+  allowSubmissions?: boolean;
+  submissionsOpen?: boolean;
+}
+
+export interface CandidateInput {
+  name: string;
+  description?: string;
+  photoUrl?: string;
+  order?: number;
+}
+
+export type BroadcastTarget = 'EVENT_PARTICIPANTS' | 'ALL_BOT_USERS';
+
+export interface BroadcastMessage {
+  id: string;
+  eventId: string | null;
+  target: BroadcastTarget;
+  text: string;
+  imageUrl: string | null;
+  buttonText: string | null;
+  buttonUrl: string | null;
+  recipientsCount: number;
+  sentCount: number;
+  failedCount: number;
+  createdAt: string;
+  event?: { id: string; name: string } | null;
+}
+
+export interface BroadcastStats {
+  totalUsers: number;
+  activeUsers: number;
+  totalBroadcasts: number;
+}
+
+export interface BroadcastInput {
+  text: string;
+  imageUrl?: string;
+  buttonText?: string;
+  buttonUrl?: string;
+}
+
+export interface BlockedUser {
+  id: string;
+  telegramTag: string;
+  telegramUserId?: string | null;
+  group?: string | null;
+  faculty?: string | null;
+  reason?: string | null;
+  isBlocked: boolean;
+  blockedAt: string;
+  updatedAt: string;
+}
+
+export interface CreateBlockedUserInput {
+  telegramTag: string;
+  group?: string;
+  faculty?: string;
+  reason?: string;
+  isBlocked?: boolean;
+}
+
+export interface UpdateBlockedUserInput {
+  group?: string;
+  faculty?: string;
+  reason?: string;
+  isBlocked?: boolean;
+}
+

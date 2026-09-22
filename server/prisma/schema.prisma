@@ -38,9 +38,11 @@ model News {
   eventDate        DateTime?
   eventLocation    String?   @db.VarChar(100)
   registrationLink String?
+  isDraft          Boolean   @default(false)
 }
 
 enum FundraiserStatus {
+  DRAFT
   ACTIVE
   CLOSED
 }
@@ -194,14 +196,51 @@ model Event {
   feeRequisites         String?   @db.VarChar(255)
   isAbitfest            Boolean   @default(false)
   noRegistration        Boolean   @default(false)
+  isDraft               Boolean   @default(false)
+  hasTime               Boolean   @default(true)
+  time                  String?   @db.VarChar(10)
+  allowedFaculties      String[]  @default([])
+  checkInStaffTags      String[]  @default([])
+  baseQuestionsConfig   Json?
 
   detailsId String?       @unique @db.Uuid
   details   EventDetails? @relation(fields: [detailsId], references: [id], onDelete: SetNull)
 
-  eventPartners EventPartner[]
-  program       EventProgramItem[]
-  questions     EventQuestion[]
-  registrations EventRegistration[]
+  eventPartners          EventPartner[]
+  program                EventProgramItem[]
+  questions              EventQuestion[]
+  registrations          EventRegistration[]
+  votings                EventVoting[]
+  broadcasts             BroadcastMessage[]
+  pendingWebRegistrations PendingWebRegistration[]
+}
+
+model BlockedUser {
+  id             String   @id @default(uuid()) @db.Uuid
+  telegramTag    String   @unique @db.VarChar(50)
+  telegramUserId BigInt?
+  group          String?  @db.VarChar(20)
+  faculty        String?  @db.VarChar(50)
+  reason         String?  @db.Text
+  isBlocked      Boolean  @default(true)
+  blockedAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model PendingWebRegistration {
+  id          String   @id @default(uuid()) @db.Uuid
+  token       String   @unique @db.VarChar(64)
+  eventId     String   @db.Uuid
+  payload     Json
+  telegramTag String   @db.VarChar(50)
+  expiresAt   DateTime
+  completed   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@index([telegramTag])
 }
 
 model EventProgramItem {
@@ -241,18 +280,29 @@ enum RegistrationPayment {
 }
 
 model EventRegistration {
-  id          String              @id @default(uuid()) @db.Uuid
-  eventId     String              @db.Uuid
-  fullName    String              @db.VarChar(100)
-  telegramTag String              @db.VarChar(50)
-  group       String              @db.VarChar(10)
-  birthDate   DateTime?
-  payment     RegistrationPayment @default(NONE)
-  receiptUrl  String?
-  createdAt   DateTime            @default(now())
+  id             String              @id @default(uuid()) @db.Uuid
+  eventId        String              @db.Uuid
+  botUserId      String?             @db.Uuid
+  telegramUserId BigInt?
+  fullName       String              @db.VarChar(100)
+  telegramTag    String              @db.VarChar(50)
+  group          String              @db.VarChar(10)
+  birthDate      DateTime?
+  payment        RegistrationPayment @default(NONE)
+  receiptUrl     String?
+  attended       Boolean             @default(false)
+  attendedAt     DateTime?
+  attendedBy     String?             @db.VarChar(100)
+  createdAt      DateTime            @default(now())
 
-  event   Event                     @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  answers EventRegistrationAnswer[]
+  event          Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  botUser        BotUser?            @relation(fields: [botUserId], references: [id], onDelete: SetNull)
+  answers        EventRegistrationAnswer[]
+  votes          Vote[]
+
+  @@index([eventId])
+  @@index([telegramUserId])
+  @@index([attended])
 }
 
 model EventRegistrationAnswer {
@@ -317,3 +367,118 @@ model ProjectParticipant {
   // The same person may sit in several department chats.
   @@unique([departmentId, telegramId])
 }
+
+model BotUser {
+  id          String              @id @default(uuid()) @db.Uuid
+  telegramId  BigInt              @unique
+  chatId      BigInt
+  username    String?             @db.VarChar(50)
+  firstName   String?             @db.VarChar(100)
+  lastName    String?             @db.VarChar(100)
+  fullName    String?             @db.VarChar(120)
+  group       String?             @db.VarChar(10)
+  birthDate   DateTime?
+  phoneNumber String?             @db.VarChar(20)
+  isBlocked   Boolean             @default(false)
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @default(now()) @updatedAt
+
+  registrations EventRegistration[]
+  votes         Vote[]
+}
+
+enum VotingStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+}
+
+enum CandidateStatus {
+  APPROVED
+  PENDING
+  REJECTED
+}
+
+model EventVoting {
+  id               String            @id @default(uuid()) @db.Uuid
+  eventId          String            @db.Uuid
+  title            String            @db.VarChar(120)
+  description      String?           @db.Text
+  status           VotingStatus      @default(DRAFT)
+  onlyRegistered   Boolean           @default(true)
+  showResultsLive  Boolean           @default(false)
+  allowChangeVote  Boolean           @default(false)
+  allowSubmissions Boolean           @default(false)
+  submissionsOpen  Boolean           @default(false)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @default(now()) @updatedAt
+
+  event           Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  candidates      VotingCandidate[]
+  votes           Vote[]
+
+  @@index([eventId])
+}
+
+model VotingCandidate {
+  id                    String          @id @default(uuid()) @db.Uuid
+  votingId              String          @db.Uuid
+  name                  String          @db.VarChar(120)
+  description           String?         @db.Text
+  photoUrl              String?
+  order                 Int             @default(0)
+  status                CandidateStatus @default(APPROVED)
+  submittedByTelegramId BigInt?
+  submittedByName       String?         @db.VarChar(120)
+  submittedByTag        String?         @db.VarChar(60)
+  rejectionReason       String?         @db.Text
+  createdAt             DateTime        @default(now())
+
+  voting      EventVoting @relation(fields: [votingId], references: [id], onDelete: Cascade)
+  votes       Vote[]
+
+  @@index([votingId])
+  @@index([submittedByTelegramId])
+}
+
+model Vote {
+  id             String             @id @default(uuid()) @db.Uuid
+  votingId       String             @db.Uuid
+  candidateId    String             @db.Uuid
+  botUserId      String?            @db.Uuid
+  telegramId     BigInt
+  registrationId String?            @db.Uuid
+  createdAt      DateTime           @default(now())
+
+  voting         EventVoting        @relation(fields: [votingId], references: [id], onDelete: Cascade)
+  candidate      VotingCandidate    @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  botUser        BotUser?           @relation(fields: [botUserId], references: [id], onDelete: SetNull)
+  registration   EventRegistration? @relation(fields: [registrationId], references: [id], onDelete: SetNull)
+
+  @@unique([votingId, telegramId])
+  @@index([candidateId])
+}
+
+enum BroadcastTarget {
+  EVENT_PARTICIPANTS
+  ALL_BOT_USERS
+}
+
+model BroadcastMessage {
+  id              String          @id @default(uuid()) @db.Uuid
+  eventId         String?         @db.Uuid
+  target          BroadcastTarget @default(EVENT_PARTICIPANTS)
+  text            String          @db.Text
+  imageUrl        String?
+  buttonText      String?         @db.VarChar(60)
+  buttonUrl       String?
+  recipientsCount Int             @default(0)
+  sentCount       Int             @default(0)
+  failedCount     Int             @default(0)
+  createdAt       DateTime        @default(now())
+
+  event           Event?          @relation(fields: [eventId], references: [id], onDelete: SetNull)
+
+  @@index([eventId])
+}
+

@@ -15,9 +15,12 @@ export class NewsService {
     return this.prisma.news.create({ data: dto });
   }
 
-  async findAll({ page, limit, search, category }: NewsQueryDto) {
+  async findAll({ page, limit, search, category, draft }: NewsQueryDto) {
     const term = search?.trim();
     const where: Prisma.NewsWhereInput = {};
+    if (!draft) {
+      where.isDraft = false;
+    }
     if (category) {
       where.category = category;
     }

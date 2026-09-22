@@ -12,21 +12,38 @@ import { RichTextArea } from '@/components/RichTextArea';
 import { Spinner } from '@/components/ui/Spinner';
 import { hapticNotify } from '@/lib/telegram';
 
-const fmtDate = (iso: string) =>
-  new Intl.DateTimeFormat('uk-UA', {
-    day: 'numeric',
-    month: 'long',
-    hour: '2-digit',
-    minute: '2-digit',
-    timeZone: 'Europe/Kyiv',
-  }).format(new Date(iso));
+const fmtDate = (iso: string, hasTimeFlag?: boolean, timeStr?: string | null) => {
+  try {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return iso;
+    const datePart = new Intl.DateTimeFormat('uk-UA', {
+      day: 'numeric',
+      month: 'long',
+      timeZone: 'Europe/Kyiv',
+    }).format(d);
+
+    if (hasTimeFlag === false) return `${datePart} (час буде повідомлено згодом)`;
+    if (timeStr && timeStr.trim()) return `${datePart} о ${timeStr.trim()}`;
+
+    const timePart = new Intl.DateTimeFormat('uk-UA', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Europe/Kyiv',
+    }).format(d);
+
+    if (timePart === '00:00' && hasTimeFlag !== true) return `${datePart} (час буде повідомлено згодом)`;
+    return `${datePart} о ${timePart}`;
+  } catch {
+    return iso;
+  }
+};
 
 function buildCaption(e: EventItem): string {
   return [
     `📢 ${e.name}`,
     '',
-    `🗓 ${fmtDate(e.date)}`,
-    e.location ? `📍 ${e.location}` : '',
+    `🗓 ${fmtDate(e.date, e.hasTime, e.time)}`,
+    e.location?.trim() ? `📍 ${e.location.trim()}` : '📍 Локація: буде повідомлено згодом',
     '',
     e.description ?? '',
   ]
@@ -66,11 +83,9 @@ export default function ChannelPage() {
       api.postChannel({
         text: text.trim(),
         imageUrl: imageUrl ?? undefined,
-        // Send eventId only when the register button is wanted — the backend
-        // builds the button URL from it. Omitting it => a post with no button.
         eventId: withButton && eventId ? eventId : undefined,
         buttonUrl:
-          withButton && !eventId && buttonUrl.trim()
+          withButton && buttonUrl.trim()
             ? buttonUrl.trim()
             : undefined,
         buttonText: withButton ? buttonText.trim() || undefined : undefined,
@@ -91,6 +106,7 @@ export default function ChannelPage() {
       setImageUrl(ev.photoUrl ?? null);
       setWithButton(true);
       setButtonText('Зареєструватися');
+      setButtonUrl(`https://t.me/fice_event_bot/app?startapp=event_${id}`);
     }
   }
 
@@ -151,17 +167,62 @@ export default function ChannelPage() {
                 value={buttonText}
                 onChange={(e) => setButtonText(e.target.value)}
               />
-              {eventId ? (
-                <p className="text-xs text-subtle">
-                  Кнопка веде на сторінку реєстрації обраного заходу.
-                </p>
-              ) : (
-                <Input
-                  label="Посилання кнопки"
-                  placeholder="https://…"
-                  value={buttonUrl}
-                  onChange={(e) => setButtonUrl(e.target.value)}
-                />
+              <Input
+                label="Посилання кнопки"
+                placeholder={
+                  eventId
+                    ? `https://t.me/fice_event_bot/app?startapp=event_${eventId}`
+                    : 'https://…'
+                }
+                value={buttonUrl}
+                onChange={(e) => setButtonUrl(e.target.value)}
+              />
+              {eventId && (
+                <div className="space-y-1.5">
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setButtonUrl(
+                          `https://t.me/fice_event_bot/app?startapp=event_${eventId}`,
+                        )
+                      }
+                      className="text-[11px] rounded-lg border border-purple-500/40 bg-purple-500/10 px-2 py-1 text-purple-300 hover:bg-purple-500/20 transition-colors"
+                    >
+                      ⚡️ 1 клік: Mini App (t.me/.../app)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const base =
+                          (status as any)?.publicWebUrl ||
+                          (typeof window !== 'undefined'
+                            ? `${window.location.protocol}//${window.location.hostname}:3002`
+                            : '');
+                        setButtonUrl(
+                          `${base.replace(/\/$/, '')}/events/${eventId}#register`,
+                        );
+                      }}
+                      className="text-[11px] rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-emerald-300 hover:bg-emerald-500/20 transition-colors"
+                    >
+                      🌐 Сайт у Telegram (без BotFather)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setButtonUrl(
+                          `https://t.me/fice_event_bot?start=event_${eventId}`,
+                        )
+                      }
+                      className="text-[11px] rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-2 py-1 text-cyan-300 hover:bg-cyan-500/20 transition-colors"
+                    >
+                      💬 Через чат з ботом (?start=...)
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-muted">
+                    Для відкриття Mini App в 1 клік потрібно зареєструвати додаток у @BotFather командою <code>/newapp</code> з коротким імʼям <code>app</code> для <b>@fice_event_bot</b>. Або оберіть «Сайт у Telegram» — він відкривається одразу без налаштувань!
+                  </p>
+                </div>
               )}
             </>
           )}

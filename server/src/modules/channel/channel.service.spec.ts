@@ -9,10 +9,12 @@ function makeService(cfg: Cfg, event: { id: string; photoUrl: string | null } | 
     event: { findUnique: jest.fn().mockResolvedValue(event) },
   };
   const bot = { postToChannel };
+  const userBot = { getUsername: () => cfg['USER_BOT_USERNAME'] };
   const config = { get: (k: string) => cfg[k] };
   const service = new ChannelService(
     prisma as never,
     bot as never,
+    userBot as never,
     config as never,
   );
   return { service, postToChannel };

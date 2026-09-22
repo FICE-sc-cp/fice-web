@@ -82,3 +82,25 @@ export function donateJarUrl(jarUrl: string, amount?: number): string {
     return jarUrl;
   }
 }
+
+export function formatEventDateTime(dateStr: string, hasTime?: boolean, timeStr?: string | null): string {
+  const d = new Date(dateStr);
+  const dateFormatted = d.toLocaleDateString('uk-UA', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+  if (hasTime === false) {
+    return `${dateFormatted} (час буде повідомлено згодом)`;
+  }
+  if (timeStr && timeStr.trim()) {
+    return `${dateFormatted}, ${timeStr.trim()}`;
+  }
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  if (hours === '00' && minutes === '00') {
+    return `${dateFormatted} (час буде повідомлено згодом)`;
+  }
+  return `${dateFormatted}, ${hours}:${minutes}`;
+}
+

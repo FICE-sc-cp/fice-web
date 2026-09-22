@@ -1,18 +1,35 @@
 import type { NextConfig } from 'next';
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
-const { protocol, hostname, port } = new URL(apiUrl);
+const backendUrl = process.env.BACKEND_URL ?? process.env.INTERNAL_API_URL ?? 'http://server:3001';
 
 const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       {
-        protocol: protocol.replace(':', '') as 'http' | 'https',
-        hostname,
-        port: port || undefined,
+        protocol: 'http',
+        hostname: 'server',
+        port: '3001',
+        pathname: '/uploads/**',
+      },
+      {
+        protocol: 'http',
+        hostname: 'localhost',
+        port: '3001',
         pathname: '/uploads/**',
       },
     ],
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/api-proxy/:path*',
+        destination: `${backendUrl}/:path*`,
+      },
+      {
+        source: '/uploads/:path*',
+        destination: `${backendUrl}/uploads/:path*`,
+      },
+    ];
   },
 };
 

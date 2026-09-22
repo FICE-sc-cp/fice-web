@@ -11,6 +11,10 @@ RUN npm install
 # Copy source files
 COPY . .
 
+ARG BACKEND_URL=http://server:3001
+ENV BACKEND_URL=$BACKEND_URL
+ENV INTERNAL_API_URL=$BACKEND_URL
+
 # Build Next.js
 RUN npm run build
 

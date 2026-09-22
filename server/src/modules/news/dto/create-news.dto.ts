@@ -62,4 +62,8 @@ export class CreateNewsDto {
   @IsOptional()
   @IsString()
   registrationLink?: string | null;
+
+  @ApiPropertyOptional({ default: false, description: 'Is news in draft status' })
+  @IsOptional()
+  isDraft?: boolean;
 }

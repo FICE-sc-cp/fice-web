@@ -8,6 +8,7 @@ import { Container } from "@/components/ui/Container";
 import { Glow } from "@/components/ui/Glow";
 import { fice, mediaUrl, safe, type News, type Paginated } from "@/lib/api";
 import { renderRichInline } from "@/lib/richText";
+import { cn } from "@/lib/utils";
 import {
   bodyParagraphs,
   categoryLabel,
@@ -110,12 +111,19 @@ export default async function NewsArticlePage({
               <span className="mb-4 inline-flex items-center gap-2 text-[12.5px] font-extrabold uppercase tracking-wider text-brand-cyan">
                 📣 Оголошення про захід
               </span>
-              <div className="mb-7 grid gap-5 sm:grid-cols-3">
+              <div className="mb-7 grid gap-5 grid-cols-1 sm:grid-cols-3">
                 <EventField label="Дата" value={event.date} />
-                <EventField label="Час" value={event.time} />
+                <EventField
+                  label="Час"
+                  value={event.time || "Буде повідомлено згодом"}
+                />
                 <EventField
                   label="Локація"
-                  value={item.eventLocation ?? "Уточнюється"}
+                  value={
+                    item.eventLocation?.trim()
+                      ? item.eventLocation.trim()
+                      : "Буде повідомлено згодом"
+                  }
                 />
               </div>
               {item.registrationLink && (

@@ -3,6 +3,7 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -20,6 +21,7 @@ import {
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { Admin } from '../../auth/admin.decorator';
+import { extractTelegramUser } from '../../auth/init-data.util';
 import { ApiPaginatedResponse } from '../../common/dto/paginated.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { AddEventPartnerDto } from './dto/add-event-partner.dto';
@@ -47,7 +49,30 @@ export class EventController {
   @ApiOperation({ summary: 'List events with details and partners' })
   @ApiPaginatedResponse(EventEntity)
   findAll(@Query() query: EventQueryDto) {
-    return this.eventService.findAll(query, query.past, query.abitfest);
+    return this.eventService.findAll(query, query.past, query.abitfest, query.draft);
+  }
+
+  @Get('registration-session/:token')
+  @ApiOperation({ summary: 'Check status of pending web registration session' })
+  getRegistrationSession(@Param('token') token: string) {
+    return this.eventService.getRegistrationSession(token);
+  }
+
+  @Get('checkin/events')
+  @ApiOperation({ summary: 'List events where user has check-in permissions' })
+  getCheckInEvents(
+    @Headers('x-telegram-init-data') initData?: string,
+    @Query('tgUserId') queryTgUserId?: string,
+    @Query('tgTag') queryTgTag?: string,
+  ) {
+    const user = initData ? extractTelegramUser(initData) : null;
+    const telegramId = user?.id
+      ? BigInt(user.id)
+      : queryTgUserId
+      ? BigInt(queryTgUserId)
+      : undefined;
+    const username = user?.username || queryTgTag;
+    return this.eventService.getCheckInEvents(telegramId, username);
   }
 
   @Get(':id')
@@ -55,6 +80,72 @@ export class EventController {
   @ApiOkResponse({ type: EventEntity })
   findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.eventService.findOne(id);
+  }
+
+  @Get(':id/checkin/access')
+  @ApiOperation({ summary: 'Check if user has check-in permissions for this event' })
+  getCheckInAccess(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Headers('x-telegram-init-data') initData?: string,
+    @Query('tgUserId') queryTgUserId?: string,
+    @Query('tgTag') queryTgTag?: string,
+  ) {
+    const user = initData ? extractTelegramUser(initData) : null;
+    const telegramId = user?.id
+      ? BigInt(user.id)
+      : queryTgUserId
+      ? BigInt(queryTgUserId)
+      : undefined;
+    const username = user?.username || queryTgTag;
+    return this.eventService.getCheckInAccess(id, telegramId, username);
+  }
+
+  @Get(':id/checkin/list')
+  @ApiOperation({ summary: 'List registrations with attendance for check-in' })
+  getCheckInList(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Headers('x-telegram-init-data') initData?: string,
+    @Query('tgUserId') queryTgUserId?: string,
+    @Query('tgTag') queryTgTag?: string,
+  ) {
+    const user = initData ? extractTelegramUser(initData) : null;
+    const telegramId = user?.id
+      ? BigInt(user.id)
+      : queryTgUserId
+      ? BigInt(queryTgUserId)
+      : undefined;
+    const username = user?.username || queryTgTag;
+    return this.eventService.getCheckInList(id, telegramId, username);
+  }
+
+  @Post(':id/checkin/:registrationId')
+  @ApiOperation({ summary: 'Toggle or set attended status for a participant' })
+  toggleCheckIn(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('registrationId', ParseUUIDPipe) registrationId: string,
+    @Body() body: { attended: boolean; staffName?: string },
+    @Headers('x-telegram-init-data') initData?: string,
+    @Query('tgUserId') queryTgUserId?: string,
+    @Query('tgTag') queryTgTag?: string,
+  ) {
+    const user = initData ? extractTelegramUser(initData) : null;
+    const telegramId = user?.id
+      ? BigInt(user.id)
+      : queryTgUserId
+      ? BigInt(queryTgUserId)
+      : undefined;
+    const username = user?.username || queryTgTag;
+    const staffName = user
+      ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
+      : body.staffName;
+    return this.eventService.toggleCheckIn(
+      id,
+      registrationId,
+      body.attended,
+      telegramId,
+      username,
+      staffName,
+    );
   }
 
   @Patch(':id')

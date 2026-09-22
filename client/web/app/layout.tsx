@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Mulish } from 'next/font/google';
 import './globals.css';
 
@@ -12,6 +12,13 @@ export const metadata: Metadata = {
   title: 'Студентська рада ФІОТ',
   description:
     'Сайт студентської ради ФІОТ — діяльність, заходи, збори, партнерство та вступ до команди.',
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({

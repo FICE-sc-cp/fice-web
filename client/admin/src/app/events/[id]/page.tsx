@@ -14,10 +14,16 @@ import { EventPartners } from '@/components/EventPartners';
 import { Spinner } from '@/components/ui/Spinner';
 import { hapticNotify } from '@/lib/telegram';
 
-function toLocalInput(iso: string) {
+function toLocalDateInput(iso: string) {
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function toLocalTimeInput(iso: string) {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 export default function EditEventPage() {
@@ -55,6 +61,7 @@ export default function EditEventPage() {
         photoAlbumUrl: v.photoAlbumUrl?.trim() || null,
         isAbitfest: v.isAbitfest ?? false,
         noRegistration: v.noRegistration ?? false,
+        isDraft: v.isDraft ?? false,
       });
     },
     onSuccess: () => {
@@ -68,74 +75,95 @@ export default function EditEventPage() {
   return (
     <main className="mx-auto max-w-xl px-4 py-6">
       <PageHeader title="Редагувати захід" />
-      <Link
-        href={`/events/${id}/registrations`}
-        className="mb-4 inline-flex rounded-xl border border-border px-4 py-2 text-sm font-semibold text-brand-cyan transition-colors hover:border-brand-cyan"
-      >
-        Список зареєстрованих →
-      </Link>
+      <div className="mb-4 flex flex-wrap gap-2">
+        <Link
+          href={`/events/${id}/registrations`}
+          className="inline-flex rounded-xl border border-border px-3.5 py-2 text-xs font-semibold text-brand-cyan transition-colors hover:border-brand-cyan"
+        >
+          Список зареєстрованих →
+        </Link>
+        <Link
+          href={`/events/${id}/voting`}
+          className="inline-flex rounded-xl border border-border px-3.5 py-2 text-xs font-semibold text-fg transition-colors hover:border-white/40"
+        >
+          🗳 Голосування заходу →
+        </Link>
+        <Link
+          href={`/events/${id}/broadcast`}
+          className="inline-flex rounded-xl border border-border px-3.5 py-2 text-xs font-semibold text-brand-green transition-colors hover:border-brand-green"
+        >
+          📢 Розсилка учасникам →
+        </Link>
+      </div>
       {isLoading ? (
         <div className="flex justify-center py-12">
           <Spinner />
         </div>
       ) : (
-        <>
-          <EventForm
-            submitLabel="Зберегти"
-            submitting={mutation.isPending}
-            onSubmit={(v) => mutation.mutate(v)}
-            error={mutation.error}
-            defaultValues={
-              event
-                ? {
-                    name: event.name,
-                    date: toLocalInput(event.date),
-                    photoUrl: event.photoUrl,
-                    description: event.description ?? event.details?.description ?? '',
-                    isAbitfest: event.isAbitfest ?? false,
-                    noRegistration: event.noRegistration ?? false,
-                    location: event.location ?? '',
-                    locationNote: event.locationNote ?? '',
-                    timeNote: event.timeNote ?? '',
-                    registrationCloseDate: event.registrationCloseDate
-                      ? toLocalInput(event.registrationCloseDate)
+        <EventForm
+          submitLabel="Зберегти"
+          submitting={mutation.isPending}
+          onSubmit={(v) => mutation.mutate(v)}
+          error={mutation.error}
+          draftKey={`edit_event_${id}`}
+          partnersSlot={
+            event ? (
+              <EventPartners eventId={event.id} attached={event.eventPartners ?? []} />
+            ) : undefined
+          }
+          defaultValues={
+            event
+              ? {
+                  name: event.name,
+                  date: toLocalDateInput(event.date),
+                  hasTime: event.hasTime ?? true,
+                  time: event.time || toLocalTimeInput(event.date),
+                  photoUrl: event.photoUrl,
+                  description: event.description ?? event.details?.description ?? '',
+                  isAbitfest: event.isAbitfest ?? false,
+                  noRegistration: event.noRegistration ?? false,
+                  isDraft: event.isDraft ?? false,
+                  allowedFaculties: event.allowedFaculties ?? [],
+                  checkInStaffTags: event.checkInStaffTags ?? [],
+                  baseQuestionsConfig: (event.baseQuestionsConfig as any) ?? undefined,
+                  location: event.location ?? '',
+                  locationNote: event.locationNote ?? '',
+                  timeNote: event.timeNote ?? '',
+                  registrationCloseDate: event.registrationCloseDate
+                    ? toLocalDateInput(event.registrationCloseDate)
+                    : '',
+                  photoAlbumUrl: event.photoAlbumUrl ?? '',
+                  feeAmount: event.feeAmount != null ? String(event.feeAmount) : '',
+                  feeAtEventAmount:
+                    event.feeAtEventAmount != null
+                      ? String(event.feeAtEventAmount)
                       : '',
-                    photoAlbumUrl: event.photoAlbumUrl ?? '',
-                    feeAmount: event.feeAmount != null ? String(event.feeAmount) : '',
-                    feeAtEventAmount:
-                      event.feeAtEventAmount != null
-                        ? String(event.feeAtEventAmount)
-                        : '',
-                    feeRequisites: event.feeRequisites ?? '',
-                    moneyCollected: event.details
-                      ? String(event.details.moneyCollected)
+                  feeRequisites: event.feeRequisites ?? '',
+                  moneyCollected: event.details
+                    ? String(event.details.moneyCollected)
+                    : '',
+                  charityAmount: event.details
+                    ? String(event.details.charityAmount)
+                    : '',
+                  visitorsAmount:
+                    event.details?.visitorsAmount != null
+                      ? String(event.details.visitorsAmount)
                       : '',
-                    charityAmount: event.details
-                      ? String(event.details.charityAmount)
-                      : '',
-                    visitorsAmount:
-                      event.details?.visitorsAmount != null
-                        ? String(event.details.visitorsAmount)
-                        : '',
-                    program: (event.program ?? []).map((p) => ({
-                      time: p.time,
-                      title: p.title,
-                    })),
-                    questions: (event.questions ?? []).map((q) => ({
-                      id: q.id,
-                      label: q.label,
-                      type: q.type,
-                      required: q.required,
-                      optionsText: q.options.join(', '),
-                    })),
-                  }
-                : undefined
-            }
-          />
-          {event && (
-            <EventPartners eventId={event.id} attached={event.eventPartners ?? []} />
-          )}
-        </>
+                  program: (event.program ?? []).map((p) => ({
+                    time: p.time,
+                    title: p.title,
+                  })),
+                  questions: (event.questions ?? []).map((q) => ({
+                    id: q.id,
+                    label: q.label,
+                    type: q.type,
+                    required: q.required,
+                    optionsText: q.options.join(', '),
+                  })),
+                }
+              : undefined
+          }
+        />
       )}
     </main>
   );

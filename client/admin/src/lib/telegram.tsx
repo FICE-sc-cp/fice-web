@@ -52,6 +52,15 @@ export function TelegramProvider({ children }: { children: React.ReactNode }) {
     } catch {}
 
     try {
+      const tg = (window as any).Telegram?.WebApp;
+      if (tg) {
+        tg.ready?.();
+        tg.expand?.();
+        tg.disableVerticalSwipes?.();
+      }
+    } catch {}
+
+    try {
       const raw = retrieveRawInitData();
       if (raw) setInitData(raw);
     } catch {}

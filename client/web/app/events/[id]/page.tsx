@@ -189,13 +189,17 @@ export default async function EventDetailPage({
               />
               <Fact
                 label="Час"
-                value={fmtTime(date)}
+                value={
+                  event.hasTime === false
+                    ? "Буде повідомлено згодом"
+                    : event.time || (fmtTime(date) === "00:00" ? "Буде повідомлено згодом" : fmtTime(date))
+                }
                 note={event.timeNote ?? undefined}
                 color="#2eff97"
               />
               <Fact
                 label="Локація"
-                value={event.location ?? "Уточнюється"}
+                value={event.location?.trim() ? event.location.trim() : "Буде повідомлено згодом"}
                 href={
                   event.locationNote && isUrl(event.locationNote)
                     ? event.locationNote
