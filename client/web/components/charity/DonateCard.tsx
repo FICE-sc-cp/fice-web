@@ -50,6 +50,7 @@ export function DonateCard({ initial }: { initial: Fundraiser }) {
   const current = Number(data.currentAmount);
   const goal = Number(data.goalAmount);
   const pct = fundraiserPct(current, goal);
+  const hasGoal = Number.isFinite(goal) && goal > 0;
 
   const amount = useMemo(() => {
     const c = Number(custom.replace(/\s/g, ''));
@@ -85,7 +86,9 @@ export function DonateCard({ initial }: { initial: Fundraiser }) {
           >
             {formatUAH(current)} ₴
           </span>
-          <span className={cn('text-lg font-bold', theme.accentText)}>{pct}%</span>
+          {hasGoal && (
+            <span className={cn('text-lg font-bold', theme.accentText)}>{pct}%</span>
+          )}
         </div>
         <div className="h-3 w-full overflow-hidden rounded-full bg-surface-2">
           <div
@@ -96,17 +99,11 @@ export function DonateCard({ initial }: { initial: Fundraiser }) {
             style={{ width: `${pct}%` }}
           />
         </div>
-        <div className="flex justify-between text-sm text-subtle">
-          <span>
+        {hasGoal && (
+          <div className="text-sm text-subtle">
             з мети <span className="font-bold text-fg">{formatUAH(goal)} ₴</span>
-          </span>
-          <span>
-            <span className="font-bold text-fg">
-              {data.donationsCount.toLocaleString('uk-UA')}
-            </span>{' '}
-            {pluralDonations(data.donationsCount)}
-          </span>
-        </div>
+          </div>
+        )}
       </div>
 
       {isActive ? (
@@ -212,12 +209,4 @@ export function DonateCard({ initial }: { initial: Fundraiser }) {
       )}
     </div>
   );
-}
-
-function pluralDonations(n: number): string {
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod10 === 1 && mod100 !== 11) return 'донат';
-  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'донати';
-  return 'донатів';
 }

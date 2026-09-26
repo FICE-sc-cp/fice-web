@@ -4,7 +4,6 @@ import { Type } from 'class-transformer';
 import {
   IsDate,
   IsEnum,
-  IsInt,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -51,26 +50,25 @@ export class CreateFundraiserDto {
   @MaxLength(100)
   location?: string;
 
-  @ApiProperty({ example: 480000, description: 'Target amount' })
+  @ApiPropertyOptional({
+    example: 480000,
+    default: 0,
+    description: 'Target amount; replaced by the jar goal when a linked jar has one',
+  })
+  @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
-  goalAmount: number;
+  goalAmount?: number;
 
   @ApiPropertyOptional({
     example: 0,
     default: 0,
-    description: 'Amount collected so far',
+    description: 'Amount collected so far; ignored when a jar widget is linked',
   })
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
   currentAmount?: number;
-
-  @ApiPropertyOptional({ example: 0, default: 0, description: 'Number of donations' })
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  donationsCount?: number;
 
   @ApiPropertyOptional({ maxLength: 25, example: '5375 4141 0000 1234' })
   @IsOptional()
@@ -84,23 +82,40 @@ export class CreateFundraiserDto {
   jarUrl?: string;
 
   @ApiPropertyOptional({
-    maxLength: 40,
-    description: 'Monobank jar account id, enables automatic balance sync',
+    maxLength: 500,
+    nullable: true,
+    description:
+      'Monobank jar widget link (contains jar=...). Enables automatic sync of the raised amount, goal and jar link; empty or null unlinks',
+    example:
+      'https://send.monobank.ua/widget.html?jar=3nzmmsWPvF88kT6FKrnpUwSaLkF2pwMK&sendId=6MJtUJ8B8d&type=qrp',
   })
   @IsOptional()
   @IsString()
-  @MaxLength(40)
-  monoJarId?: string;
+  @MaxLength(500)
+  jarWidgetUrl?: string | null;
 
-  @ApiProperty({ type: String, format: 'date-time' })
+  @ApiPropertyOptional({
+    type: String,
+    format: 'date-time',
+    nullable: true,
+    description:
+      'Start date. Defaults to today (Kyiv) on create when omitted; null means no dates',
+  })
+  @IsOptional()
   @Type(() => Date)
   @IsDate()
-  startDate: Date;
+  startDate?: Date | null;
 
-  @ApiProperty({ type: String, format: 'date-time' })
+  @ApiPropertyOptional({
+    type: String,
+    format: 'date-time',
+    nullable: true,
+    description: 'End date; requires a start date and must not be before it',
+  })
+  @IsOptional()
   @Type(() => Date)
   @IsDate()
-  endDate: Date;
+  endDate?: Date | null;
 
   @ApiPropertyOptional({ description: 'External link with more details' })
   @IsOptional()
