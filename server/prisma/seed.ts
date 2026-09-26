@@ -60,7 +60,6 @@ async function reset() {
   await prisma.eventQuestion.deleteMany();
   await prisma.eventProgramItem.deleteMany();
   await prisma.eventPartner.deleteMany();
-  await prisma.donation.deleteMany();
   await prisma.applicantDepartment.deleteMany();
   await prisma.departmentMemberAssignment.deleteMany();
   await prisma.event.deleteMany();
@@ -765,8 +764,7 @@ async function main() {
     ],
   });
 
-  // Fundraisers + donations.
-  const pickup = await prisma.fundraiser.create({
+  await prisma.fundraiser.create({
     data: {
       name: 'Пікап для евакуаційної групи 47-ї бригади',
       status: 'ACTIVE',
@@ -777,50 +775,11 @@ async function main() {
       location: 'Запорізький напрямок',
       goalAmount: 480000,
       currentAmount: 326500,
-      donationsCount: 1248,
       cardNumber: '5375 4141 0000 1234',
       jarUrl: 'https://send.monobank.ua/jar/demo',
       startDate: new Date('2026-06-01T00:00:00Z'),
       endDate: new Date('2026-07-04T00:00:00Z'),
     },
-  });
-
-  const now = Date.now();
-  await prisma.donation.createMany({
-    data: [
-      {
-        fundraiserId: pickup.id,
-        name: 'Олег К.',
-        amount: 500,
-        comment: 'Тримаймося!',
-        createdAt: new Date(now - 2 * 60 * 1000),
-      },
-      {
-        fundraiserId: pickup.id,
-        name: null,
-        amount: 1000,
-        createdAt: new Date(now - 14 * 60 * 1000),
-      },
-      {
-        fundraiserId: pickup.id,
-        name: 'Марія В.',
-        amount: 250,
-        createdAt: new Date(now - 38 * 60 * 1000),
-      },
-      {
-        fundraiserId: pickup.id,
-        name: 'Андрій П.',
-        amount: 2000,
-        comment: 'Дякую за вашу роботу',
-        createdAt: new Date(now - 3 * 60 * 60 * 1000),
-      },
-      {
-        fundraiserId: pickup.id,
-        name: 'Софія',
-        amount: 150,
-        createdAt: new Date(now - 5 * 60 * 60 * 1000),
-      },
-    ],
   });
 
   await prisma.fundraiser.createMany({
@@ -832,7 +791,6 @@ async function main() {
         location: 'Покровський напрямок',
         goalAmount: 110000,
         currentAmount: 70000,
-        donationsCount: 214,
         cardNumber: '4441 1111 2222 3333',
         startDate: new Date('2026-05-01T00:00:00Z'),
         endDate: new Date('2026-07-15T00:00:00Z'),
@@ -844,7 +802,6 @@ async function main() {
           'Збір на термобілизну та спальники. Дякуємо всім, хто долучився!',
         goalAmount: 80000,
         currentAmount: 80000,
-        donationsCount: 312,
         startDate: new Date('2025-11-01T00:00:00Z'),
         endDate: new Date('2025-12-15T00:00:00Z'),
       },
@@ -855,7 +812,6 @@ async function main() {
           'Збір на потужний генератор для прифронтового шпиталю. Ціль досягнуто!',
         goalAmount: 150000,
         currentAmount: 150000,
-        donationsCount: 540,
         startDate: new Date('2026-01-10T00:00:00Z'),
         endDate: new Date('2026-02-20T00:00:00Z'),
       },

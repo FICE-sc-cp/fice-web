@@ -42,6 +42,7 @@ export default async function CharityDetailsPage({
   }
 
   const isActive = fundraiser.status === "ACTIVE";
+  const period = fmtPeriod(fundraiser.startDate, fundraiser.endDate);
   const cover = mediaUrl(fundraiser.imageUrl);
   const theme = fundraiserTheme(fundraiser.id);
 
@@ -89,13 +90,14 @@ export default async function CharityDetailsPage({
                       />
                       {isActive ? "Збір триває" : "Збір завершено"}
                     </span>
-                    <span aria-hidden className="text-border">
-                      /
-                    </span>
-                    <span className="text-subtle">
-                      {fmtDay(fundraiser.startDate)} –{" "}
-                      {fmtDay(fundraiser.endDate)}
-                    </span>
+                    {period && (
+                      <>
+                        <span aria-hidden className="text-border">
+                          /
+                        </span>
+                        <span className="text-subtle">{period}</span>
+                      </>
+                    )}
                   </div>
                   <h1 className="text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl">
                     {fundraiser.name}
@@ -166,6 +168,12 @@ export default async function CharityDetailsPage({
       <Footer />
     </>
   );
+}
+
+function fmtPeriod(start: string | null, end: string | null): string | null {
+  if (!start) return null;
+  if (!end) return `з ${fmtDay(start)}`;
+  return `${fmtDay(start)} – ${fmtDay(end)}`;
 }
 
 function fmtDay(iso: string): string {

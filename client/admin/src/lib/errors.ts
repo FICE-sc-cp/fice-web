@@ -24,10 +24,9 @@ const FIELD_LABELS: Record<string, string> = {
   location: 'Локація',
   goalAmount: 'Мета збору',
   currentAmount: 'Зібрано',
-  donationsCount: 'Кількість донатів',
   cardNumber: 'Номер картки',
   jarUrl: 'Посилання на банку',
-  monoJarId: 'ID банки monobank',
+  jarWidgetUrl: 'Посилання на віджет банки',
   startDate: 'Дата початку',
   endDate: 'Дата завершення',
   date: 'Дата',
@@ -93,13 +92,18 @@ export function describeDetail(detail: string): {
       return { field, message: text.charAt(0).toUpperCase() + text.slice(1) };
     }
   }
+  const rest = detail.trim().slice(field.length).trim();
+  if (/^[a-zA-Z][a-zA-Z0-9_.]*$/.test(field) && /[а-яґєіїА-ЯҐЄІЇ]/.test(rest)) {
+    return { field, message: rest };
+  }
   return { field, message: detail };
 }
 
 export function translateDetail(detail: string): string {
   const { field, message } = describeDetail(detail);
   const label = FIELD_LABELS[field];
-  return label ? `${label}: ${message.toLowerCase()}` : message;
+  if (!label) return message;
+  return `${label}: ${message.charAt(0).toLowerCase()}${message.slice(1)}`;
 }
 
 const BY_STATUS: Record<number, string> = {

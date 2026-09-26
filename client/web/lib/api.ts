@@ -166,12 +166,10 @@ export interface Fundraiser {
   location: string | null;
   goalAmount: string;
   currentAmount: string;
-  donationsCount: number;
   cardNumber: string | null;
   jarUrl: string | null;
-  monoJarId: string | null;
-  startDate: string;
-  endDate: string;
+  startDate: string | null;
+  endDate: string | null;
   detailsLink: string | null;
 }
 
