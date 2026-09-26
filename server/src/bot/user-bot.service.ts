@@ -68,9 +68,9 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
     const userToken = this.configService.get<string>('USER_BOT_TOKEN');
     const adminToken = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
 
-    if (userToken && adminToken && userToken === adminToken) {
+    if (adminToken && (!userToken || userToken === adminToken)) {
       this.logger.warn(
-        'USER_BOT_TOKEN is identical to TELEGRAM_BOT_TOKEN. Skipping secondary polling.',
+        'USER_BOT_TOKEN is not set or equals TELEGRAM_BOT_TOKEN. Skipping secondary polling.',
       );
       return;
     }

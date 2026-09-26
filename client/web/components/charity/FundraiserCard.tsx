@@ -52,9 +52,11 @@ export function FundraiserCard({ fundraiser }: { fundraiser: Fundraiser }) {
             <span className="font-bold">
               {formatUAH(fundraiser.currentAmount)} ₴
             </span>
-            <span className="text-subtle">
-              {formatUAH(fundraiser.goalAmount)} ₴
-            </span>
+            {Number(fundraiser.goalAmount) > 0 && (
+              <span className="text-subtle">
+                {formatUAH(fundraiser.goalAmount)} ₴
+              </span>
+            )}
           </div>
         </div>
 

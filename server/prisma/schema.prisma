@@ -55,32 +55,17 @@ model Fundraiser {
   story          String?          @db.Text
   imageUrl       String?
   location       String?          @db.VarChar(100)
-  goalAmount     Decimal          @db.Decimal(10, 2)
-  currentAmount  Decimal          @db.Decimal(10, 2)
-  donationsCount Int              @default(0)
+  goalAmount     Decimal          @db.Decimal(14, 2)
+  currentAmount  Decimal          @db.Decimal(14, 2)
   cardNumber     String?          @db.VarChar(25)
   jarUrl         String?
-  monoJarId      String?          @db.VarChar(40)
-  startDate      DateTime
-  endDate        DateTime
+  jarWidgetUrl   String?          @db.VarChar(500)
+  jarHasGoal     Boolean          @default(false)
+  jarSyncedAt    DateTime?
+  jarSyncError   String?          @db.VarChar(255)
+  startDate      DateTime?
+  endDate        DateTime?
   detailsLink    String?
-
-  donations Donation[]
-}
-
-model Donation {
-  id           String   @id @default(uuid()) @db.Uuid
-  fundraiserId String   @db.Uuid
-  name         String?  @db.VarChar(60)
-  amount       Decimal  @db.Decimal(10, 2)
-  comment      String?  @db.VarChar(160)
-  createdAt    DateTime @default(now())
-  externalId   String?  @db.VarChar(64)
-
-  fundraiser Fundraiser @relation(fields: [fundraiserId], references: [id], onDelete: Cascade)
-
-  @@unique([fundraiserId, externalId])
-  @@index([fundraiserId, createdAt])
 }
 
 model DepartmentHead {

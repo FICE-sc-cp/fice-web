@@ -180,12 +180,14 @@ export interface Fundraiser {
   location: string | null;
   goalAmount: string;
   currentAmount: string;
-  donationsCount: number;
   cardNumber: string | null;
   jarUrl: string | null;
-  monoJarId: string | null;
-  startDate: string;
-  endDate: string;
+  jarWidgetUrl: string | null;
+  jarHasGoal: boolean;
+  jarSyncedAt: string | null;
+  jarSyncError: string | null;
+  startDate: string | null;
+  endDate: string | null;
   detailsLink: string | null;
 }
 
@@ -329,6 +331,16 @@ export interface PartnerInput {
   websiteLink?: string | null;
 }
 
+export type JarPreview =
+  | {
+      status: 'ok';
+      currentAmount: string;
+      goalAmount: string | null;
+      jarUrl: string | null;
+      closed: boolean;
+    }
+  | { status: 'unavailable'; reason: string };
+
 export interface FundraiserInput {
   name: string;
   status?: FundraiserStatus;
@@ -336,14 +348,13 @@ export interface FundraiserInput {
   story?: string | null;
   imageUrl?: string | null;
   location?: string | null;
-  goalAmount: number;
+  goalAmount?: number;
   currentAmount?: number;
-  donationsCount?: number;
   cardNumber?: string | null;
   jarUrl?: string | null;
-  monoJarId?: string | null;
-  startDate: string;
-  endDate: string;
+  jarWidgetUrl?: string | null;
+  startDate?: string | null;
+  endDate?: string | null;
   detailsLink?: string | null;
 }
 
@@ -471,6 +482,11 @@ export const api = {
   fundraiser: (id: string) => request<Fundraiser>(`/fundraiser/${id}`),
   createFundraiser: (body: FundraiserInput) =>
     request<Fundraiser>('/fundraiser', { method: 'POST', ...json(body) }),
+  previewJar: (jarWidgetUrl: string) =>
+    request<JarPreview>('/fundraiser/jar-preview', {
+      method: 'POST',
+      ...json({ jarWidgetUrl }),
+    }),
   updateFundraiser: (id: string, body: Partial<FundraiserInput>) =>
     request<Fundraiser>(`/fundraiser/${id}`, { method: 'PATCH', ...json(body) }),
   deleteFundraiser: (id: string) =>

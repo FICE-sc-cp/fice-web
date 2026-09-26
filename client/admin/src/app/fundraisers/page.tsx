@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { Spinner } from '@/components/ui/Spinner';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { hapticNotify } from '@/lib/telegram';
+import { timeAgo } from '@/lib/utils';
 
 export default function FundraisersListPage() {
   const qc = useQueryClient();
@@ -74,6 +75,19 @@ export default function FundraisersListPage() {
                     <p className="mt-0.5 break-words text-xs text-subtle">
                       {current.toLocaleString('uk-UA')} / {goal.toLocaleString('uk-UA')} ₴
                     </p>
+                    {f.jarWidgetUrl && (
+                      <p
+                        className={`mt-0.5 text-xs ${
+                          f.jarSyncError ? 'text-brand-red' : 'text-subtle'
+                        }`}
+                      >
+                        {f.jarSyncError
+                          ? '⚠ Автооновлення з банки зупинено'
+                          : f.jarSyncedAt
+                            ? `↻ З банки · ${timeAgo(f.jarSyncedAt)}`
+                            : '↻ З банки · очікує синхронізації'}
+                      </p>
+                    )}
                   </div>
                   <div className="flex shrink-0 gap-2">
                     <Link

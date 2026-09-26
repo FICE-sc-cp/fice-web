@@ -1,36 +1,97 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { FundraiserStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { paginated, skipFor } from '../../common/pagination';
 import { CreateFundraiserDto } from './dto/create-fundraiser.dto';
 import { UpdateFundraiserDto } from './dto/update-fundraiser.dto';
-import { CreateDonationDto } from './dto/create-donation.dto';
+import {
+  JAR_REUSE_MS,
+  JarWidgetLink,
+  MonobankJarClient,
+  jarPublicUrl,
+  jarSnapshotData,
+  parseJarWidget,
+} from './monobank-jar.client';
 
-const RECENT_DONATIONS = 12;
+interface JarFields {
+  jarWidgetUrl: string | null;
+  jarHasGoal?: boolean;
+  jarSyncedAt?: Date | null;
+  jarSyncError?: string | null;
+  currentAmount?: Prisma.Decimal;
+  goalAmount?: Prisma.Decimal;
+  jarUrl?: string;
+  status?: FundraiserStatus;
+}
+
+export type JarPreview =
+  | {
+      status: 'ok';
+      currentAmount: string;
+      goalAmount: string | null;
+      jarUrl: string | null;
+      closed: boolean;
+    }
+  | { status: 'unavailable'; reason: string };
+
+const UNLINKED: JarFields = {
+  jarWidgetUrl: null,
+  jarHasGoal: false,
+  jarSyncedAt: null,
+  jarSyncError: null,
+};
+
+const INVALID_WIDGET_LINK =
+  'jarWidgetUrl Встав посилання на віджет банки Monobank — воно має містити параметр jar=';
+const JAR_NOT_FOUND =
+  'jarWidgetUrl Monobank не знайшов таку банку — перевір посилання на віджет';
+const MONOBANK_BUSY =
+  'Monobank тимчасово обмежив запити — спробуй за кілька хвилин';
+const START_REQUIRED =
+  'startDate Вкажи дату початку — без неї не можна задати дату завершення';
+const END_BEFORE_START =
+  'endDate Дата завершення не може бути раніше за дату початку';
 
 @Injectable()
 export class FundraiserService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly jarClient: MonobankJarClient,
+  ) {}
 
-  create(dto: CreateFundraiserDto) {
+  async create(dto: CreateFundraiserDto) {
+    const {
+      jarWidgetUrl,
+      currentAmount,
+      jarUrl,
+      goalAmount,
+      startDate,
+      endDate,
+      ...rest
+    } = dto;
+    const start = startDate === undefined ? todayInKyiv() : startDate;
+    const end = endDate ?? null;
+    assertDateRange(start, end);
+
+    const status = dto.status ?? FundraiserStatus.ACTIVE;
+    const link = normalizeLink(jarWidgetUrl);
+    const jar = link ? await this.resolveJar(link, status, true) : UNLINKED;
+
     return this.prisma.fundraiser.create({
       data: {
-        name: dto.name,
-        status: dto.status ?? FundraiserStatus.ACTIVE,
-        description: dto.description,
-        story: dto.story,
-        imageUrl: dto.imageUrl,
-        location: dto.location,
-        goalAmount: dto.goalAmount,
-        currentAmount: dto.currentAmount ?? 0,
-        donationsCount: dto.donationsCount ?? 0,
-        cardNumber: dto.cardNumber,
-        jarUrl: dto.jarUrl,
-        monoJarId: dto.monoJarId,
-        startDate: dto.startDate,
-        endDate: dto.endDate,
-        detailsLink: dto.detailsLink,
+        ...rest,
+        status,
+        startDate: start,
+        endDate: end,
+        goalAmount: goalAmount ?? 0,
+        currentAmount: link ? 0 : (currentAmount ?? 0),
+        jarUrl: link ? null : jarUrl,
+        ...jar,
       },
     });
   }
@@ -39,21 +100,30 @@ export class FundraiserService {
     const { count } = await this.prisma.fundraiser.updateMany({
       where: {
         status: FundraiserStatus.ACTIVE,
-        endDate: { lt: new Date() },
+        endDate: { lt: todayInKyiv() },
       },
       data: { status: FundraiserStatus.CLOSED },
     });
     return count;
   }
 
-  async findAll({ page, limit }: PaginationQueryDto, status?: FundraiserStatus) {
-    const where = status ? { status } : { status: { not: FundraiserStatus.DRAFT } };
+  async findAll(
+    { page, limit }: PaginationQueryDto,
+    status?: FundraiserStatus,
+  ) {
+    const where = status
+      ? { status }
+      : { status: { not: FundraiserStatus.DRAFT } };
     const [items, total] = await this.prisma.$transaction([
       this.prisma.fundraiser.findMany({
         where,
         skip: skipFor(page, limit),
         take: limit,
-        orderBy: [{ status: 'asc' }, { startDate: 'desc' }],
+        orderBy: [
+          { status: 'asc' },
+          { startDate: { sort: 'desc', nulls: 'last' } },
+          { id: 'asc' },
+        ],
       }),
       this.prisma.fundraiser.count({ where }),
     ]);
@@ -63,12 +133,6 @@ export class FundraiserService {
   async findOne(id: string) {
     const fundraiser = await this.prisma.fundraiser.findUnique({
       where: { id },
-      include: {
-        donations: {
-          orderBy: { createdAt: 'desc' },
-          take: RECENT_DONATIONS,
-        },
-      },
     });
     if (!fundraiser) {
       throw new NotFoundException(`Fundraiser ${id} not found`);
@@ -77,71 +141,52 @@ export class FundraiserService {
   }
 
   async update(id: string, dto: UpdateFundraiserDto) {
-    await this.ensureExists(id);
-    return this.prisma.fundraiser.update({ where: { id }, data: dto });
+    const existing = await this.prisma.fundraiser.findUnique({
+      where: { id },
+      select: {
+        status: true,
+        jarWidgetUrl: true,
+        jarHasGoal: true,
+        startDate: true,
+        endDate: true,
+      },
+    });
+    if (!existing) {
+      throw new NotFoundException(`Fundraiser ${id} not found`);
+    }
+
+    assertDateRange(
+      dto.startDate !== undefined ? dto.startDate : existing.startDate,
+      dto.endDate !== undefined ? dto.endDate : existing.endDate,
+    );
+
+    const { jarWidgetUrl, currentAmount, jarUrl, ...rest } = dto;
+    const linkTouched = jarWidgetUrl !== undefined;
+    const link = linkTouched
+      ? normalizeLink(jarWidgetUrl)
+      : existing.jarWidgetUrl;
+    const data: Prisma.FundraiserUncheckedUpdateInput = { ...rest };
+
+    if (!link) {
+      if (linkTouched || existing.jarWidgetUrl) Object.assign(data, UNLINKED);
+      if (currentAmount !== undefined) data.currentAmount = currentAmount;
+      if (jarUrl !== undefined) data.jarUrl = jarUrl;
+      return this.prisma.fundraiser.update({ where: { id }, data });
+    }
+
+    const sameLink = link === existing.jarWidgetUrl;
+    const jar = linkTouched
+      ? await this.resolveJar(link, dto.status ?? existing.status, !sameLink)
+      : undefined;
+    if (jar) Object.assign(data, jar);
+    if (jar?.jarHasGoal === undefined && sameLink && existing.jarHasGoal) {
+      delete data.goalAmount;
+    }
+
+    return this.prisma.fundraiser.update({ where: { id }, data });
   }
 
   async remove(id: string) {
-    await this.ensureExists(id);
-    return this.prisma.fundraiser.delete({ where: { id } });
-  }
-
-  listDonations(id: string, limit = RECENT_DONATIONS) {
-    return this.prisma.donation.findMany({
-      where: { fundraiserId: id },
-      orderBy: { createdAt: 'desc' },
-      take: limit,
-    });
-  }
-
-  /**
-   * Records a donation and bumps the fundraiser progress + counter so the
-   * public page reflects it immediately (manual / live mode).
-   */
-  async addDonation(id: string, dto: CreateDonationDto) {
-    await this.ensureExists(id);
-    const [donation] = await this.prisma.$transaction([
-      this.prisma.donation.create({
-        data: {
-          fundraiserId: id,
-          name: dto.name?.trim() || null,
-          amount: dto.amount,
-          comment: dto.comment?.trim() || null,
-          createdAt: dto.createdAt,
-        },
-      }),
-      this.prisma.fundraiser.update({
-        where: { id },
-        data: {
-          currentAmount: { increment: dto.amount },
-          donationsCount: { increment: 1 },
-        },
-      }),
-    ]);
-    return donation;
-  }
-
-  async removeDonation(id: string, donationId: string) {
-    const donation = await this.prisma.donation.findFirst({
-      where: { id: donationId, fundraiserId: id },
-    });
-    if (!donation) {
-      throw new NotFoundException(`Donation ${donationId} not found`);
-    }
-    await this.prisma.$transaction([
-      this.prisma.donation.delete({ where: { id: donationId } }),
-      this.prisma.fundraiser.update({
-        where: { id },
-        data: {
-          currentAmount: { decrement: donation.amount },
-          donationsCount: { decrement: 1 },
-        },
-      }),
-    ]);
-    return { id: donationId, removed: true };
-  }
-
-  private async ensureExists(id: string) {
     const exists = await this.prisma.fundraiser.findUnique({
       where: { id },
       select: { id: true },
@@ -149,53 +194,99 @@ export class FundraiserService {
     if (!exists) {
       throw new NotFoundException(`Fundraiser ${id} not found`);
     }
+    return this.prisma.fundraiser.delete({ where: { id } });
   }
 
-  /** Used by the Monobank sync to find fundraisers tied to a jar. */
-  fundraisersWithJars() {
-    return this.prisma.fundraiser.findMany({
-      where: { monoJarId: { not: null } },
-      select: { id: true, monoJarId: true },
-    });
-  }
-
-  /** Authoritative balance update from Monobank (overwrites currentAmount). */
-  setBalance(id: string, currentAmount: Prisma.Decimal | number) {
-    return this.prisma.fundraiser.update({
-      where: { id },
-      data: { currentAmount },
-    });
-  }
-
-  /**
-   * Idempotently imports a Monobank statement item as a donation. Returns true
-   * when a new row was created (so callers can bump the counter).
-   */
-  async importMonoDonation(
-    id: string,
-    item: { externalId: string; name: string | null; amount: number; createdAt: Date },
-  ): Promise<boolean> {
-    try {
-      await this.prisma.donation.create({
-        data: {
-          fundraiserId: id,
-          externalId: item.externalId,
-          name: item.name,
-          amount: item.amount,
-          createdAt: item.createdAt,
-        },
-      });
-      await this.prisma.fundraiser.update({
-        where: { id },
-        data: { donationsCount: { increment: 1 } },
-      });
-      return true;
-    } catch (e) {
-      // Unique violation => already imported; ignore.
-      if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === 'P2002') {
-        return false;
+  async previewJar(link: string): Promise<JarPreview> {
+    const widget = parseWidgetOrThrow(link);
+    const result = await this.jarClient.fetch(widget.widgetId, JAR_REUSE_MS);
+    switch (result.kind) {
+      case 'ok': {
+        const data = jarSnapshotData(result.jar, widget.sendId);
+        return {
+          status: 'ok',
+          currentAmount: data.currentAmount.toString(),
+          goalAmount: data.goalAmount?.toString() ?? null,
+          jarUrl: data.jarUrl ?? null,
+          closed: result.jar.closed,
+        };
       }
-      throw e;
+      case 'invalid':
+        throw new BadRequestException(JAR_NOT_FOUND);
+      case 'unsupported':
+        throw new BadRequestException(`jarWidgetUrl ${result.reason}`);
+      case 'rate-limited':
+        return { status: 'unavailable', reason: MONOBANK_BUSY };
+      case 'unavailable':
+        return { status: 'unavailable', reason: result.reason };
     }
   }
+
+  private async resolveJar(
+    link: string,
+    status: FundraiserStatus,
+    isNewLink: boolean,
+  ): Promise<JarFields> {
+    const widget = parseWidgetOrThrow(link);
+    const result = await this.jarClient.fetch(widget.widgetId, JAR_REUSE_MS);
+    switch (result.kind) {
+      case 'ok':
+        return {
+          jarWidgetUrl: link,
+          ...jarSnapshotData(result.jar, widget.sendId),
+          ...(result.jar.closed &&
+            status === FundraiserStatus.ACTIVE && {
+              status: FundraiserStatus.CLOSED,
+            }),
+        };
+      case 'invalid':
+        throw new BadRequestException(JAR_NOT_FOUND);
+      case 'unsupported':
+        throw new BadRequestException(`jarWidgetUrl ${result.reason}`);
+      case 'rate-limited':
+      case 'unavailable': {
+        const fallbackUrl = jarPublicUrl(widget.sendId);
+        return {
+          jarWidgetUrl: link,
+          jarSyncError: null,
+          ...(isNewLink && { jarSyncedAt: null, jarHasGoal: false }),
+          ...(fallbackUrl && { jarUrl: fallbackUrl }),
+        };
+      }
+    }
+  }
+}
+
+function parseWidgetOrThrow(link: string): JarWidgetLink {
+  const widget = parseJarWidget(link);
+  if (!widget) throw new BadRequestException(INVALID_WIDGET_LINK);
+  return widget;
+}
+
+function assertDateRange(
+  start: Date | null | undefined,
+  end: Date | null | undefined,
+): void {
+  if (!end) return;
+  if (!start) throw new BadRequestException(START_REQUIRED);
+  if (end.getTime() < start.getTime()) {
+    throw new BadRequestException(END_BEFORE_START);
+  }
+}
+
+function todayInKyiv(): Date {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Kyiv',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value ?? '';
+  return new Date(`${get('year')}-${get('month')}-${get('day')}T00:00:00.000Z`);
+}
+
+function normalizeLink(link: string | null | undefined): string | null {
+  const trimmed = link?.trim();
+  return trimmed ? trimmed : null;
 }

@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "Fundraiser" ADD COLUMN     "jarHasGoal" BOOLEAN NOT NULL DEFAULT false,
+ALTER COLUMN "startDate" DROP NOT NULL,
+ALTER COLUMN "endDate" DROP NOT NULL;
+
