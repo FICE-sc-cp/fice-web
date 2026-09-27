@@ -6,8 +6,12 @@ describe('VotingService', () => {
   let service: VotingService;
   let prisma: any;
   let userBot: any;
+  let config: any;
 
   beforeEach(() => {
+    config = {
+      get: jest.fn().mockReturnValue('http://localhost:3002'),
+    };
     prisma = {
       eventVoting: {
         findMany: jest.fn(),
@@ -42,7 +46,7 @@ describe('VotingService', () => {
       sendBroadcast: jest.fn().mockResolvedValue({ sent: 5, failed: 0 }),
     };
 
-    service = new VotingService(prisma, userBot);
+    service = new VotingService(prisma, userBot, config);
   });
 
   describe('castVote', () => {

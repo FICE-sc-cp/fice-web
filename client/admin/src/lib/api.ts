@@ -718,6 +718,7 @@ export interface EventVoting {
   pendingSubmissionsCount?: number;
   createdAt: string;
   totalVotes: number;
+  screenUrl?: string;
   candidates: VotingCandidate[];
 }
 

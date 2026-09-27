@@ -801,28 +801,42 @@ export default function EventVotingPage() {
                     {activeResultsId === v.id ? 'Сховати результати' : 'Результати та голоси'}
                   </Button>
 
-                  <a
-                    href={`http://${typeof window !== 'undefined' ? window.location.hostname : 'localhost'}:3002/screen/voting/${v.id}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs px-2.5 py-1 rounded-lg border border-brand-cyan/40 bg-brand-cyan/10 text-brand-cyan hover:bg-brand-cyan/20 font-medium flex items-center transition-colors"
-                  >
-                    Екран для сцени
-                  </a>
+                  {(() => {
+                    const fallbackScreenUrl =
+                      typeof window !== 'undefined' &&
+                      (window.location.hostname === 'localhost' ||
+                        window.location.hostname === '127.0.0.1')
+                        ? `http://${window.location.hostname}:3002/screen/voting/${v.id}`
+                        : `${typeof window !== 'undefined' ? window.location.origin : ''}/screen/voting/${v.id}`;
+                    const screenUrl = v.screenUrl || fallbackScreenUrl;
 
-                  <button
-                    onClick={() => {
-                      const screenUrl = `${window.location.protocol}//${window.location.hostname}:3002/screen/voting/${v.id}`;
-                      navigator.clipboard.writeText(screenUrl);
-                      hapticNotify('success');
-                      setCopiedScreenId(v.id);
-                      setTimeout(() => setCopiedScreenId(null), 2500);
-                    }}
-                    className="text-xs px-2.5 py-1 rounded-lg border border-border bg-surface text-muted hover:text-fg hover:border-white/30 font-medium"
-                    title="Скопіювати пряме посилання на екран"
-                  >
-                    {copiedScreenId === v.id ? 'Скопійовано!' : 'Скопіювати посилання'}
-                  </button>
+                    return (
+                      <>
+                        <a
+                          href={screenUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs px-2.5 py-1 rounded-lg border border-brand-cyan/40 bg-brand-cyan/10 text-brand-cyan hover:bg-brand-cyan/20 font-medium flex items-center transition-colors"
+                        >
+                          Екран для сцени
+                        </a>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(screenUrl);
+                            hapticNotify('success');
+                            setCopiedScreenId(v.id);
+                            setTimeout(() => setCopiedScreenId(null), 2500);
+                          }}
+                          className="text-xs px-2.5 py-1 rounded-lg border border-border bg-surface text-muted hover:text-fg hover:border-white/30 font-medium"
+                          title="Скопіювати пряме посилання на екран"
+                        >
+                          {copiedScreenId === v.id ? 'Скопійовано!' : 'Скопіювати посилання'}
+                        </button>
+                      </>
+                    );
+                  })()}
                 </div>
 
                 {activeResultsId === v.id && (

@@ -106,6 +106,7 @@ function MiniAppContent() {
   const [costumeSubmitting, setCostumeSubmitting] = useState(false);
   const [costumeError, setCostumeError] = useState<string | null>(null);
   const [costumeSuccessMsg, setCostumeSuccessMsg] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] = useState<{ url: string; title?: string } | null>(null);
 
   // Registration Form State
   const [regFullName, setRegFullName] = useState('');
@@ -158,9 +159,11 @@ function MiniAppContent() {
  
   // Handle Telegram native BackButton
   useEffect(() => {
-    if (selectedEventId || activeVotingId || checkInModalOpen || costumeModalOpen) {
+    if (previewImage || selectedEventId || activeVotingId || checkInModalOpen || costumeModalOpen) {
       showBackButton(() => {
-        if (costumeModalOpen) {
+        if (previewImage) {
+          setPreviewImage(null);
+        } else if (costumeModalOpen) {
           setCostumeModalOpen(false);
         } else if (checkInModalOpen) {
           setCheckInModalOpen(false);
@@ -176,6 +179,7 @@ function MiniAppContent() {
     }
     return () => hideBackButton();
   }, [
+    previewImage,
     selectedEventId,
     activeVotingId,
     checkInModalOpen,
@@ -892,7 +896,7 @@ function MiniAppContent() {
                               : 'bg-white/10 text-muted border border-white/10'
                           }`}
                         >
-                          {votingData.submissionsOpen ? 'Прийом відкрито' : 'Прийом закрито'}
+                          {votingData.submissionsOpen ? 'Відкрито' : 'Закрито'}
                         </span>
                       </div>
 
@@ -900,14 +904,47 @@ function MiniAppContent() {
                         <div className="space-y-3">
                           <div className="flex gap-3 items-center rounded-xl bg-bg/60 p-3 border border-border">
                             {votingData.userSubmission.photoUrl && (
-                              <img
-                                src={
-                                  mediaUrl(votingData.userSubmission.photoUrl) ||
-                                  votingData.userSubmission.photoUrl
-                                }
-                                alt={votingData.userSubmission.name}
-                                className="h-16 w-16 rounded-xl object-cover border border-white/10 shrink-0"
-                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  haptic('light');
+                                  const url =
+                                    mediaUrl(votingData.userSubmission!.photoUrl) ||
+                                    votingData.userSubmission!.photoUrl;
+                                  if (url) {
+                                    setPreviewImage({
+                                      url,
+                                      title: votingData.userSubmission!.name,
+                                    });
+                                  }
+                                }}
+                                className="relative group shrink-0 rounded-xl overflow-hidden cursor-pointer"
+                                title="Збільшити фото"
+                              >
+                                <img
+                                  src={
+                                    mediaUrl(votingData.userSubmission.photoUrl) ||
+                                    votingData.userSubmission.photoUrl
+                                  }
+                                  alt={votingData.userSubmission.name}
+                                  className="h-16 w-16 rounded-xl object-cover border border-white/10 transition-transform group-hover:scale-105"
+                                />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                  <svg
+                                    className="w-5 h-5 text-white"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7"
+                                    />
+                                  </svg>
+                                </div>
+                              </button>
                             )}
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-1.5 flex-wrap">
@@ -930,11 +967,6 @@ function MiniAppContent() {
                                     : '🔴 Відхилено'}
                                 </span>
                               </div>
-                              {votingData.userSubmission.description && (
-                                <p className="text-xs text-muted line-clamp-1 mt-0.5">
-                                  {votingData.userSubmission.description}
-                                </p>
-                              )}
                               <p className="text-[11px] text-muted mt-1">
                                 {votingData.userSubmission.status === 'PENDING' &&
                                   'Ваш костюм на перевірці у адміністратора. Після схвалення він зʼявиться у списку для голосування.'}
@@ -948,15 +980,16 @@ function MiniAppContent() {
                             </div>
                           </div>
 
-                          {votingData.submissionsOpen && (
-                            <Button
-                              variant="outline"
-                              onClick={openCostumeModal}
-                              className="w-full text-xs py-2 border-purple-500/30 text-purple-300 hover:bg-purple-500/10"
-                            >
-                              ✏️ Змінити заявку / перезавантажити фото
-                            </Button>
-                          )}
+                          {votingData.submissionsOpen &&
+                            votingData.userSubmission.status !== 'APPROVED' && (
+                              <Button
+                                variant="outline"
+                                onClick={openCostumeModal}
+                                className="w-full text-xs py-2 border-purple-500/30 text-purple-300 hover:bg-purple-500/10"
+                              >
+                                ✏️ Змінити заявку / перезавантажити фото
+                              </Button>
+                            )}
                         </div>
                       ) : votingData.submissionsOpen ? (
                         votingData.onlyRegistered && !votingData.isRegistered ? (
@@ -1019,13 +1052,44 @@ function MiniAppContent() {
                         >
                           <div className="flex items-center gap-3">
                             {cand.photoUrl ? (
-                              <img
-                                src={mediaUrl(cand.photoUrl) || cand.photoUrl}
-                                alt={cand.name}
-                                className="h-16 w-16 rounded-xl object-cover border border-white/10"
-                              />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  haptic('light');
+                                  const url = mediaUrl(cand.photoUrl) || cand.photoUrl;
+                                  if (url) {
+                                    setPreviewImage({
+                                      url,
+                                      title: cand.name,
+                                    });
+                                  }
+                                }}
+                                className="relative group shrink-0 rounded-xl overflow-hidden cursor-pointer"
+                                title="Збільшити фото"
+                              >
+                                <img
+                                  src={mediaUrl(cand.photoUrl) || cand.photoUrl}
+                                  alt={cand.name}
+                                  className="h-16 w-16 rounded-xl object-cover border border-white/10 transition-transform group-hover:scale-105"
+                                />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                  <svg
+                                    className="w-5 h-5 text-white"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7"
+                                    />
+                                  </svg>
+                                </div>
+                              </button>
                             ) : (
-                              <div className="h-16 w-16 rounded-xl bg-surface flex items-center justify-center border border-border text-muted">
+                              <div className="h-16 w-16 rounded-xl bg-surface flex items-center justify-center border border-border text-muted shrink-0">
                                 <svg
                                   className="h-7 w-7"
                                   fill="none"
@@ -1045,11 +1109,6 @@ function MiniAppContent() {
                               <div className="font-black text-base text-fg truncate">
                                 {cand.name}
                               </div>
-                              {cand.description && (
-                                <div className="text-xs text-muted line-clamp-2 mt-0.5">
-                                  {cand.description}
-                                </div>
-                              )}
                               {cand.percent !== undefined && (
                                 <div className="text-xs font-bold text-brand-cyan mt-1">
                                   {cand.votesCount} голосів ({cand.percent}%)
@@ -1065,7 +1124,7 @@ function MiniAppContent() {
                                   disabled={isVotingSubmitting}
                                   onClick={() => handleVote(cand.id)}
                                 >
-                                  Голос
+                                  Проголосувати
                                 </Button>
                               )}
 
@@ -1462,19 +1521,6 @@ function MiniAppContent() {
                       value={costumeName}
                       onChange={(e) => setCostumeName(e.target.value)}
                       className="w-full rounded-xl border border-border bg-bg px-3.5 py-2.5 text-sm text-fg placeholder:text-muted/60 focus:border-brand-cyan focus:outline-none"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1 block text-xs font-bold text-fg">
-                      Опис образу (опціонально)
-                    </label>
-                    <textarea
-                      rows={2}
-                      placeholder="Розкажіть трохи про деталі, як створювався костюм..."
-                      value={costumeDesc}
-                      onChange={(e) => setCostumeDesc(e.target.value)}
-                      className="w-full rounded-xl border border-border bg-bg px-3.5 py-2 text-sm text-fg placeholder:text-muted/60 focus:border-brand-cyan focus:outline-none resize-none"
                     />
                   </div>
 
@@ -2512,6 +2558,48 @@ function MiniAppContent() {
           </button>
         </div>
       </nav>
+
+      {/* ================= FULLSCREEN IMAGE PREVIEW LIGHTBOX ================= */}
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in duration-200"
+          onClick={() => {
+            haptic('light');
+            setPreviewImage(null);
+          }}
+        >
+          <div
+            className="relative flex flex-col items-center max-w-full max-h-[92vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                haptic('light');
+                setPreviewImage(null);
+              }}
+              className="absolute -top-12 right-0 rounded-full bg-white/20 hover:bg-white/30 p-2 text-white transition-colors cursor-pointer"
+              title="Закрити"
+            >
+              <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <img
+              src={previewImage.url}
+              alt={previewImage.title || 'Зображення'}
+              className="max-h-[80vh] max-w-full object-contain rounded-2xl shadow-2xl border border-white/20 select-none"
+            />
+
+            {previewImage.title && (
+              <div className="mt-3 text-center text-sm font-black text-white bg-black/60 px-4 py-1.5 rounded-full border border-white/10 backdrop-blur-sm">
+                {previewImage.title}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

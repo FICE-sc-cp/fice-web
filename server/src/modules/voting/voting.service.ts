@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { CandidateStatus, VotingStatus } from '@prisma/client';
 import * as ExcelJS from 'exceljs';
 import { UserBotService } from '../../bot/user-bot.service';
@@ -20,7 +21,14 @@ export class VotingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly userBot: UserBotService,
+    private readonly config: ConfigService,
   ) {}
+
+  private getScreenUrl(votingId: string): string {
+    const publicUrl = this.config.get<string>('PUBLIC_WEB_URL');
+    const base = publicUrl ? publicUrl.replace(/\/$/, '') : 'http://localhost:3002';
+    return `${base}/screen/voting/${votingId}`;
+  }
 
   async getEventVotings(eventId: string) {
     const votings = await this.prisma.eventVoting.findMany({
@@ -50,6 +58,7 @@ export class VotingService {
       submissionsOpen: v.submissionsOpen,
       createdAt: v.createdAt,
       totalVotes: v._count.votes,
+      screenUrl: this.getScreenUrl(v.id),
       pendingSubmissionsCount: v.candidates.filter((c) => c.status === 'PENDING').length,
       candidates: v.candidates.map((c) => ({
         id: c.id,
@@ -99,7 +108,10 @@ export class VotingService {
       },
     });
     if (!voting) throw new NotFoundException(`Voting ${id} not found`);
-    return voting;
+    return {
+      ...voting,
+      screenUrl: this.getScreenUrl(voting.id),
+    };
   }
 
   async updateVoting(id: string, dto: UpdateVotingDto) {
