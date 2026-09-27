@@ -102,6 +102,7 @@ function MiniAppContent() {
   const [costumeName, setCostumeName] = useState('');
   const [costumeDesc, setCostumeDesc] = useState('');
   const [costumePhotoUrl, setCostumePhotoUrl] = useState<string | null>(null);
+  const [costumeConsent, setCostumeConsent] = useState(false);
   const [costumeUploading, setCostumeUploading] = useState(false);
   const [costumeSubmitting, setCostumeSubmitting] = useState(false);
   const [costumeError, setCostumeError] = useState<string | null>(null);
@@ -432,10 +433,12 @@ function MiniAppContent() {
       setCostumeName(votingData.userSubmission.name);
       setCostumeDesc(votingData.userSubmission.description || '');
       setCostumePhotoUrl(votingData.userSubmission.photoUrl);
+      setCostumeConsent(true);
     } else {
       setCostumeName('');
       setCostumeDesc('');
       setCostumePhotoUrl(null);
+      setCostumeConsent(false);
     }
     setCostumeError(null);
     setCostumeSuccessMsg(null);
@@ -469,6 +472,12 @@ function MiniAppContent() {
     }
     if (!costumePhotoUrl) {
       setCostumeError('Будь ласка, завантажте фото костюма');
+      return;
+    }
+    if (!costumeConsent) {
+      setCostumeError(
+        'Необхідно надати згоду на оброблення та використання персональної інформації',
+      );
       return;
     }
 
@@ -1524,6 +1533,34 @@ function MiniAppContent() {
                     />
                   </div>
 
+                  <div className="rounded-2xl border border-purple-500/30 bg-purple-950/20 p-3.5 space-y-2">
+                    <div className="text-xs font-black uppercase tracking-wider text-purple-300">
+                      Оброблення та використання персональної інформації
+                    </div>
+                    <label className="flex items-start gap-2.5 cursor-pointer text-xs text-muted leading-relaxed select-none">
+                      <input
+                        type="checkbox"
+                        required
+                        checked={costumeConsent}
+                        onChange={(e) => setCostumeConsent(e.target.checked)}
+                        className="mt-0.5 h-4 w-4 rounded border-border text-purple-500 focus:ring-purple-500 shrink-0 cursor-pointer accent-purple-500"
+                      />
+                      <span>
+                        Чи погоджуєшся ти на оброблення та використання наданої тобою інформації вище для створення форми голосування, яка буде оприлюднена на{' '}
+                        <a
+                          href="https://t.me/fice_time"
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-brand-cyan hover:underline font-bold"
+                        >
+                          FICE Time
+                        </a>
+                        ?
+                      </span>
+                    </label>
+                  </div>
+
                   {costumeError && (
                     <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-400">
                       {costumeError}
@@ -1544,6 +1581,7 @@ function MiniAppContent() {
                       disabled={
                         !costumeName.trim() ||
                         !costumePhotoUrl ||
+                        !costumeConsent ||
                         costumeUploading ||
                         costumeSubmitting
                       }
