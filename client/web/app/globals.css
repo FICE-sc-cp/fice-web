@@ -219,3 +219,61 @@ body > main {
 body > footer {
   margin-top: auto;
 }
+
+/* ================= LIVE SCREEN ANIMATIONS ================= */
+@keyframes live-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.75); }
+}
+.live-dot {
+  animation: live-dot 1.6s ease-in-out infinite;
+}
+
+@keyframes float-y-rotate {
+  0%, 100% { transform: translateY(0) rotate(12deg); }
+  50% { transform: translateY(-6px) rotate(12deg); }
+}
+.frog-float {
+  animation: float-y-rotate 4s ease-in-out infinite;
+}
+
+@keyframes float-big {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-14px); }
+}
+.frog-big {
+  animation: float-big 3s ease-in-out infinite;
+}
+
+@keyframes pixel-hop {
+  0%, 60%, 100% { transform: translateY(0); }
+  30% { transform: translateY(-18px); }
+}
+.px1 { animation: pixel-hop 1.2s ease-in-out infinite; }
+.px2 { animation: pixel-hop 1.2s ease-in-out 0.15s infinite; }
+.px3 { animation: pixel-hop 1.2s ease-in-out 0.3s infinite; }
+
+@keyframes q-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.08); opacity: 0.7; }
+}
+.q-next {
+  animation: q-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes page-timer {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+.page-timer {
+  animation: page-timer 8s linear infinite;
+}
+
+@keyframes confetti-decor {
+  0%, 100% { transform: translateY(0) rotate(var(--r, 0deg)); }
+  50% { transform: translateY(12px) rotate(calc(var(--r, 0deg) + 25deg)); }
+}
+.confetti-decor {
+  animation: confetti-decor 3s ease-in-out infinite;
+}
+
