@@ -37,7 +37,7 @@ export default function TeamPage() {
 
         {/* team section */}
         <TeamSection />
-        <div className="pb-12">
+        <div className="pb-0">
           <Marquee />
         </div>
       </main>
