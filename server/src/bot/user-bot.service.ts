@@ -7,6 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Bot, GrammyError, InputFile } from 'grammy';
 import { resolve } from 'node:path';
+import * as QRCode from 'qrcode';
 import { PrismaService } from '../database/prisma.service';
 import { UPLOAD_DIR } from '../upload/upload.constants';
 
@@ -200,7 +201,11 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
               },
             });
 
-            await this.prisma.eventRegistration.create({
+            const payment = payload.payment ?? 'NONE';
+            const paymentStatus =
+              payment === 'DONATED' ? 'PENDING' : 'NOT_REQUIRED';
+
+            const createdReg = await this.prisma.eventRegistration.create({
               data: {
                 eventId: pending.eventId,
                 botUserId: botUser.id,
@@ -209,7 +214,9 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
                 telegramTag: normalizedTag,
                 group: payload.group,
                 birthDate: payload.birthDate ? new Date(payload.birthDate) : null,
-                payment: payload.payment ?? 'NONE',
+                source: 'WEB',
+                payment,
+                paymentStatus,
                 receiptUrl: payload.receiptUrl ?? null,
                 answers: answerData.length ? { create: answerData } : undefined,
               },
@@ -220,16 +227,20 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
               data: { completed: true },
             });
 
-            await ctx.reply(
-              `🎉 Чудово, ${from.first_name || 'друже'}! Твою реєстрацію на захід «${pending.event.name}» успішно підтверджено!\n\nСторінка на сайті вже оновилася. Побачимось на заході!`,
-              {
-                reply_markup: {
-                  inline_keyboard: [
-                    [{ text: 'Мої реєстрації в боті', web_app: { url: `${baseAppUrl}?tab=my-events` } }],
-                  ],
+            if (paymentStatus === 'NOT_REQUIRED') {
+              await this.sendTicketToUser(telegramId, createdReg, pending.event);
+            } else {
+              await ctx.reply(
+                `🎉 Чудово, ${from.first_name || 'друже'}! Твою реєстрацію на захід «${pending.event.name}» прийнято.\n\n🧾 Твій платіж передано на перевірку адміністраторам. Щойно оплату буде підтверджено — бот надішле сюди твій постійний QR-квиток для входу! 🎫`,
+                {
+                  reply_markup: {
+                    inline_keyboard: [
+                      [{ text: 'Мої реєстрації в боті', web_app: { url: `${baseAppUrl}?tab=my-events` } }],
+                    ],
+                  },
                 },
-              },
-            );
+              );
+            }
             return;
           }
         } catch (regErr) {
@@ -468,6 +479,97 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
       this.logger.warn(
         `Failed to send direct message to user ${chatIdNum}: ${err}`,
       );
+      return false;
+    }
+  }
+
+  async sendTicketToUser(
+    telegramUserId: bigint | number,
+    reg: {
+      id: string;
+      fullName: string;
+      group: string;
+      ticketCode: string;
+      birthDate?: Date | string | null;
+      payment?: string;
+      paymentStatus?: string;
+    },
+    event: { id: string; name: string; date: Date | string; location?: string | null },
+  ): Promise<boolean> {
+    if (!this.bot) return false;
+    const botUser = await this.prisma.botUser.findUnique({
+      where: { telegramId: BigInt(telegramUserId) },
+    });
+    const chatId = botUser ? Number(botUser.chatId) : Number(telegramUserId);
+
+    try {
+      const qrData = `FICE-TICKET:${reg.ticketCode}`;
+      const qrBuffer = await QRCode.toBuffer(qrData, {
+        type: 'png',
+        errorCorrectionLevel: 'M',
+        margin: 2,
+        width: 500,
+        color: {
+          dark: '#000000',
+          light: '#ffffff',
+        },
+      });
+
+      let ageInfo = '';
+      if (reg.birthDate) {
+        const bd = new Date(reg.birthDate);
+        const ageDifMs = Date.now() - bd.getTime();
+        const ageDate = new Date(ageDifMs);
+        const age = Math.abs(ageDate.getUTCFullYear() - 1970);
+        const isAdult = age >= 18;
+        ageInfo = `🎂 <b>Вік:</b> ${age} (${isAdult ? '🟢 18+' : '🔴 &lt;18'})\n`;
+      }
+
+      const eventDateStr = new Intl.DateTimeFormat('uk-UA', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: 'Europe/Kyiv',
+      }).format(new Date(event.date));
+
+      const caption =
+        `🎫 <b>ТВІЙ КВИТОК НА ЗАХІД</b>\n\n` +
+        `🎃 <b>${event.name}</b>\n` +
+        `📅 <b>Коли:</b> ${eventDateStr}\n` +
+        (event.location ? `📍 <b>Де:</b> ${event.location}\n` : '') +
+        `\n` +
+        `👤 <b>Гість:</b> ${reg.fullName}\n` +
+        `👥 <b>Група:</b> ${reg.group}\n` +
+        ageInfo +
+        `🎟 <b>Код квитка:</b> <code>${reg.ticketCode.slice(0, 8)}</code>\n` +
+        `✅ <b>Оплату/реєстрацію підтверджено</b>\n\n` +
+        `⚠️ <b>Збережи це фото в галерею смартфона</b>, щоб показати QR-код волонтеру на вході навіть без інтернету! 🔆 Зроби яскравість екрана вищою.`;
+
+      const baseAppUrl = this.getMiniAppUrl();
+
+      await this.bot.api.sendPhoto(
+        chatId,
+        new InputFile(qrBuffer, `ticket-${reg.ticketCode.slice(0, 8)}.png`),
+        {
+          caption,
+          parse_mode: 'HTML',
+          reply_markup: {
+            inline_keyboard: [
+              [
+                {
+                  text: 'Відкрити квиток у додатку 📱',
+                  web_app: { url: `${baseAppUrl}?tab=my-events` },
+                },
+              ],
+            ],
+          },
+        },
+      );
+
+      return true;
+    } catch (err) {
+      this.logger.error(`Failed to send ticket to user ${telegramUserId}: ${err}`);
       return false;
     }
   }

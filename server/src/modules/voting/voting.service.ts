@@ -179,7 +179,7 @@ export class VotingService {
     const voting = await this.prisma.eventVoting.findUnique({
       where: { id },
       include: {
-        event: { select: { id: true, name: true, noRegistration: true } },
+        event: { select: { id: true, name: true, noRegistration: true, maxRegistrations: true } },
         candidates: {
           where: { status: CandidateStatus.APPROVED },
           orderBy: { order: 'asc' },
@@ -246,6 +246,45 @@ export class VotingService {
     const canSeeResults =
       voting.showResultsLive || voting.status === VotingStatus.CLOSED;
 
+    const [totalRegistrations, confirmedRegistrations, attendedCount] = await Promise.all([
+      this.prisma.eventRegistration.count({ where: { eventId: voting.eventId } }),
+      this.prisma.eventRegistration.count({
+        where: {
+          eventId: voting.eventId,
+          paymentStatus: { in: ['CONFIRMED', 'NOT_REQUIRED'] },
+        },
+      }),
+      this.prisma.eventRegistration.count({
+        where: { eventId: voting.eventId, attended: true },
+      }),
+    ]);
+
+    const expectedVoters =
+      voting.event?.maxRegistrations && voting.event.maxRegistrations > 0
+        ? voting.event.maxRegistrations
+        : attendedCount > 0
+          ? attendedCount
+          : confirmedRegistrations > 0
+            ? confirmedRegistrations
+            : totalRegistrations > 0
+              ? totalRegistrations
+              : null;
+
+    const turnoutPercentage =
+      expectedVoters && expectedVoters > 0
+        ? Math.round((totalVotes / expectedVoters) * 100)
+        : null;
+
+    const isThresholdReached =
+      (turnoutPercentage !== null && turnoutPercentage >= 49) ||
+      (totalVotes >= 5 &&
+        voting.candidates.some(
+          (c) => totalVotes > 0 && Math.round((c._count.votes / totalVotes) * 100) >= 49,
+        ));
+
+    const hideCandidateVotes =
+      isThresholdReached && voting.status !== VotingStatus.CLOSED;
+
     return {
       id: voting.id,
       eventId: voting.eventId,
@@ -263,15 +302,17 @@ export class VotingService {
       votedCandidateId: userVotedCandidateId,
       userSubmission,
       totalVotes: canSeeResults ? totalVotes : undefined,
+      isThresholdReached,
+      hideCandidateVotes,
       candidates: voting.candidates.map((c) => ({
         id: c.id,
         name: c.name,
         description: c.description,
         photoUrl: c.photoUrl,
         order: c.order,
-        votesCount: canSeeResults ? c._count.votes : undefined,
+        votesCount: canSeeResults && !hideCandidateVotes ? c._count.votes : undefined,
         percent:
-          canSeeResults && totalVotes > 0
+          canSeeResults && !hideCandidateVotes && totalVotes > 0
             ? Math.round((c._count.votes / totalVotes) * 100)
             : undefined,
       })),
@@ -613,6 +654,7 @@ export class VotingService {
             date: true,
             location: true,
             photoUrl: true,
+            maxRegistrations: true,
           },
         },
         candidates: {
@@ -628,6 +670,19 @@ export class VotingService {
     if (!voting) throw new NotFoundException(`Voting ${votingId} not found`);
 
     const totalVotes = voting._count.votes;
+
+    const [totalRegistrations, confirmedRegistrations, attendedCount] = await Promise.all([
+      this.prisma.eventRegistration.count({ where: { eventId: voting.eventId } }),
+      this.prisma.eventRegistration.count({
+        where: {
+          eventId: voting.eventId,
+          paymentStatus: { in: ['CONFIRMED', 'NOT_REQUIRED'] },
+        },
+      }),
+      this.prisma.eventRegistration.count({
+        where: { eventId: voting.eventId, attended: true },
+      }),
+    ]);
 
     const candidates = voting.candidates
       .map((c) => ({
@@ -647,6 +702,29 @@ export class VotingService {
       ...c,
     }));
 
+    const expectedVoters =
+      voting.event.maxRegistrations && voting.event.maxRegistrations > 0
+        ? voting.event.maxRegistrations
+        : attendedCount > 0
+          ? attendedCount
+          : confirmedRegistrations > 0
+            ? confirmedRegistrations
+            : totalRegistrations > 0
+              ? totalRegistrations
+              : null;
+
+    const turnoutPercentage =
+      expectedVoters && expectedVoters > 0
+        ? Math.round((totalVotes / expectedVoters) * 100)
+        : null;
+
+    // 49% threshold reached when:
+    // 1) Turnout has reached >= 49% of all eligible voters (totalVotes >= 0.49 * expectedVoters)
+    // OR 2) Any candidate has received >= 49% of all cast votes (with at least 5 votes cast)
+    const isThresholdReached =
+      (turnoutPercentage !== null && turnoutPercentage >= 49) ||
+      (totalVotes >= 5 && candidates.some((c) => c.percentage >= 49));
+
     return {
       voting: {
         id: voting.id,
@@ -660,6 +738,9 @@ export class VotingService {
         eventDate: voting.event.date,
         eventLocation: voting.event.location,
         eventPhotoUrl: voting.event.photoUrl,
+        expectedVoters,
+        turnoutPercentage,
+        isThresholdReached,
       },
       candidates,
       winners,

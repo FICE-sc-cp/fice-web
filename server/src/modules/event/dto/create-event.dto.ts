@@ -115,6 +115,13 @@ export class CreateEventDto {
   @IsDate()
   registrationCloseDate?: Date;
 
+  @ApiPropertyOptional({ description: 'Maximum participants limit. Registration closes when reached.' })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Type(() => Number)
+  maxRegistrations?: number;
+
   @ApiPropertyOptional({ description: 'Link to a photo album of the event' })
   @IsOptional()
   @IsString()

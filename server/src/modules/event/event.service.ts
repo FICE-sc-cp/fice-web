@@ -5,7 +5,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Prisma, RegistrationPayment } from '@prisma/client';
+import {
+  PaymentStatus,
+  Prisma,
+  RegistrationPayment,
+  RegistrationSource,
+} from '@prisma/client';
 import { randomUUID } from 'crypto';
 import * as ExcelJS from 'exceljs';
 import { PrismaService } from '../../database/prisma.service';
@@ -18,6 +23,7 @@ import { CreateEventRegistrationDto } from './dto/create-event-registration.dto'
 import { UpdateEventDto } from './dto/update-event.dto';
 
 import { BotService } from '../../bot/bot.service';
+import { UserBotService } from '../../bot/user-bot.service';
 
 const PAYMENT_LABEL: Record<RegistrationPayment, string> = {
   NONE: '—',
@@ -37,6 +43,7 @@ export class EventService {
     private readonly prisma: PrismaService,
     private readonly configService: ConfigService,
     private readonly botService: BotService,
+    private readonly userBotService: UserBotService,
   ) {}
 
   private readonly include: Prisma.EventInclude = {
@@ -260,6 +267,17 @@ export class EventService {
       throw new BadRequestException('Реєстрацію на цей захід закрито');
     }
 
+    if (event.maxRegistrations && event.maxRegistrations > 0) {
+      const regCount = await this.prisma.eventRegistration.count({
+        where: { eventId },
+      });
+      if (regCount >= event.maxRegistrations) {
+        throw new BadRequestException(
+          `Реєстрацію закрито: досягнуто ліміт у ${event.maxRegistrations} учасників`,
+        );
+      }
+    }
+
     const answers = dto.answers ?? [];
     const answerMap = new Map(
       answers.map((a) => [a.questionId, (a.value ?? '').trim()]),
@@ -402,6 +420,15 @@ export class EventService {
       telegramUserId = botUser.telegramId;
     }
 
+    const payment = dto.payment ?? RegistrationPayment.NONE;
+    const paymentStatus =
+      payment === RegistrationPayment.DONATED
+        ? PaymentStatus.PENDING
+        : PaymentStatus.NOT_REQUIRED;
+    const source =
+      dto.source ??
+      (dto.telegramUserId ? RegistrationSource.BOT : RegistrationSource.WEB);
+
     const reg = await this.prisma.eventRegistration.create({
       data: {
         event: { connect: { id: eventId } },
@@ -411,12 +438,33 @@ export class EventService {
         telegramTag: normalizedTag,
         group: dto.group,
         birthDate: dto.birthDate ?? null,
-        payment: dto.payment ?? RegistrationPayment.NONE,
+        source,
+        payment,
+        paymentStatus,
         receiptUrl: dto.receiptUrl ?? null,
         answers: answerData.length ? { create: answerData } : undefined,
       },
       include: { answers: true },
     });
+
+    if (telegramUserId) {
+      if (paymentStatus === PaymentStatus.NOT_REQUIRED) {
+        this.userBotService
+          .sendTicketToUser(telegramUserId, reg, event)
+          .catch(() => {});
+      } else if (paymentStatus === PaymentStatus.PENDING) {
+        this.userBotService
+          .sendMessageToUser(
+            telegramUserId,
+            `🧾 <b>Дякуємо за реєстрацію на захід «${event.name}»!</b>\n\nТвій платіж надіслано на перевірку адміністраторам. Щойно оплату підтвердять — бот надішле тобі постійний QR-квиток для входу 🎫`,
+            {
+              text: 'Мої реєстрації 📱',
+              url: `${this.userBotService.getMiniAppUrl()}?tab=my-events`,
+            },
+          )
+          .catch(() => {});
+      }
+    }
 
     return {
       ...reg,
@@ -489,6 +537,12 @@ export class EventService {
         .filter((a) => validIds.has(a.questionId) && (a.value ?? '').length > 0)
         .map((a) => ({ questionId: a.questionId, value: a.value }));
 
+      const payment = payload.payment ?? RegistrationPayment.NONE;
+      const paymentStatus =
+        payment === RegistrationPayment.DONATED
+          ? PaymentStatus.PENDING
+          : PaymentStatus.NOT_REQUIRED;
+
       reg = await this.prisma.eventRegistration.create({
         data: {
           eventId: pending.eventId,
@@ -498,12 +552,20 @@ export class EventService {
           telegramTag: normalizedTag,
           group: payload.group,
           birthDate: payload.birthDate ? new Date(payload.birthDate) : null,
-          payment: payload.payment ?? RegistrationPayment.NONE,
+          source: RegistrationSource.WEB,
+          payment,
+          paymentStatus,
           receiptUrl: payload.receiptUrl ?? null,
           answers: answerData.length ? { create: answerData } : undefined,
         },
         include: { answers: true },
       });
+
+      if (paymentStatus === PaymentStatus.NOT_REQUIRED) {
+        this.userBotService
+          .sendTicketToUser(telegramUserId, reg, pending.event)
+          .catch(() => {});
+      }
     }
 
     await this.prisma.pendingWebRegistration.update({
@@ -541,8 +603,17 @@ export class EventService {
   }
 
   async listRegistrations(eventId: string, { page, limit }: PaginationQueryDto) {
-    await this.findOne(eventId);
-    const [items, total] = await this.prisma.$transaction([
+    const event = await this.findOne(eventId);
+    const [
+      items,
+      total,
+      webCount,
+      botCount,
+      attendedCount,
+      pendingPaymentCount,
+      confirmedPaymentCount,
+      rejectedPaymentCount,
+    ] = await this.prisma.$transaction([
       this.prisma.eventRegistration.findMany({
         where: { eventId },
         include: { answers: true },
@@ -551,8 +622,47 @@ export class EventService {
         take: limit,
       }),
       this.prisma.eventRegistration.count({ where: { eventId } }),
+      this.prisma.eventRegistration.count({ where: { eventId, source: 'WEB' } }),
+      this.prisma.eventRegistration.count({ where: { eventId, source: 'BOT' } }),
+      this.prisma.eventRegistration.count({ where: { eventId, attended: true } }),
+      this.prisma.eventRegistration.count({
+        where: { eventId, paymentStatus: 'PENDING' },
+      }),
+      this.prisma.eventRegistration.count({
+        where: { eventId, paymentStatus: 'CONFIRMED' },
+      }),
+      this.prisma.eventRegistration.count({
+        where: { eventId, paymentStatus: 'REJECTED' },
+      }),
     ]);
-    return paginated(items, total, page, limit);
+
+    const isClosedByDate = Boolean(
+      event.registrationCloseDate &&
+        event.registrationCloseDate.getTime() < Date.now(),
+    );
+    const isClosedByLimit = Boolean(
+      event.maxRegistrations &&
+        event.maxRegistrations > 0 &&
+        total >= event.maxRegistrations,
+    );
+
+    return {
+      ...paginated(items, total, page, limit),
+      analytics: {
+        total,
+        webCount,
+        botCount,
+        attendedCount,
+        pendingPaymentCount,
+        confirmedPaymentCount,
+        rejectedPaymentCount,
+        maxRegistrations: event.maxRegistrations ?? null,
+        isRegistrationOpen:
+          !event.noRegistration && !isClosedByDate && !isClosedByLimit,
+        isClosedByDate,
+        isClosedByLimit,
+      },
+    };
   }
 
   async exportRegistrations(eventId: string): Promise<Buffer> {
@@ -578,30 +688,50 @@ export class EventService {
       'Telegram',
       'Група',
       'Дата народження',
+      'Джерело',
       'Оплата',
-      'Скрін оплати',
+      'Статус оплати',
+      'Скрін/Чек',
+      'Код квитка',
       'Зареєстровано',
       'Присутність',
       'Час відмітки',
       'Хто відмітив',
     ];
-    sheet.columns = [...baseHeaders, ...event.questions.map((q) => q.label)].map(
-      (header) => ({ header, width: Math.min(40, Math.max(16, header.length + 4)) }),
-    );
+    sheet.columns = [
+      ...baseHeaders,
+      ...event.questions.map((q) => q.label),
+    ].map((header) => ({
+      header,
+      width: Math.min(40, Math.max(16, header.length + 4)),
+    }));
     sheet.getRow(1).font = { bold: true };
 
     for (const reg of event.registrations) {
-      const answerMap = new Map(reg.answers.map((a) => [a.questionId, a.value]));
+      const answerMap = new Map(
+        reg.answers.map((a) => [a.questionId, a.value]),
+      );
       sheet.addRow([
         reg.fullName,
         reg.telegramTag,
         reg.group,
         reg.birthDate ? reg.birthDate.toISOString().slice(0, 10) : '',
+        reg.source === 'BOT' ? 'Telegram-бот' : 'Сайт',
         PAYMENT_LABEL[reg.payment],
+        reg.paymentStatus === 'CONFIRMED'
+          ? 'Підтверджено'
+          : reg.paymentStatus === 'REJECTED'
+          ? `Відхилено${reg.paymentRejectionReason ? `: ${reg.paymentRejectionReason}` : ''}`
+          : reg.paymentStatus === 'PENDING'
+          ? 'Очікує підтвердження'
+          : '—',
         reg.receiptUrl ?? '',
+        reg.ticketCode ?? '',
         reg.createdAt.toISOString().slice(0, 16).replace('T', ' '),
         reg.attended ? 'ТАК' : 'НІ',
-        reg.attendedAt ? reg.attendedAt.toISOString().slice(0, 16).replace('T', ' ') : '',
+        reg.attendedAt
+          ? reg.attendedAt.toISOString().slice(0, 16).replace('T', ' ')
+          : '',
         reg.attendedBy ?? '',
         ...event.questions.map((q) => answerMap.get(q.id) ?? ''),
       ]);
@@ -696,7 +826,11 @@ export class EventService {
         telegramTag: r.telegramTag,
         group: r.group,
         birthDate: r.birthDate,
+        source: r.source,
         payment: r.payment,
+        paymentStatus: r.paymentStatus,
+        paymentRejectionReason: r.paymentRejectionReason,
+        ticketCode: r.ticketCode,
         receiptUrl: r.receiptUrl,
         attended: r.attended,
         attendedAt: r.attendedAt,
@@ -709,6 +843,262 @@ export class EventService {
         })),
       })),
     };
+  }
+
+  async checkInByCode(
+    eventId: string,
+    rawCode: string,
+    telegramId?: bigint,
+    username?: string,
+    staffName?: string,
+  ) {
+    const { canCheckIn } = await this.verifyCheckInAccess(
+      eventId,
+      telegramId,
+      username,
+    );
+    if (!canCheckIn) {
+      throw new ForbiddenException(
+        'У вас немає доступу до відмітки учасників на цьому заході',
+      );
+    }
+
+    let cleanCode = (rawCode || '').trim();
+    if (cleanCode.startsWith('FICE-TICKET:')) {
+      cleanCode = cleanCode.replace('FICE-TICKET:', '').trim();
+    } else if (cleanCode.startsWith('FICE:')) {
+      cleanCode = cleanCode.replace('FICE:', '').trim();
+    }
+
+    const isUuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        cleanCode,
+      );
+    if (!isUuid) {
+      throw new NotFoundException(
+        'Квиток не знайдено або він належить іншому заходу',
+      );
+    }
+
+    const reg = await this.prisma.eventRegistration.findFirst({
+      where: {
+        eventId,
+        OR: [{ ticketCode: cleanCode }, { id: cleanCode }],
+      },
+    });
+
+    if (!reg) {
+      throw new NotFoundException(
+        'Квиток не знайдено або він належить іншому заходу',
+      );
+    }
+
+    let age: number | null = null;
+    let isAdult: boolean | null = null;
+    if (reg.birthDate) {
+      const bd = new Date(reg.birthDate);
+      const ageDifMs = Date.now() - bd.getTime();
+      const ageDate = new Date(ageDifMs);
+      age = Math.abs(ageDate.getUTCFullYear() - 1970);
+      isAdult = age >= 18;
+    }
+
+    const isPaymentPending =
+      reg.payment === 'DONATED' && reg.paymentStatus !== 'CONFIRMED';
+    const isPaymentRejected = reg.paymentStatus === 'REJECTED';
+
+    if (reg.attended) {
+      return {
+        success: false,
+        alreadyAttended: true,
+        isPaymentPending,
+        isPaymentRejected,
+        message: `⚠️ Вже відмічено о ${
+          reg.attendedAt
+            ? new Intl.DateTimeFormat('uk-UA', {
+                hour: '2-digit',
+                minute: '2-digit',
+              }).format(new Date(reg.attendedAt))
+            : ''
+        } (${reg.attendedBy || 'Організатор'})`,
+        registration: {
+          id: reg.id,
+          fullName: reg.fullName,
+          group: reg.group,
+          telegramTag: reg.telegramTag,
+          birthDate: reg.birthDate,
+          source: reg.source,
+          payment: reg.payment,
+          paymentStatus: reg.paymentStatus,
+          ticketCode: reg.ticketCode,
+          attended: reg.attended,
+          attendedAt: reg.attendedAt,
+          attendedBy: reg.attendedBy,
+          age,
+          isAdult,
+        },
+      };
+    }
+
+    const staffTag = username
+      ? `@${username.replace(/^@+/, '')}`
+      : staffName || 'Організатор';
+
+    const updated = await this.prisma.eventRegistration.update({
+      where: { id: reg.id },
+      data: {
+        attended: true,
+        attendedAt: new Date(),
+        attendedBy: staffTag,
+      },
+    });
+
+    return {
+      success: true,
+      alreadyAttended: false,
+      isPaymentPending,
+      isPaymentRejected,
+      message: isPaymentRejected
+        ? `⛔️ Увага! Оплату учасника було ВІДХИЛЕНО!`
+        : isPaymentPending
+        ? `⚠️ Відмічено, але оплата ще НЕ підтверджена адміном! Перевірте чек.`
+        : `✅ Успішно відмічено: ${reg.fullName}`,
+      registration: {
+        id: updated.id,
+        fullName: updated.fullName,
+        group: updated.group,
+        telegramTag: updated.telegramTag,
+        birthDate: updated.birthDate,
+        source: updated.source,
+        payment: updated.payment,
+        paymentStatus: updated.paymentStatus,
+        ticketCode: updated.ticketCode,
+        attended: true,
+        attendedAt: updated.attendedAt,
+        attendedBy: updated.attendedBy,
+        age,
+        isAdult,
+      },
+    };
+  }
+
+  async confirmPayment(
+    eventId: string,
+    registrationId: string,
+    telegramId?: bigint,
+    username?: string,
+  ) {
+    const { canCheckIn } = await this.verifyCheckInAccess(
+      eventId,
+      telegramId,
+      username,
+    );
+    if (!canCheckIn) {
+      throw new ForbiddenException('У вас немає прав на підтвердження оплати');
+    }
+
+    const reg = await this.prisma.eventRegistration.findFirst({
+      where: { id: registrationId, eventId },
+      include: { event: true },
+    });
+    if (!reg) throw new NotFoundException('Реєстрацію не знайдено');
+
+    const updated = await this.prisma.eventRegistration.update({
+      where: { id: registrationId },
+      data: {
+        paymentStatus: PaymentStatus.CONFIRMED,
+        paymentRejectionReason: null,
+      },
+      include: { event: true },
+    });
+
+    if (updated.telegramUserId) {
+      await this.userBotService.sendTicketToUser(
+        updated.telegramUserId,
+        updated,
+        updated.event,
+      );
+    }
+
+    return updated;
+  }
+
+  async rejectPayment(
+    eventId: string,
+    registrationId: string,
+    reason?: string,
+    telegramId?: bigint,
+    username?: string,
+  ) {
+    const { canCheckIn } = await this.verifyCheckInAccess(
+      eventId,
+      telegramId,
+      username,
+    );
+    if (!canCheckIn) {
+      throw new ForbiddenException('У вас немає прав на відхилення оплати');
+    }
+
+    const reg = await this.prisma.eventRegistration.findFirst({
+      where: { id: registrationId, eventId },
+      include: { event: true },
+    });
+    if (!reg) throw new NotFoundException('Реєстрацію не знайдено');
+
+    const updated = await this.prisma.eventRegistration.update({
+      where: { id: registrationId },
+      data: {
+        paymentStatus: PaymentStatus.REJECTED,
+        paymentRejectionReason:
+          reason || 'Оплату не знайдено або некоректний чек',
+      },
+      include: { event: true },
+    });
+
+    if (updated.telegramUserId) {
+      const msg =
+        `⚠️ <b>Оплату на захід «${updated.event.name}» було відхилено.</b>\n\n` +
+        (reason ? `Причина: <i>${reason}</i>\n\n` : '') +
+        `Будь ласка, зверніться до організаторів або надішліть новий чек у додатку.`;
+
+      await this.userBotService.sendMessageToUser(updated.telegramUserId, msg, {
+        text: 'Відкрити мої реєстрації 📱',
+        url: `${this.userBotService.getMiniAppUrl()}?tab=my-events`,
+      });
+    }
+
+    return updated;
+  }
+
+  async cancelRegistration(
+    eventId: string,
+    registrationId: string,
+    reason?: string,
+  ) {
+    const reg = await this.prisma.eventRegistration.findFirst({
+      where: { id: registrationId, eventId },
+      include: { event: true },
+    });
+    if (!reg) throw new NotFoundException('Реєстрацію не знайдено');
+
+    await this.prisma.eventRegistration.delete({
+      where: { id: registrationId },
+    });
+
+    if (reg.telegramUserId) {
+      const eventName = reg.event?.name || 'захід';
+      const reasonText = reason?.trim()
+        ? `\n\n<b>Причина:</b> ${reason.trim()}`
+        : '';
+      this.userBotService
+        .sendMessageToUser(
+          reg.telegramUserId,
+          `ℹ️ Вашу реєстрацію на захід "<b>${eventName}</b>" було скасовано адміністратором.${reasonText}\n\nЯкщо у вас виникли запитання, будь ласка, зверніться до організаторів.`,
+        )
+        .catch(() => {});
+    }
+
+    return { ok: true, message: 'Реєстрацію успішно скасовано' };
   }
 
   async toggleCheckIn(

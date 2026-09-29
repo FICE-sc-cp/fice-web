@@ -132,6 +132,7 @@ export interface EventItem {
   locationNote: string | null;
   timeNote: string | null;
   registrationCloseDate: string | null;
+  maxRegistrations?: number | null;
   photoAlbumUrl: string | null;
   feeAmount: string | null;
   feeAtEventAmount: string | null;
@@ -152,6 +153,26 @@ export interface EventItem {
 }
 
 export type RegistrationPayment = 'NONE' | 'DONATED' | 'AT_EVENT';
+export type PaymentStatus =
+  | 'NOT_REQUIRED'
+  | 'PENDING'
+  | 'CONFIRMED'
+  | 'REJECTED';
+export type RegistrationSource = 'WEB' | 'BOT';
+
+export interface RegistrationAnalytics {
+  total: number;
+  maxRegistrations: number | null;
+  registrationCloseDate: string | null;
+  isClosedByDate: boolean;
+  isClosedByLimit: boolean;
+  webCount: number;
+  botCount: number;
+  attendedCount: number;
+  pendingPaymentCount: number;
+  confirmedPaymentCount: number;
+  rejectedPaymentCount: number;
+}
 
 export interface EventRegistration {
   id: string;
@@ -159,7 +180,11 @@ export interface EventRegistration {
   telegramTag: string;
   group: string;
   birthDate: string | null;
+  source?: RegistrationSource;
   payment: RegistrationPayment;
+  paymentStatus?: PaymentStatus;
+  paymentRejectionReason?: string | null;
+  ticketCode?: string;
   receiptUrl: string | null;
   attended?: boolean;
   attendedAt?: string | null;
@@ -300,6 +325,7 @@ export interface EventInput {
   locationNote?: string | null;
   timeNote?: string;
   registrationCloseDate?: string;
+  maxRegistrations?: number | null;
   photoAlbumUrl?: string | null;
   feeAmount?: number;
   feeAtEventAmount?: number;
@@ -450,8 +476,31 @@ export const api = {
   removeEventPartner: (id: string, eventPartnerId: string) =>
     request<unknown>(`/event/${id}/partners/${eventPartnerId}`, { method: 'DELETE' }),
   eventRegistrations: (id: string, page = 1, limit = 100) =>
-    request<Paginated<EventRegistration>>(
+    request<Paginated<EventRegistration> & { analytics?: RegistrationAnalytics }>(
       `/event/${id}/registrations?page=${page}&limit=${limit}`,
+    ),
+  confirmRegistrationPayment: (eventId: string, registrationId: string) =>
+    request<{ success: boolean; registration: EventRegistration }>(
+      `/event/${eventId}/registrations/${registrationId}/confirm-payment`,
+      { method: 'POST' },
+    ),
+  rejectRegistrationPayment: (
+    eventId: string,
+    registrationId: string,
+    reason?: string,
+  ) =>
+    request<{ success: boolean; registration: EventRegistration }>(
+      `/event/${eventId}/registrations/${registrationId}/reject-payment`,
+      { method: 'POST', ...json({ reason }) },
+    ),
+  cancelEventRegistration: (
+    eventId: string,
+    registrationId: string,
+    reason?: string,
+  ) =>
+    request<{ ok: boolean; message: string }>(
+      `/event/${eventId}/registrations/${registrationId}`,
+      { method: 'DELETE', ...json({ reason }) },
     ),
   exportEventRegistrations: async (id: string): Promise<Blob> => {
     const res = await fetch(`${BASE}/event/${id}/registrations/export`, {

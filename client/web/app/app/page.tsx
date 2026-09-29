@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
+import { QRCodeSVG } from 'qrcode.react';
 import {
   fice,
   mediaUrl,
@@ -20,6 +21,19 @@ import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Glow } from '@/components/ui/Glow';
 import { cn } from '@/lib/utils';
+
+function getAgeInfo(birthDate?: string | null) {
+  if (!birthDate) return null;
+  const birth = new Date(birthDate);
+  if (isNaN(birth.getTime())) return null;
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+    age--;
+  }
+  return { age, isAdult: age >= 18 };
+}
 
 function pluralizeEvents(count: number): string {
   const mod10 = count % 10;
@@ -42,6 +56,7 @@ function MiniAppContent() {
     hapticNotify,
     showBackButton,
     hideBackButton,
+    scanQr,
   } = useTelegram();
 
   // Navigation
@@ -86,6 +101,29 @@ function MiniAppContent() {
   const [checkInSearch, setCheckInSearch] = useState('');
   const [checkInFilter, setCheckInFilter] = useState<'ALL' | 'UNATTENDED' | 'ATTENDED'>('ALL');
   const [togglingCheckInId, setTogglingCheckInId] = useState<string | null>(null);
+  const [scanResult, setScanResult] = useState<{
+    type: 'success' | 'warning' | 'error';
+    text: string;
+    details?: string;
+  } | null>(null);
+
+  // Big result modal for volunteers scanning QR tickets at the entrance
+  const [scanModal, setScanModal] = useState<{
+    open: boolean;
+    type: 'success' | 'warning' | 'error';
+    title: string;
+    message?: string;
+    registration?: (CheckInItem & {
+      age?: number | null;
+      isAdult?: boolean | null;
+    }) | null;
+  }>({
+    open: false,
+    type: 'success',
+    title: '',
+    message: '',
+    registration: null,
+  });
 
   const checkInTotal = serverCheckInStats?.total ?? checkInList.length;
   const checkInAttendedCount = useMemo(() => {
@@ -160,9 +198,11 @@ function MiniAppContent() {
  
   // Handle Telegram native BackButton
   useEffect(() => {
-    if (previewImage || selectedEventId || activeVotingId || checkInModalOpen || costumeModalOpen) {
+    if (previewImage || selectedEventId || activeVotingId || checkInModalOpen || costumeModalOpen || scanModal.open) {
       showBackButton(() => {
-        if (previewImage) {
+        if (scanModal.open) {
+          setScanModal((prev) => ({ ...prev, open: false }));
+        } else if (previewImage) {
           setPreviewImage(null);
         } else if (costumeModalOpen) {
           setCostumeModalOpen(false);
@@ -185,6 +225,7 @@ function MiniAppContent() {
     activeVotingId,
     checkInModalOpen,
     costumeModalOpen,
+    scanModal.open,
     showBackButton,
     hideBackButton,
   ]);
@@ -330,6 +371,148 @@ function MiniAppContent() {
     } finally {
       setTogglingCheckInId(null);
     }
+  };
+
+  const handleScanCheckIn = () => {
+    if (!selectedEventId) return;
+    setScanResult(null);
+    scanQr('Наведіть камеру на QR-код квитка', (code) => {
+      (async () => {
+        try {
+          const tgId = user?.id ? String(user.id) : undefined;
+          const tgTag = user?.username ? `@${user.username}` : undefined;
+          const staffName = user?.username
+            ? `@${user.username}`
+            : user?.firstName || 'Організатор';
+
+          const res = await fice.scanCheckIn(
+            selectedEventId,
+            code,
+            initData,
+            tgId,
+            tgTag,
+            staffName,
+          );
+
+          if (res.success) {
+            const regItem = res.registration;
+            const ageInfo = getAgeInfo(regItem?.birthDate);
+            const isAdult = res.registration?.isAdult ?? ageInfo?.isAdult;
+            const age = res.registration?.age ?? ageInfo?.age ?? null;
+            const enrichedReg = {
+              ...regItem,
+              age,
+              isAdult,
+            };
+            const ageTag = isAdult === true ? '🔞 18+' : isAdult === false ? '👶 <18' : '';
+
+            if (res.alreadyAttended) {
+              hapticNotify('warning');
+              setScanResult({
+                type: 'warning',
+                text: `⚠️ Вже відмічено: ${regItem?.fullName}`,
+                details: `${regItem?.group} ${ageTag} · Відмічено: ${
+                  regItem?.attendedAt
+                    ? new Date(regItem.attendedAt).toLocaleTimeString('uk-UA', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    : ''
+                } ${regItem?.attendedBy ? `(${regItem.attendedBy})` : ''}`,
+              });
+              setScanModal({
+                open: true,
+                type: 'warning',
+                title: '⚠️ КВИТОК ВЖЕ ВИКОРИСТАНО',
+                message: `Учасник вже був відмічений на вході о ${
+                  regItem?.attendedAt
+                    ? new Date(regItem.attendedAt).toLocaleTimeString('uk-UA', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })
+                    : ''
+                }${regItem?.attendedBy ? ` (${regItem.attendedBy})` : ''}`,
+                registration: enrichedReg,
+              });
+            } else if (res.isPaymentRejected) {
+              hapticNotify('error');
+              setScanResult({
+                type: 'error',
+                text: `⛔️ Оплату відхилено: ${regItem?.fullName}`,
+                details: 'Оплату цього квитка було відхилено адміністратором!',
+              });
+              setScanModal({
+                open: true,
+                type: 'error',
+                title: '⛔️ ОПЛАТУ ВІДХИЛЕНО',
+                message: 'Оплату цього квитка було відхилено! Перевірте статус оплати на вході.',
+                registration: enrichedReg,
+              });
+            } else if (res.isPaymentPending) {
+              hapticNotify('warning');
+              setScanResult({
+                type: 'warning',
+                text: `⏳ Оплата очікує перевірки: ${regItem?.fullName}`,
+                details: 'Учасник зареєстрований, але чек очікує підтвердження або оплати на вході',
+              });
+              setScanModal({
+                open: true,
+                type: 'warning',
+                title: '⏳ ОПЛАТА НЕ ПІДТВЕРДЖЕНА',
+                message: 'Учасник зареєстрований, але оплата ще не підтверджена або має бути внесена на вході.',
+                registration: enrichedReg,
+              });
+            } else {
+              hapticNotify('success');
+              setScanResult({
+                type: 'success',
+                text: `✓ Відмічено: ${regItem?.fullName}`,
+                details: `${regItem?.group} ${ageTag} · Відмічено`,
+              });
+              setScanModal({
+                open: true,
+                type: 'success',
+                title: '✓ ВІДМІЧЕНО',
+                message: 'Учасника успішно відмічено на заході!',
+                registration: enrichedReg,
+              });
+            }
+            loadCheckInList();
+          } else {
+            hapticNotify('error');
+            const errText = res.message || 'Квиток не знайдено або він належить іншому заходу';
+            setScanResult({
+              type: 'error',
+              text: '❌ Недійсний квиток',
+              details: errText,
+            });
+            setScanModal({
+              open: true,
+              type: 'error',
+              title: '❌ НЕДІЙСНИЙ КВИТОК',
+              message: errText,
+              registration: null,
+            });
+          }
+        } catch (err: unknown) {
+          hapticNotify('error');
+          const errText = err instanceof Error ? err.message : 'Спробуйте ще раз або введіть вручну';
+          setScanResult({
+            type: 'error',
+            text: '❌ Помилка сканування',
+            details: errText,
+          });
+          setScanModal({
+            open: true,
+            type: 'error',
+            title: '❌ ПОМИЛКА СКАНУВАННЯ',
+            message: errText,
+            registration: null,
+          });
+        }
+      })();
+      return true;
+    });
   };
 
   const filteredCheckInItems = useMemo(() => {
@@ -1269,6 +1452,51 @@ function MiniAppContent() {
                 />
               </div>
 
+              {/* QR Scanner trigger button */}
+              <button
+                type="button"
+                onClick={handleScanCheckIn}
+                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-brand-cyan to-brand-green text-black font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-brand-cyan/15 active:scale-98 transition-transform"
+              >
+                <span className="text-base leading-none">📷</span>
+                <span>Сканувати QR-код квитка</span>
+              </button>
+
+              {/* Scan result alert banner */}
+              {scanResult && (
+                <div
+                  className={cn(
+                    'rounded-2xl border p-3 text-xs space-y-1.5 transition-all',
+                    scanResult.type === 'success' && 'border-brand-green/40 bg-brand-green/15 text-fg',
+                    scanResult.type === 'warning' && 'border-amber-500/40 bg-amber-500/15 text-fg',
+                    scanResult.type === 'error' && 'border-red-500/40 bg-red-500/15 text-fg',
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-black text-sm">{scanResult.text}</span>
+                    <button
+                      type="button"
+                      onClick={() => setScanResult(null)}
+                      className="text-muted hover:text-fg text-xs p-1"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  {scanResult.details && (
+                    <div className="text-[11px] opacity-90">{scanResult.details}</div>
+                  )}
+                  <div className="pt-1">
+                    <button
+                      type="button"
+                      onClick={handleScanCheckIn}
+                      className="px-3 py-1.5 rounded-lg bg-surface border border-white/20 text-fg text-xs font-bold hover:bg-white/10 active:scale-95 transition-all"
+                    >
+                      📷 Сканувати наступного
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Search input */}
               <div className="relative pt-1">
                 <input
@@ -1426,6 +1654,165 @@ function MiniAppContent() {
                 ))
               )}
             </div>
+
+            {/* ================= MODAL: QR SCAN RESULT POPUP ================= */}
+            {scanModal.open && (
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-fadeIn"
+                onClick={(e) => {
+                  if (e.target === e.currentTarget) {
+                    setScanModal((prev) => ({ ...prev, open: false }));
+                  }
+                }}
+              >
+                <div
+                  className={cn(
+                    'w-full max-w-sm rounded-3xl border p-5 shadow-2xl space-y-4 text-center transition-all bg-surface',
+                    scanModal.type === 'success' && 'border-brand-green/60 shadow-brand-green/20',
+                    scanModal.type === 'warning' && 'border-amber-500/60 shadow-amber-500/20',
+                    scanModal.type === 'error' && 'border-red-500/60 shadow-red-500/20',
+                  )}
+                >
+                  {/* Status Badge Icon */}
+                  <div className="flex justify-center pt-1">
+                    <div
+                      className={cn(
+                        'flex h-16 w-16 items-center justify-center rounded-2xl text-3xl font-black shadow-lg',
+                        scanModal.type === 'success' &&
+                          'bg-brand-green/20 text-brand-green border border-brand-green/40 shadow-brand-green/30',
+                        scanModal.type === 'warning' &&
+                          'bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-amber-500/30',
+                        scanModal.type === 'error' &&
+                          'bg-red-500/20 text-red-400 border border-red-500/40 shadow-red-500/30',
+                      )}
+                    >
+                      {scanModal.type === 'success' ? '✓' : scanModal.type === 'warning' ? '⚠️' : '✕'}
+                    </div>
+                  </div>
+
+                  {/* Title & Status Message */}
+                  <div className="space-y-1">
+                    <h3
+                      className={cn(
+                        'text-lg font-black tracking-wide uppercase',
+                        scanModal.type === 'success' && 'text-brand-green',
+                        scanModal.type === 'warning' && 'text-amber-300',
+                        scanModal.type === 'error' && 'text-red-400',
+                      )}
+                    >
+                      {scanModal.title}
+                    </h3>
+                    {scanModal.message && (
+                      <p className="text-xs text-muted leading-relaxed px-1">
+                        {scanModal.message}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Attendee Details Card */}
+                  {scanModal.registration && (
+                    <div className="rounded-2xl border border-border bg-bg/80 p-3.5 space-y-2.5 text-left">
+                      {/* Name */}
+                      <div className="text-center">
+                        <span className="text-[10px] uppercase font-bold text-subtle tracking-wider block">
+                          Учасник
+                        </span>
+                        <span className="text-base font-black text-fg block mt-0.5">
+                          {scanModal.registration.fullName}
+                        </span>
+                      </div>
+
+                      {/* Group & Age Badges */}
+                      <div className="flex flex-wrap items-center justify-center gap-1.5 pt-0.5">
+                        <span className="rounded-lg bg-surface border border-border px-2.5 py-0.5 text-xs font-mono font-bold text-brand-cyan">
+                          {scanModal.registration.group}
+                        </span>
+
+                        {scanModal.registration.isAdult === true && (
+                          <span className="rounded-lg border border-emerald-500/40 bg-emerald-500/15 px-2 py-0.5 text-xs font-bold text-emerald-300">
+                            🔞 18+{scanModal.registration.age ? ` (${scanModal.registration.age} р.)` : ''}
+                          </span>
+                        )}
+                        {scanModal.registration.isAdult === false && (
+                          <span className="rounded-lg border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-xs font-bold text-amber-300">
+                            👶 &lt;18{scanModal.registration.age ? ` (${scanModal.registration.age} р.)` : ''}
+                          </span>
+                        )}
+
+                        {scanModal.registration.paymentStatus === 'CONFIRMED' ? (
+                          <span className="rounded-lg border border-brand-green/40 bg-brand-green/15 px-2 py-0.5 text-[11px] font-bold text-brand-green">
+                            ✓ Оплачено
+                          </span>
+                        ) : scanModal.registration.payment === 'AT_EVENT' ? (
+                          <span className="rounded-lg border border-brand-orange/40 bg-brand-orange/15 px-2 py-0.5 text-[11px] font-bold text-brand-orange">
+                            💵 На вході
+                          </span>
+                        ) : scanModal.registration.paymentStatus === 'REJECTED' ? (
+                          <span className="rounded-lg border border-red-500/40 bg-red-500/15 px-2 py-0.5 text-[11px] font-bold text-red-400">
+                            ✕ Відхилено
+                          </span>
+                        ) : scanModal.registration.paymentStatus === 'PENDING' ? (
+                          <span className="rounded-lg border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold text-amber-300">
+                            ⏳ На перевірці
+                          </span>
+                        ) : null}
+                      </div>
+
+                      {/* Telegram tag & Ticket info */}
+                      <div className="flex items-center justify-between border-t border-border/60 pt-2 text-xs text-subtle">
+                        <a
+                          href={`https://t.me/${scanModal.registration.telegramTag.replace(/^@/, '')}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-brand-cyan hover:underline font-semibold"
+                        >
+                          {scanModal.registration.telegramTag} ↗
+                        </a>
+                        {scanModal.registration.ticketCode && (
+                          <span className="font-mono text-[11px] text-muted">
+                            #{scanModal.registration.ticketCode.slice(0, 8).toUpperCase()}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Attendance log */}
+                      {scanModal.registration.attended && scanModal.registration.attendedAt && (
+                        <div className="rounded-xl border border-white/10 bg-white/5 p-2 text-[11px] text-muted text-center">
+                          Відмічено о{' '}
+                          <b className="text-fg">
+                            {new Date(scanModal.registration.attendedAt).toLocaleTimeString('uk-UA', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </b>
+                          {scanModal.registration.attendedBy && ` (${scanModal.registration.attendedBy})`}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Buttons */}
+                  <div className="space-y-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={handleScanCheckIn}
+                      className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-brand-cyan to-brand-green text-black font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-brand-cyan/20 active:scale-98 transition-transform"
+                    >
+                      <span className="text-base leading-none">📷</span>
+                      <span>Сканувати наступного</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setScanModal((prev) => ({ ...prev, open: false }))}
+                      className="w-full py-2.5 rounded-xl border border-border bg-white/5 text-muted hover:text-fg text-xs font-semibold transition-colors active:scale-98"
+                    >
+                      Закрити
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -2088,22 +2475,28 @@ function MiniAppContent() {
                           {selectedEvent.feeRequisites || 'Уточнюйте у організаторів'}
                         </div>
                         <label className="block text-xs font-semibold text-fg pt-1">
-                          Завантажити скриншот оплати:
+                          Завантажити квитанцію або скриншот (PDF, зображення):
                         </label>
                         <input
                           type="file"
-                          accept="image/*"
+                          accept="image/*,application/pdf"
                           onChange={handleReceiptUpload}
                           className="text-xs text-muted file:mr-2 file:py-1 file:px-3 file:rounded-xl file:border-0 file:bg-surface file:text-xs file:font-semibold file:text-fg"
                         />
                         {regUploading && (
-                          <div className="text-xs text-muted">
-                            Завантаження файлу…
+                          <div className="text-xs text-muted flex items-center gap-1.5">
+                            <span className="animate-spin">⏳</span>
+                            <span>Завантаження файлу…</span>
                           </div>
                         )}
                         {regReceiptUrl && (
-                          <div className="text-xs text-brand-green font-semibold">
-                            ✓ Скриншот додано
+                          <div className="text-xs text-brand-green font-semibold flex items-center gap-1.5">
+                            <span>✓</span>
+                            <span>
+                              {regReceiptUrl.toLowerCase().endsWith('.pdf')
+                                ? 'Квитанцію (PDF) успішно додано'
+                                : 'Скриншот успішно додано'}
+                            </span>
                           </div>
                         )}
                         {regErrors.receipt && (
@@ -2376,21 +2769,41 @@ function MiniAppContent() {
                           </span>
                         </div>
                       </div>
-                      <span
-                        className={`text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider shrink-0 ${
-                          reg.payment === 'DONATED'
-                            ? 'bg-brand-green/20 text-brand-green border border-brand-green/30'
-                            : reg.payment === 'AT_EVENT'
-                            ? 'bg-brand-purple/20 text-brand-purple border border-brand-purple/30'
-                            : 'bg-white/10 text-fg border border-white/10'
-                        }`}
-                      >
-                        {reg.payment === 'DONATED'
-                          ? 'Оплачено'
-                          : reg.payment === 'AT_EVENT'
-                          ? 'Оплата на вході'
-                          : 'Зареєстровано'}
-                      </span>
+                      {(() => {
+                        if (reg.paymentStatus === 'PENDING') {
+                          return (
+                            <span className="text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider shrink-0 bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                              Очікує перевірки
+                            </span>
+                          );
+                        }
+                        if (reg.paymentStatus === 'REJECTED') {
+                          return (
+                            <span className="text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider shrink-0 bg-red-500/20 text-red-400 border border-red-500/30">
+                              Відхилено
+                            </span>
+                          );
+                        }
+                        return (
+                          <span
+                            className={`text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider shrink-0 ${
+                              reg.payment === 'DONATED' || reg.paymentStatus === 'CONFIRMED'
+                                ? 'bg-brand-green/20 text-brand-green border border-brand-green/30'
+                                : reg.payment === 'AT_EVENT'
+                                ? 'bg-brand-purple/20 text-brand-purple border border-brand-purple/30'
+                                : 'bg-white/10 text-fg border border-white/10'
+                            }`}
+                          >
+                            {reg.paymentStatus === 'CONFIRMED'
+                              ? 'Квиток дійсний'
+                              : reg.payment === 'DONATED'
+                              ? 'Оплачено'
+                              : reg.payment === 'AT_EVENT'
+                              ? 'Оплата на вході'
+                              : 'Зареєстровано'}
+                          </span>
+                        );
+                      })()}
                     </div>
 
                     <div className="rounded-2xl bg-bg/60 p-3.5 text-sm space-y-1.5 text-muted">
@@ -2404,6 +2817,99 @@ function MiniAppContent() {
                         Telegram: <b className="text-brand-cyan font-semibold">{reg.telegramTag}</b>
                       </div>
                     </div>
+
+                    {/* Ticket QR or Payment Review Status */}
+                    {reg.paymentStatus === 'PENDING' ? (
+                      <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3.5 space-y-2">
+                        <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-300">
+                          <span className="animate-pulse">⏳</span>
+                          <span>Оплата на перевірці</span>
+                        </div>
+                        <p className="text-xs text-amber-200/90 leading-relaxed">
+                          Організатори перевіряють вашу квитанцію. Щойно оплату буде підтверджено, тут зʼявиться ваш персональний QR-код для проходу на захід.
+                        </p>
+                        {reg.receiptUrl && (
+                          <a
+                            href={mediaUrl(reg.receiptUrl) || '#'}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 text-xs text-brand-cyan hover:underline font-semibold pt-0.5"
+                          >
+                            <span>Переглянути завантажену квитанцію</span>
+                            <span>↗</span>
+                          </a>
+                        )}
+                      </div>
+                    ) : reg.paymentStatus === 'REJECTED' ? (
+                      <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-3.5 space-y-1.5">
+                        <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-red-400">
+                          <span>❌</span>
+                          <span>Оплату не підтверджено</span>
+                        </div>
+                        <p className="text-xs text-red-300/90 leading-relaxed">
+                          {reg.paymentRejectionReason
+                            ? `Причина: ${reg.paymentRejectionReason}`
+                            : 'Квитанцію відхилено або оплату не знайдено.'}
+                        </p>
+                        <p className="text-[11px] text-muted">
+                          Будь ласка, зверніться до організаторів для уточнення.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4 flex flex-col items-center text-center space-y-3">
+                        <div className="flex items-center justify-between w-full">
+                          <span className="text-[11px] font-mono font-bold text-brand-cyan tracking-wider">
+                            КВИТОК #{((reg.ticketCode || reg.id).slice(0, 8)).toUpperCase()}
+                          </span>
+                          {(() => {
+                            const ageInfo = getAgeInfo(reg.birthDate);
+                            if (!ageInfo) return null;
+                            return (
+                              <span
+                                className={cn(
+                                  'rounded-lg px-2 py-0.5 text-[11px] font-black uppercase tracking-wider border',
+                                  ageInfo.isAdult
+                                    ? 'border-brand-green/40 bg-brand-green/15 text-brand-green'
+                                    : 'border-brand-orange/40 bg-brand-orange/15 text-brand-orange',
+                                )}
+                              >
+                                {ageInfo.isAdult ? '🔞 18+' : '👶 <18'}
+                              </span>
+                            );
+                          })()}
+                        </div>
+
+                        {/* QR Code Container - MUST have white background so black QR is readable in dark themes */}
+                        <div className="p-3.5 rounded-2xl bg-white shadow-lg inline-block">
+                          <QRCodeSVG
+                            value={`FICE-TICKET:${reg.ticketCode || reg.id}`}
+                            size={180}
+                            level="M"
+                            includeMargin={false}
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          {reg.attended ? (
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-brand-green/20 border border-brand-green/40 text-brand-green text-xs font-bold">
+                              <span>✓</span>
+                              <span>Ви вже пройшли на захід</span>
+                            </div>
+                          ) : (
+                            <div className="text-xs font-bold text-fg">
+                              Предʼявіть цей QR-код волонтеру на вході
+                            </div>
+                          )}
+                          <p className="text-[11px] text-muted flex items-center justify-center gap-1">
+                            <span>🔆</span>
+                            <span>Збільшіть яскравість екрана перед скануванням</span>
+                          </p>
+                          <p className="text-[10px] text-subtle">
+                            Працює навіть без інтернету! Можна зберегти або зробити скриншот.
+                          </p>
+                        </div>
+                      </div>
+                    )}
 
                     <div className="flex gap-2">
                       <Button

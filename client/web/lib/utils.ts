@@ -5,12 +5,23 @@ export function cn(...inputs: ClassValue[]){
     return twMerge(clsx(inputs));
 }
 
-export function eventRegistrationOpen(event: {
-  date: string;
-  registrationCloseDate: string | null;
-  noRegistration?: boolean;
-}): boolean {
+export function eventRegistrationOpen(
+  event: {
+    date: string;
+    registrationCloseDate: string | null;
+    noRegistration?: boolean;
+    maxRegistrations?: number | null;
+  },
+  currentCount?: number,
+): boolean {
   if (event.noRegistration) return false;
+  if (
+    event.maxRegistrations &&
+    currentCount !== undefined &&
+    currentCount >= event.maxRegistrations
+  ) {
+    return false;
+  }
   const closeTs = event.registrationCloseDate
     ? new Date(event.registrationCloseDate).getTime()
     : new Date(event.date).getTime();

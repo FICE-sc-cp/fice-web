@@ -29,6 +29,11 @@ declare global {
           onClick: (cb: () => void) => void;
           offClick: (cb: () => void) => void;
         };
+        showScanQrPopup?: (
+          params: { text?: string },
+          callback?: (text: string) => boolean | void,
+        ) => void;
+        closeScanQrPopup?: () => void;
       };
     };
   }
@@ -133,6 +138,31 @@ export function useTelegram() {
     } catch {}
   };
 
+  const scanQr = (
+    text: string,
+    onScan: (scannedText: string) => boolean | void,
+  ) => {
+    try {
+      const tg = window.Telegram?.WebApp;
+      if (tg?.showScanQrPopup) {
+        tg.showScanQrPopup({ text }, onScan);
+      } else {
+        const manual = window.prompt(
+          'Сканер доступний у додатку Telegram на телефоні.\nВведіть код квитка або ID учасника вручну:',
+        );
+        if (manual) onScan(manual.trim());
+      }
+    } catch (e) {
+      console.error('Scan QR error:', e);
+    }
+  };
+
+  const closeQrScanner = () => {
+    try {
+      window.Telegram?.WebApp?.closeScanQrPopup?.();
+    } catch {}
+  };
+
   return {
     ready,
     isTelegram,
@@ -143,6 +173,8 @@ export function useTelegram() {
     hapticNotify,
     showBackButton,
     hideBackButton,
+    scanQr,
+    closeQrScanner,
     close: () => window.Telegram?.WebApp?.close(),
   };
 }

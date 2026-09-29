@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { RegistrationPayment } from '@prisma/client';
+import { RegistrationPayment, RegistrationSource } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
   IsArray,
@@ -52,6 +52,11 @@ export class CreateEventRegistrationDto {
   @IsOptional()
   @IsEnum(RegistrationPayment)
   payment?: RegistrationPayment;
+
+  @ApiPropertyOptional({ enum: RegistrationSource, default: RegistrationSource.WEB })
+  @IsOptional()
+  @IsEnum(RegistrationSource)
+  source?: RegistrationSource;
 
   @ApiPropertyOptional({ description: 'Uploaded receipt URL when payment = DONATED' })
   @IsOptional()

@@ -28,6 +28,7 @@ import { AddEventPartnerDto } from './dto/add-event-partner.dto';
 import { CreateEventDto } from './dto/create-event.dto';
 import { EventQueryDto } from './dto/event-query.dto';
 import { CreateEventRegistrationDto } from './dto/create-event-registration.dto';
+import { RejectPaymentDto } from './dto/reject-payment.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { EventEntity } from './entities/event.entity';
 import { EventService } from './event.service';
@@ -118,6 +119,34 @@ export class EventController {
     return this.eventService.getCheckInList(id, telegramId, username);
   }
 
+  @Post(':id/checkin/scan')
+  @ApiOperation({ summary: 'Scan permanent QR code to check in a participant' })
+  scanCheckIn(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: { code: string; staffName?: string },
+    @Headers('x-telegram-init-data') initData?: string,
+    @Query('tgUserId') queryTgUserId?: string,
+    @Query('tgTag') queryTgTag?: string,
+  ) {
+    const user = initData ? extractTelegramUser(initData) : null;
+    const telegramId = user?.id
+      ? BigInt(user.id)
+      : queryTgUserId
+      ? BigInt(queryTgUserId)
+      : undefined;
+    const username = user?.username || queryTgTag;
+    const staffName = user
+      ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
+      : body.staffName;
+    return this.eventService.checkInByCode(
+      id,
+      body.code,
+      telegramId,
+      username,
+      staffName,
+    );
+  }
+
   @Post(':id/checkin/:registrationId')
   @ApiOperation({ summary: 'Toggle or set attended status for a participant' })
   toggleCheckIn(
@@ -145,6 +174,60 @@ export class EventController {
       telegramId,
       username,
       staffName,
+    );
+  }
+
+  @Post(':id/registrations/:registrationId/confirm-payment')
+  @Admin()
+  @ApiOperation({
+    summary: 'Confirm participant payment and send permanent QR ticket',
+  })
+  confirmPayment(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('registrationId', ParseUUIDPipe) registrationId: string,
+    @Headers('x-telegram-init-data') initData?: string,
+    @Query('tgUserId') queryTgUserId?: string,
+    @Query('tgTag') queryTgTag?: string,
+  ) {
+    const user = initData ? extractTelegramUser(initData) : null;
+    const telegramId = user?.id
+      ? BigInt(user.id)
+      : queryTgUserId
+      ? BigInt(queryTgUserId)
+      : undefined;
+    const username = user?.username || queryTgTag;
+    return this.eventService.confirmPayment(
+      id,
+      registrationId,
+      telegramId,
+      username,
+    );
+  }
+
+  @Post(':id/registrations/:registrationId/reject-payment')
+  @Admin()
+  @ApiOperation({ summary: 'Reject participant payment with optional reason' })
+  rejectPayment(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('registrationId', ParseUUIDPipe) registrationId: string,
+    @Body() body: RejectPaymentDto,
+    @Headers('x-telegram-init-data') initData?: string,
+    @Query('tgUserId') queryTgUserId?: string,
+    @Query('tgTag') queryTgTag?: string,
+  ) {
+    const user = initData ? extractTelegramUser(initData) : null;
+    const telegramId = user?.id
+      ? BigInt(user.id)
+      : queryTgUserId
+      ? BigInt(queryTgUserId)
+      : undefined;
+    const username = user?.username || queryTgTag;
+    return this.eventService.rejectPayment(
+      id,
+      registrationId,
+      body.reason,
+      telegramId,
+      username,
     );
   }
 
@@ -218,5 +301,16 @@ export class EventController {
       'Content-Length': buffer.length.toString(),
     });
     res.send(buffer);
+  }
+
+  @Delete(':id/registrations/:registrationId')
+  @Admin()
+  @ApiOperation({ summary: 'Cancel event registration (admin)' })
+  cancelRegistration(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('registrationId', ParseUUIDPipe) registrationId: string,
+    @Body() body?: { reason?: string },
+  ) {
+    return this.eventService.cancelRegistration(id, registrationId, body?.reason);
   }
 }

@@ -140,7 +140,7 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
     }
 
     if (hasFee && !payment) e.payment = 'Обери спосіб оплати';
-    if (payment === 'DONATED' && !receiptUrl) e.receipt = 'Додай скриншот оплати';
+    if (payment === 'DONATED' && !receiptUrl) e.receipt = 'Додай скриншот або PDF квитанції';
 
     for (const q of questions) {
       if (q.required && !(answers[q.id] ?? '').trim()) {
@@ -570,7 +570,7 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
                     <input
                       ref={fileRef}
                       type="file"
-                      accept="image/*"
+                      accept="image/*,application/pdf,.pdf"
                       className="hidden"
                       onChange={onReceiptChange}
                     />
@@ -579,11 +579,22 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
                       onClick={() => fileRef.current?.click()}
                       className="flex flex-col items-center gap-1 rounded-xl border border-dashed border-border px-4 py-6 text-sm font-semibold text-muted transition-colors hover:border-brand-cyan"
                     >
-                      {uploading
-                        ? 'Завантаження…'
-                        : receiptUrl
-                          ? '✓ Скриншот додано — натисни, щоб змінити'
-                          : '⬆️ Додати скриншот оплати'}
+                      {uploading ? (
+                        'Завантаження…'
+                      ) : receiptUrl ? (
+                        receiptUrl.toLowerCase().endsWith('.pdf') ? (
+                          '✓ 📄 PDF-квитанцію додано — натисни, щоб змінити'
+                        ) : (
+                          '✓ 🖼 Скриншот додано — натисни, щоб змінити'
+                        )
+                      ) : (
+                        <>
+                          <span>⬆️ Додати скриншот оплати або PDF квитанцію</span>
+                          <span className="text-xs font-normal text-muted/70">
+                            Формати: JPG, PNG, PDF (до 10 МБ)
+                          </span>
+                        </>
+                      )}
                     </button>
                     {errors.receipt && (
                       <span className="text-xs font-medium text-brand-red">

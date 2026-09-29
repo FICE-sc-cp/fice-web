@@ -44,7 +44,15 @@ export default function LiveVotingScreenPage() {
 
   // Screen modes
   const [viewMode, setViewMode] = useState<'leaderboard' | 'ceremony'>('leaderboard');
-  const [hideCounts, setHideCounts] = useState(false);
+  // Manual override for hiding candidate counts:
+  // null = automatic (auto-hides when 49% of all votes/voters reached)
+  // boolean = manual override by organizer
+  const [manualHideOverride, setManualHideOverride] = useState<boolean | null>(null);
+
+  // Auto-hide when 49% threshold is reached
+  const isAutoThresholdReached = !!data?.voting?.isThresholdReached;
+  const hideCounts = manualHideOverride !== null ? manualHideOverride : isAutoThresholdReached;
+
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
 
@@ -660,10 +668,52 @@ export default function LiveVotingScreenPage() {
             {data?.voting.eventName || 'Бал ФІОТ 2026'}
           </div>
 
-          {/* Total Votes Count (if enabled) */}
-          {!hideCounts && totalVotes > 0 && (
-            <div style={{ fontSize: 34, fontWeight: 900, whiteSpace: 'nowrap' }}>
-              {fmtNumber(totalVotes)} {pluralVotes(totalVotes)}
+          {/* Total Votes Count */}
+          {totalVotes > 0 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+              <div style={{ fontSize: 34, fontWeight: 900, whiteSpace: 'nowrap' }}>
+                {fmtNumber(totalVotes)} {pluralVotes(totalVotes)}
+                {data?.voting.turnoutPercentage !== undefined && data?.voting.turnoutPercentage !== null && (
+                  <span style={{ fontSize: 26, fontWeight: 700, opacity: 0.85, marginLeft: 8 }}>
+                    ({data.voting.turnoutPercentage}%)
+                  </span>
+                )}
+              </div>
+
+              {hideCounts && (
+                <div
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '6px 14px',
+                    borderRadius: 12,
+                    background: '#0c0a09',
+                    color: '#36dfff',
+                    fontSize: 20,
+                    fontWeight: 800,
+                    border: '1.5px solid rgba(54, 223, 255, 0.5)',
+                    boxShadow: '0 0 16px rgba(54, 223, 255, 0.25)',
+                    whiteSpace: 'nowrap',
+                  }}
+                  title="Проголосувало понад 49% виборців — голоси за кандидатів приховано для збереження інтриги"
+                >
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                  <span>Інтрига (&gt;49%)</span>
+                </div>
+              )}
             </div>
           )}
 
@@ -1270,9 +1320,43 @@ export default function LiveVotingScreenPage() {
                             lineHeight: '34px',
                             color: '#ffffff',
                             whiteSpace: 'nowrap',
+                            display: 'flex',
+                            alignItems: 'center',
                           }}
                         >
-                          {!hideCounts && `${fmtNumber(c.votesCount)} ${pluralVotes(c.votesCount)}`}
+                          {hideCounts ? (
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 8,
+                                color: '#a1a1aa',
+                                fontSize: 22,
+                                fontWeight: 700,
+                                background: 'rgba(255, 255, 255, 0.06)',
+                                padding: '3px 12px',
+                                borderRadius: 8,
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                              }}
+                            >
+                              <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.4"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                              </svg>
+                              Голоси приховано
+                            </span>
+                          ) : (
+                            `${fmtNumber(c.votesCount)} ${pluralVotes(c.votesCount)}`
+                          )}
                         </div>
                       </div>
                     </div>
@@ -1491,7 +1575,38 @@ export default function LiveVotingScreenPage() {
                             </div>
                           )}
 
-                          {!hideCounts && (
+                          {hideCounts ? (
+                            <div
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                color: '#a1a1aa',
+                                fontSize: 18,
+                                fontWeight: 700,
+                                background: 'rgba(255, 255, 255, 0.06)',
+                                padding: '2px 8px',
+                                borderRadius: 6,
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              <svg
+                                width="13"
+                                height="13"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.4"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                              </svg>
+                              Приховано
+                            </div>
+                          ) : (
                             <div
                               style={{
                                 fontSize: 24,
@@ -1715,7 +1830,38 @@ export default function LiveVotingScreenPage() {
                                 </div>
                               )}
 
-                              {!hideCounts && (
+                              {hideCounts ? (
+                                <div
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 6,
+                                    color: '#a1a1aa',
+                                    fontSize: 20,
+                                    fontWeight: 700,
+                                    background: 'rgba(255, 255, 255, 0.06)',
+                                    padding: '2px 10px',
+                                    borderRadius: 6,
+                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                >
+                                  <svg
+                                    width="14"
+                                    height="14"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2.4"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  >
+                                    <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                                  </svg>
+                                  Приховано
+                                </div>
+                              ) : (
                                 <div
                                   style={{
                                     fontSize: 26,
@@ -1885,7 +2031,32 @@ export default function LiveVotingScreenPage() {
                             >
                               {r.name}
                             </div>
-                            {!hideCounts && (
+                            {hideCounts ? (
+                              <div
+                                style={{
+                                  flexShrink: 0,
+                                  width: 44,
+                                  display: 'flex',
+                                  justifyContent: 'center',
+                                  color: '#71717a',
+                                }}
+                                title="Голоси приховано"
+                              >
+                                <svg
+                                  width="18"
+                                  height="18"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2.4"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                                  <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                                </svg>
+                              </div>
+                            ) : (
                               <div
                                 style={{
                                   flexShrink: 0,
@@ -2082,7 +2253,34 @@ export default function LiveVotingScreenPage() {
                             </span>
                           )}
 
-                          {!hideCounts && (
+                          {hideCounts && ceremonyStep < 3 ? (
+                            <span
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 6,
+                                color: '#a1a1aa',
+                                fontSize: 24,
+                                fontWeight: 700,
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              <svg
+                                width="18"
+                                height="18"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.4"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+                                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                              </svg>
+                              Приховано
+                            </span>
+                          ) : (
                             <span
                               style={{
                                 fontSize: 30,
@@ -2236,7 +2434,7 @@ export default function LiveVotingScreenPage() {
                   Голосування завершено
                 </div>
 
-                {!hideCounts && totalVotes > 0 && (
+                {totalVotes > 0 && (
                   <div
                     style={{
                       width: '100%',
@@ -2565,8 +2763,15 @@ export default function LiveVotingScreenPage() {
           type="button"
           role="switch"
           aria-checked={hideCounts}
-          onClick={() => setHideCounts(!hideCounts)}
+          onClick={() =>
+            setManualHideOverride((prev) => (prev !== null ? !prev : !isAutoThresholdReached))
+          }
           className="flex items-center gap-3 h-11 px-4 rounded-xl bg-[#1d1d24] text-white text-sm font-extrabold cursor-pointer transition-colors hover:bg-[#25252e]"
+          title={
+            isAutoThresholdReached
+              ? 'Голоси кандидатів приховано автоматично (проголосувало понад 49% виборців). Натисніть, щоб змінити.'
+              : 'Приховати точну кількість голосів кандидатів для збереження інтриги'
+          }
         >
           <span
             style={{
@@ -2591,8 +2796,25 @@ export default function LiveVotingScreenPage() {
               }}
             />
           </span>
-          <span>{hideCounts ? '🔒 Голоси приховані' : '👁️ Показувати голоси'}</span>
+          <span>
+            {hideCounts
+              ? `🔒 Голоси приховані ${
+                  isAutoThresholdReached && manualHideOverride === null ? '(авто >49%)' : ''
+                }`
+              : '👁️ Показувати голоси'}
+          </span>
         </button>
+
+        {manualHideOverride !== null && (
+          <button
+            type="button"
+            onClick={() => setManualHideOverride(null)}
+            className="h-11 px-3 rounded-xl border border-white/10 bg-[#1d1d24] text-white/70 hover:text-white hover:border-white/30 text-xs font-bold cursor-pointer"
+            title="Скинути до автоматичного режиму (>49%)"
+          >
+            Скинути в авто
+          </button>
+        )}
 
         <div className="w-0.5 h-9 bg-[#3f3f46]" />
 

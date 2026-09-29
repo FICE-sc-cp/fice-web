@@ -136,6 +136,7 @@ export interface EventItem {
   locationNote: string | null;
   timeNote: string | null;
   registrationCloseDate: string | null;
+  maxRegistrations?: number | null;
   photoAlbumUrl: string | null;
   feeAmount: string | null;
   feeAtEventAmount: string | null;
@@ -242,12 +243,19 @@ export interface ApplyPartnerPayload {
 }
 
 export type RegistrationPayment = 'NONE' | 'DONATED' | 'AT_EVENT';
+export type PaymentStatus =
+  | 'NOT_REQUIRED'
+  | 'PENDING'
+  | 'CONFIRMED'
+  | 'REJECTED';
+export type RegistrationSource = 'WEB' | 'BOT';
 
 export interface EventRegistrationPayload {
   fullName: string;
   telegramTag: string;
   group: string;
   birthDate?: string;
+  source?: RegistrationSource;
   payment?: RegistrationPayment;
   receiptUrl?: string;
   telegramUserId?: string | number;
@@ -506,6 +514,38 @@ export const fice = {
       },
     );
   },
+  scanCheckIn: (
+    eventId: string,
+    code: string,
+    initData?: string,
+    tgUserId?: string,
+    tgTag?: string,
+    staffName?: string,
+  ) => {
+    const params = new URLSearchParams();
+    if (tgUserId) params.set('tgUserId', tgUserId);
+    if (tgTag) params.set('tgTag', tgTag);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+
+    return request<{
+      success: boolean;
+      alreadyAttended: boolean;
+      isPaymentPending?: boolean;
+      isPaymentRejected?: boolean;
+      message: string;
+      registration: CheckInItem & {
+        age?: number | null;
+        isAdult?: boolean | null;
+      };
+    }>(`/event/${eventId}/checkin/scan${qs}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(initData ? { 'x-telegram-init-data': initData } : {}),
+      },
+      body: JSON.stringify({ code, staffName }),
+    });
+  },
 };
 
 export interface CheckInItem {
@@ -513,7 +553,12 @@ export interface CheckInItem {
   fullName: string;
   telegramTag: string;
   group: string;
+  birthDate?: string | null;
+  source?: RegistrationSource;
   payment: RegistrationPayment;
+  paymentStatus?: PaymentStatus;
+  paymentRejectionReason?: string | null;
+  ticketCode?: string;
   receiptUrl: string | null;
   attended: boolean;
   attendedAt: string | null;
@@ -574,8 +619,15 @@ export interface MyEventRegistration {
   telegramTag: string;
   group: string;
   birthDate: string | null;
+  source?: RegistrationSource;
   payment: RegistrationPayment;
+  paymentStatus?: PaymentStatus;
+  paymentRejectionReason?: string | null;
+  ticketCode?: string;
   receiptUrl: string | null;
+  attended: boolean;
+  attendedAt?: string | null;
+  attendedBy?: string | null;
   createdAt: string;
   event: {
     id: string;
@@ -589,6 +641,7 @@ export interface MyEventRegistration {
     feeAtEventAmount: string | null;
     feeRequisites: string | null;
     registrationCloseDate: string | null;
+    maxRegistrations?: number | null;
   };
   answers: { id: string; value: string; question: { label: string } }[];
 }
@@ -641,6 +694,9 @@ export interface VotingScreenData {
     eventDate: string;
     eventLocation: string | null;
     eventPhotoUrl: string | null;
+    expectedVoters?: number | null;
+    turnoutPercentage?: number | null;
+    isThresholdReached?: boolean;
   };
   candidates: {
     id: string;

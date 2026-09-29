@@ -175,6 +175,7 @@ model Event {
   locationNote          String?   @db.Text
   timeNote              String?   @db.VarChar(120)
   registrationCloseDate DateTime?
+  maxRegistrations      Int?
   photoAlbumUrl         String?
   feeAmount             Decimal?  @db.Decimal(10, 2)
   feeAtEventAmount      Decimal?  @db.Decimal(10, 2)
@@ -258,6 +259,18 @@ model EventQuestion {
   answers EventRegistrationAnswer[]
 }
 
+enum RegistrationSource {
+  WEB
+  BOT
+}
+
+enum PaymentStatus {
+  NOT_REQUIRED
+  PENDING
+  CONFIRMED
+  REJECTED
+}
+
 enum RegistrationPayment {
   NONE
   DONATED
@@ -265,20 +278,24 @@ enum RegistrationPayment {
 }
 
 model EventRegistration {
-  id             String              @id @default(uuid()) @db.Uuid
-  eventId        String              @db.Uuid
-  botUserId      String?             @db.Uuid
-  telegramUserId BigInt?
-  fullName       String              @db.VarChar(100)
-  telegramTag    String              @db.VarChar(50)
-  group          String              @db.VarChar(10)
-  birthDate      DateTime?
-  payment        RegistrationPayment @default(NONE)
-  receiptUrl     String?
-  attended       Boolean             @default(false)
-  attendedAt     DateTime?
-  attendedBy     String?             @db.VarChar(100)
-  createdAt      DateTime            @default(now())
+  id                     String              @id @default(uuid()) @db.Uuid
+  eventId                String              @db.Uuid
+  botUserId              String?             @db.Uuid
+  telegramUserId         BigInt?
+  fullName               String              @db.VarChar(100)
+  telegramTag            String              @db.VarChar(50)
+  group                  String              @db.VarChar(10)
+  birthDate              DateTime?
+  source                 RegistrationSource  @default(WEB)
+  payment                RegistrationPayment @default(NONE)
+  paymentStatus          PaymentStatus       @default(NOT_REQUIRED)
+  paymentRejectionReason String?             @db.Text
+  ticketCode             String              @unique @default(uuid()) @db.Uuid
+  receiptUrl             String?
+  attended               Boolean             @default(false)
+  attendedAt             DateTime?
+  attendedBy             String?             @db.VarChar(100)
+  createdAt              DateTime            @default(now())
 
   event          Event               @relation(fields: [eventId], references: [id], onDelete: Cascade)
   botUser        BotUser?            @relation(fields: [botUserId], references: [id], onDelete: SetNull)
@@ -288,6 +305,8 @@ model EventRegistration {
   @@index([eventId])
   @@index([telegramUserId])
   @@index([attended])
+  @@index([ticketCode])
+  @@index([paymentStatus])
 }
 
 model EventRegistrationAnswer {

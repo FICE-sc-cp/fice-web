@@ -26,6 +26,12 @@ function toLocalTimeInput(iso: string) {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+function toLocalDateTimeInput(iso: string) {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export default function EditEventPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
@@ -130,8 +136,12 @@ export default function EditEventPage() {
                   locationNote: event.locationNote ?? '',
                   timeNote: event.timeNote ?? '',
                   registrationCloseDate: event.registrationCloseDate
-                    ? toLocalDateInput(event.registrationCloseDate)
+                    ? toLocalDateTimeInput(event.registrationCloseDate)
                     : '',
+                  maxRegistrations:
+                    event.maxRegistrations != null
+                      ? String(event.maxRegistrations)
+                      : '',
                   photoAlbumUrl: event.photoAlbumUrl ?? '',
                   feeAmount: event.feeAmount != null ? String(event.feeAmount) : '',
                   feeAtEventAmount:

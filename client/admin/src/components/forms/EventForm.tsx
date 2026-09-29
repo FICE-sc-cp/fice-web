@@ -53,6 +53,7 @@ const schema = z.object({
   locationNote: z.string().optional(),
   timeNote: z.string().max(120, 'Максимум 120 символів').optional(),
   registrationCloseDate: z.string().optional(),
+  maxRegistrations: z.string().optional(),
   photoAlbumUrl: z.string().optional(),
   feeAmount: z.string().optional(),
   feeAtEventAmount: z.string().optional(),
@@ -135,6 +136,7 @@ export function eventValuesToInput(v: EventFormValues): EventInput {
     registrationCloseDate: v.registrationCloseDate
       ? new Date(v.registrationCloseDate).toISOString()
       : undefined,
+    maxRegistrations: v.maxRegistrations ? Number(v.maxRegistrations) : null,
     photoAlbumUrl: v.photoAlbumUrl?.trim() || undefined,
     feeAmount: v.feeAmount ? Number(v.feeAmount) : undefined,
     feeAtEventAmount: v.feeAtEventAmount ? Number(v.feeAtEventAmount) : undefined,
@@ -231,6 +233,7 @@ export function EventForm({
       locationNote: '',
       timeNote: '',
       registrationCloseDate: '',
+      maxRegistrations: '',
       photoAlbumUrl: '',
       feeAmount: '',
       feeAtEventAmount: '',
@@ -530,12 +533,27 @@ export function EventForm({
             {...register('timeNote')}
             error={errors.timeNote?.message}
           />
-          <Input
-            label="Закриття реєстрації"
-            type="datetime-local"
-            {...register('registrationCloseDate')}
-            error={errors.registrationCloseDate?.message}
-          />
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="min-w-0">
+              <Input
+                label="Закриття реєстрації (дедлайн)"
+                type="datetime-local"
+                {...register('registrationCloseDate')}
+                error={errors.registrationCloseDate?.message}
+              />
+            </div>
+            <div className="min-w-0">
+              <Input
+                label="Ліміт реєстрацій (макс. людей)"
+                type="number"
+                min="1"
+                placeholder="Необмежено"
+                inputMode="numeric"
+                {...register('maxRegistrations')}
+                error={errors.maxRegistrations?.message}
+              />
+            </div>
+          </div>
           <Input
             label="Посилання на фотоальбом (після заходу)"
             placeholder="https://…"

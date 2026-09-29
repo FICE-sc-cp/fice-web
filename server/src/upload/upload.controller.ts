@@ -18,7 +18,7 @@ import {
   UPLOAD_URL_PREFIX,
 } from './upload.constants';
 
-const imageUpload = FileInterceptor('file', {
+const imageOrPdfUpload = FileInterceptor('file', {
   storage: diskStorage({
     destination: UPLOAD_DIR,
     filename: (_req, file, cb) =>
@@ -26,8 +26,15 @@ const imageUpload = FileInterceptor('file', {
   }),
   limits: { fileSize: MAX_UPLOAD_BYTES },
   fileFilter: (_req, file, cb) => {
-    if (!file.mimetype.startsWith('image/')) {
-      cb(new BadRequestException('Only image files are allowed'), false);
+    const isImage = file.mimetype.startsWith('image/');
+    const isPdf = file.mimetype === 'application/pdf';
+    if (!isImage && !isPdf) {
+      cb(
+        new BadRequestException(
+          'Дозволені тільки зображення (JPEG, PNG тощо) або PDF-файли',
+        ),
+        false,
+      );
       return;
     }
     cb(null, true);
@@ -59,7 +66,7 @@ export class UploadController {
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Upload an image and get its URL (admin)' })
   @ApiBody(fileBody)
-  @UseInterceptors(imageUpload)
+  @UseInterceptors(imageOrPdfUpload)
   upload(@UploadedFile() file?: Express.Multer.File) {
     return toResult(file);
   }
@@ -69,7 +76,7 @@ export class UploadController {
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Upload an image publicly (e.g. a payment receipt)' })
   @ApiBody(fileBody)
-  @UseInterceptors(imageUpload)
+  @UseInterceptors(imageOrPdfUpload)
   uploadPublic(@UploadedFile() file?: Express.Multer.File) {
     return toResult(file);
   }
