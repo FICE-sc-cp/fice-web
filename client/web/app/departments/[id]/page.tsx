@@ -61,6 +61,7 @@ function MemberCard({
   telegram,
   photo,
   quote,
+  description,
   featured,
   accent,
   gradient,
@@ -70,13 +71,19 @@ function MemberCard({
   telegram: string | null;
   photo?: string | null;
   quote?: string | null;
+  description?: string | null;
   featured?: boolean;
   accent: Accent;
   gradient: string;
 }) {
   const tg = telegram?.replace(/^@/, "");
   return (
-    <article className="flex w-64 max-w-full flex-col gap-3">
+    <article
+      className={cn(
+        "flex max-w-full flex-col gap-3",
+        description ? "w-72" : "w-64",
+      )}
+    >
       <div
         className={cn(
           "rounded-2xl",
@@ -131,6 +138,11 @@ function MemberCard({
             «{quote}»
           </p>
         )}
+        {description && (
+          <p className="mt-1 text-base leading-relaxed text-stone-400">
+            {description}
+          </p>
+        )}
       </div>
     </article>
   );
@@ -163,6 +175,8 @@ export default async function DepartmentPage({
   const iconGrad = accentGradient[d.accent];
   const joinHref = `/join?dept=${encodeURIComponent(d.name)}`;
   const teamMembers: Member[] = d.team ?? [];
+  const teamLead = teamMembers.find((m) => m.lead) ?? null;
+  const teamRest = teamMembers.filter((m) => !m.lead);
   const hasAbout = !!d.about?.length;
   const hasResp = !!d.responsibilities?.length;
 
@@ -359,26 +373,48 @@ export default async function DepartmentPage({
               className="left-1/2 top-1/2 h-[24rem] w-[40rem] -translate-x-1/2 -translate-y-1/2"
             />
             <Container className="flex flex-col">
-              <SectionHeading title="Команда" gradient={d.gradient} />
+              <SectionHeading
+                title={d.teamTitle ?? "Команда"}
+                gradient={d.gradient}
+              />
+              {(teamLead || head) && (
+                <div className="mt-12 flex justify-center">
+                  {teamLead ? (
+                    <MemberCard
+                      name={teamLead.name}
+                      role={teamLead.role}
+                      telegram={teamLead.telegram}
+                      photo={teamLead.photo}
+                      description={teamLead.description}
+                      featured
+                      accent={d.accent}
+                      gradient={d.gradient}
+                    />
+                  ) : (
+                    head && (
+                      <MemberCard
+                        name={head.name}
+                        role="Голова департаменту"
+                        telegram={head.telegram}
+                        photo={head.photo}
+                        quote={d.headQuote}
+                        featured
+                        accent={d.accent}
+                        gradient={d.gradient}
+                      />
+                    )
+                  )}
+                </div>
+              )}
               <div className="mt-12 flex flex-wrap justify-center gap-x-6 gap-y-10">
-                {head && (
-                  <MemberCard
-                    name={head.name}
-                    role="Голова департаменту"
-                    telegram={head.telegram}
-                    photo={head.photo}
-                    quote={d.headQuote}
-                    featured
-                    accent={d.accent}
-                    gradient={d.gradient}
-                  />
-                )}
-                {teamMembers.map((m, i) => (
+                {teamRest.map((m, i) => (
                   <MemberCard
                     key={i}
                     name={m.name}
                     role={m.role}
                     telegram={m.telegram}
+                    photo={m.photo}
+                    description={m.description}
                     accent={d.accent}
                     gradient={d.gradient}
                   />
