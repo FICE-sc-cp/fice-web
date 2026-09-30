@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { Glow } from "@/components/ui/Glow";
+import { PixelBow } from "@/components/ui/PixelBow";
 import {
   AccentCard,
   //accentText,
@@ -16,12 +17,14 @@ const DEPARTMENTS: {
   accent: Accent;
   description: string;
   wide?: boolean;
+  bow?: boolean;
 }[] = [
   {
     slug: "presidium",
     name: "Президія",
     accent: "magenta",
     wide: true,
+    bow: true,
     description:
       "Керівництво студрадою, формування стратегії та координування ключових процесів, а також комунікація, документообіг і внутрішні процеси — усе, що робить роботу організації стабільною та ефективною.",
   },
@@ -49,14 +52,14 @@ const DEPARTMENTS: {
   {
     slug: "merch",
     name: "Департамент мерчу",
-    accent: "orange",
+    accent: "magenta",
     description:
       "Команда розробляє дизайн, створює нові продукти. Працюємо над якістю, стилем і впізнаваністю бренду ФІОТ.",
   },
   {
     slug: "education",
     name: "Департамент якості освіти",
-    accent: "green",
+    accent: "cyan",
     description:
       "Аналізує освітній процес, збирає фідбек і допомагає вирішувати академічні питання.",
   },
@@ -94,7 +97,7 @@ export function DepartmentsSection() {
           />
         </Reveal>
 
-        <RevealGroup className="mt-10 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 md:grid md:grid-cols-2 md:gap-6 md:overflow-visible md:pb-0 lg:grid-cols-3">
+        <RevealGroup className="-mt-2 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 pt-12 md:mt-10 md:grid md:grid-cols-2 md:gap-6 md:overflow-visible md:pb-0 md:pt-0 lg:grid-cols-3">
           {DEPARTMENTS.map((dept) => (
             <div
               key={dept.name}
@@ -106,8 +109,18 @@ export function DepartmentsSection() {
             <AccentCard
               accent={dept.accent}
               interactive
-              className="flex h-full flex-col gap-4 px-6 py-8"
+              className="relative flex h-full flex-col gap-4 px-6 py-8"
             >
+              {dept.bow && (
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute -top-8 left-2 h-16 w-16 -rotate-12 drop-shadow-md md:-left-4 md:-top-7"
+                >
+                  <span className="block h-full w-full animate-float">
+                    <PixelBow className="h-full w-full" />
+                  </span>
+                </span>
+              )}
               <h3 className="text-2xl font-bold text-white">{dept.name}</h3>
               {/*<p className={cn("text-xl font-bold", accentText[dept.accent])}>
                 Голова — @user_name

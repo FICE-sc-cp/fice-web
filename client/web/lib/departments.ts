@@ -390,9 +390,9 @@ export const DEPARTMENTS: Record<string, DepartmentData> = {
     slug: "merch",
     cover: "/merch-main-photo.jpg",
     name: "Департамент мерчу",
-    accent: "orange",
-    gradient: "bg-gradient-orange",
-    glow: ["#FF8904", "#FB2C36"],
+    accent: "magenta",
+    gradient: "bg-gradient-magenta",
+    glow: ["#AD46FF", "#F6339A"],
     memberCount: 19,
     slogan: "Розробка дизайнів друкованої та сувенірної продукції.",
     about: [
@@ -460,9 +460,9 @@ export const DEPARTMENTS: Record<string, DepartmentData> = {
     slug: "education",
     cover: "/photo-7.png", //Change later
     name: "Департамент якості освіти",
-    accent: "green",
-    gradient: "bg-gradient-green",
-    glow: ["#2EFF97", "#00E3C5"],
+    accent: "cyan",
+    gradient: "bg-gradient-blue",
+    glow: ["#00E3F3", "#2B7FFF"],
     memberCount: 20,
     slogan: "Якісна освіта — це результат спільної роботи кожного з нас.",
     about: [
