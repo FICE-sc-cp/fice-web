@@ -51,7 +51,7 @@ export async function generateMetadata({
   if (!dept) return { title: "Департамент — Студрада ФІОТ" };
   return {
     title: `${dept.name} — Студрада ФІОТ`,
-    description: dept.slogan ?? undefined,
+    description: dept.slogan?.replace(/\s*\n\s*/g, " ") ?? undefined,
   };
 }
 
@@ -232,7 +232,7 @@ export default async function DepartmentPage({
                   </span>
                 </h1>
                 {d.slogan && (
-                  <p className="max-w-xl text-xl text-muted sm:text-2xl">
+                  <p className="max-w-xl whitespace-pre-line text-xl text-muted sm:text-2xl">
                     {d.slogan}
                   </p>
                 )}
