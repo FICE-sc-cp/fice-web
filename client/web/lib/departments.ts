@@ -86,7 +86,6 @@ function dept(input: DeptInput): DepartmentData {
 export const DEPARTMENTS: Record<string, DepartmentData> = {
   presidium: dept({
     slug: "presidium",
-    cover: "/photo-7.png",
     name: "Президія",
     accent: "magenta",
     gradient: "bg-gradient-magenta",
@@ -240,7 +239,6 @@ export const DEPARTMENTS: Record<string, DepartmentData> = {
   }),
   media: dept({
     slug: "media",
-    cover: "/photo-7.png",
     name: "Департамент медіа",
     accent: "cyan",
     gradient: "bg-gradient-blue",
@@ -458,7 +456,6 @@ export const DEPARTMENTS: Record<string, DepartmentData> = {
   }),
   education: dept({
     slug: "education",
-    cover: "/photo-7.png", //Change later
     name: "Департамент якості освіти",
     accent: "cyan",
     gradient: "bg-gradient-blue",
@@ -511,5 +508,21 @@ export const DEPARTMENTS: Record<string, DepartmentData> = {
     ],
   }),
 };
+
+export const APPLICANTS_DEPARTMENT = dept({
+  slug: "applicants",
+  name: "Департамент роботи з абітурієнтами",
+  accent: "orange",
+  gradient: "bg-gradient-orange",
+  glow: ["#FF8904", "#FB2C36"],
+  memberCount: 9,
+  slogan:
+    "Ми стали містком між амбіціями майбутніх студентів та можливостями університету — створюючи простір для впевненого старту і свідомого вибору.",
+  about: [
+    "Наша головна місія – допомогти абітурієнтам не потонути в хаосі дат, документів і вимог вступної кампанії. Ми беремо на себе всю інформаційну та організаційну підтримку, щоб зробити цей шлях зрозумілим і легким.",
+  ],
+});
+
+export const APPLICANTS_DB_NAME = "Департамент по роботі з абітурієнтами";
 
 export const departmentSlugs = Object.keys(DEPARTMENTS);

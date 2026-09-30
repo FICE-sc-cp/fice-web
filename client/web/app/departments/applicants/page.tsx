@@ -1,28 +1,24 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import Link from "next/link";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Container } from "@/components/ui/Container";
 import { Glow } from "@/components/ui/Glow";
 import { Reveal, RevealGroup } from "@/components/ui/Reveal";
 import { EventCard } from "@/components/sections/EventCard";
-import { IconDefs, PeopleIcon } from "@/components/ui/icons";
+import { DepartmentTop } from "@/components/sections/DepartmentTop";
+import { accentBorder } from "@/components/ui/AccentCard";
+import { IconDefs } from "@/components/ui/icons";
 import { fice, safe, type EventItem } from "@/lib/api";
+import { APPLICANTS_DB_NAME, APPLICANTS_DEPARTMENT } from "@/lib/departments";
 import { cn } from "@/lib/utils";
 
-const GRADIENT = "bg-gradient-magenta";
-const GLOW: [string, string] = ["#F6339A", "#9810FA"];
-const NAME = "Департамент роботи з абітурієнтами";
-const SLOGAN =
-  "Ми стали містком між амбіціями майбутніх студентів та можливостями університету — створюючи простір для впевненого старту і свідомого вибору.";
-const MEMBER_COUNT = 9;
+const GRADIENT = APPLICANTS_DEPARTMENT.gradient;
+const GLOW = APPLICANTS_DEPARTMENT.glow;
+const ROLE_BORDER = accentBorder[APPLICANTS_DEPARTMENT.accent];
 
 const PERSON_OUTLINE =
   "drop-shadow(3px 3px 0 #fff) drop-shadow(-3px -3px 0 #fff) drop-shadow(3px -3px 0 #fff) drop-shadow(-3px 3px 0 #fff)";
-
-const ABOUT =
-  "Наша головна місія – допомогти абітурієнтам не потонути в хаосі дат, документів і вимог вступної кампанії. Ми беремо на себе всю інформаційну та організаційну підтримку, щоб зробити цей шлях зрозумілим і легким.";
 
 const ROLES = [
   {
@@ -88,9 +84,6 @@ function SectionHeading({ title }: { title: string }) {
 }
 
 export default async function ApplicantsPage() {
-  const joinHref = `/join?dept=${encodeURIComponent(NAME)}`;
-  const memberCount = MEMBER_COUNT;
-
   const [upcomingData, pastData] = await Promise.all([
     safe(fice.events(FESTS_LIMIT, 1, false, true), EMPTY_EVENTS),
     safe(fice.events(FESTS_LIMIT, 1, true, true), EMPTY_EVENTS),
@@ -102,80 +95,7 @@ export default async function ApplicantsPage() {
       <IconDefs />
       <Header />
       <main className="overflow-x-clip">
-        <section className="relative isolate pb-10 pt-20 lg:pt-28">
-          <Glow
-            color={GLOW[0]}
-            className="left-0 top-10 h-[26rem] w-[36rem] -translate-x-1/4"
-          />
-          <Glow
-            color={GLOW[1]}
-            className="right-0 top-24 h-[28rem] w-[36rem] translate-x-1/4"
-          />
-          <Container>
-            <div className="mx-auto flex max-w-3xl flex-col items-center gap-5 text-center">
-              <Link
-                href="/#departments"
-                className="inline-flex items-center gap-1 text-lg font-semibold text-subtle transition-colors hover:text-fg"
-              >
-                ← Усі департаменти
-              </Link>
-              <h1 className="text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
-                <span className={cn("bg-clip-text text-transparent", GRADIENT)}>
-                  {NAME}
-                </span>
-              </h1>
-              <p className="max-w-xl text-xl text-muted sm:text-2xl">
-                {SLOGAN}
-              </p>
-              <div className="mt-1 flex flex-wrap items-center justify-center gap-3">
-                {memberCount != null && (
-                  <span className="inline-flex h-11 items-center gap-2 rounded-full border border-white/10 bg-surface/50 px-4 text-base font-semibold text-fg">
-                    <span className="size-5">
-                      <PeopleIcon gradient="magenta" />
-                    </span>
-                    {memberCount} учасників
-                  </span>
-                )}
-                <Link
-                  href={joinHref}
-                  className={cn(
-                    "inline-flex h-11 items-center rounded-full px-6 text-base font-bold text-black transition-transform hover:scale-[1.03] active:scale-95",
-                    GRADIENT,
-                  )}
-                >
-                  Долучитися
-                </Link>
-              </div>
-            </div>
-          </Container>
-        </section>
-
-        <section id="about" className="relative isolate scroll-mt-28 py-16 lg:py-24">
-          <Container className="flex flex-col">
-            <Reveal>
-              <div className="flex flex-col items-center">
-                <SectionHeading title="Про департамент" />
-              </div>
-            </Reveal>
-            <div className="mt-12 grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-14">
-              <Reveal className="relative overflow-hidden rounded-3xl border border-white/10">
-                <Image
-                  src="/photo-7.png"
-                  alt={NAME}
-                  width={0}
-                  height={0}
-                  sizes="(min-width: 1024px) 32rem, 100vw"
-                  className="h-auto w-full"
-                />
-              </Reveal>
-              <Reveal>
-                <p className="text-xl leading-relaxed text-muted sm:text-2xl">
-                  {ABOUT}
-                </p>
-              </Reveal>
-            </div>
-          </Container>
-        </section>
+        <DepartmentTop d={APPLICANTS_DEPARTMENT} dbName={APPLICANTS_DB_NAME} />
 
         <section className="relative isolate py-16 lg:py-24">
           <Glow
@@ -192,7 +112,12 @@ export default async function ApplicantsPage() {
                   key={role.name}
                   className="mx-auto flex w-full max-w-[18rem] flex-col gap-4 sm:max-w-none"
                 >
-                  <div className="group relative aspect-[3/4] overflow-hidden rounded-2xl border border-brand-magenta bg-surface/40">
+                  <div
+                    className={cn(
+                      "group relative aspect-[3/4] overflow-hidden rounded-2xl border bg-surface/40",
+                      ROLE_BORDER,
+                    )}
+                  >
                     <Image
                       src="/placeholder-person.png"
                       alt={role.name}
