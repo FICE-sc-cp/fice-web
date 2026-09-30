@@ -13,7 +13,20 @@ import { useMainButton } from '@/lib/telegram';
 const schema = z.object({
   name: z.string().min(1, 'Вкажи назву').max(50, 'Максимум 50 символів'),
   memberCount: z.string().optional(),
-  telegramChatId: z.string().max(64, 'Максимум 64 символи').optional(),
+  telegramChatId: z
+    .string()
+    .max(64, 'Максимум 64 символи')
+    .refine(
+      (v) => {
+        const id = v.replace(/\s+/g, '');
+        return id === '' || /^-\d+(\/\d+)?$/.test(id);
+      },
+      {
+        message:
+          'Вкажи числовий ID групи, напр. -1001234567890, або -1001234567890/12 для однієї гілки',
+      },
+    )
+    .optional(),
   headFirstName: z.string().max(30, 'Максимум 30 символів').optional(),
   headLastName: z.string().max(30, 'Максимум 30 символів').optional(),
   headTelegramTag: z.string().max(50, 'Максимум 50 символів').optional(),
@@ -85,8 +98,8 @@ export function DepartmentForm({
           error={errors.telegramChatId?.message}
         />
         <p className="break-words text-xs text-subtle">
-          Чат, звідки бот збирає людей департаменту. Для гілки додай /threadId.
-          Бот має бути адміном чату.
+          Чат, звідки бот збирає людей департаменту. Лише ID групи — люди з усіх
+          гілок; ID/номер гілки — лише з однієї гілки. Бот має бути адміном чату.
         </p>
       </div>
 

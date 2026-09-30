@@ -15,6 +15,13 @@ import type { User } from 'grammy/types';
 import { UPLOAD_DIR, UPLOAD_URL_PREFIX } from '../upload/upload.constants';
 import { PrismaService } from '../database/prisma.service';
 import { ProjectParticipantService } from '../modules/project_participant/project_participant.service';
+import {
+  DepartmentChat,
+  matchDepartments,
+  messageTopicId,
+} from './department-chats';
+
+const DEPARTMENT_CHATS_TTL_MS = 60_000;
 
 export interface ChannelPostOptions {
   text: string;
@@ -64,6 +71,8 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
 
     const miniAppUrl = this.configService.get<string>('MINI_APP_URL');
 
+    this.registerProjectChatHarvesting(this.bot);
+
     this.bot.command('start', async (ctx) => {
       // `web_app` buttons are only valid in private chats — Telegram rejects
       // them elsewhere with BUTTON_TYPE_INVALID, which would crash the poller.
@@ -91,7 +100,12 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       }
     });
 
-    this.registerProjectChatHarvesting(this.bot);
+    this.bot.catch((err) => {
+      this.logger.error(
+        'Failed to handle Telegram update: ' +
+          (err.error instanceof Error ? err.error.message : String(err.error)),
+      );
+    });
 
     this.bot
       .start({
@@ -117,85 +131,172 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
 
   // Department chat ids are configured in the admin panel (Department.telegramChatId),
   // so the mapping is read from the DB with a short cache instead of env vars.
-  private deptChats: { id: string; chatId: string; threadId?: number }[] = [];
+  private deptChats: DepartmentChat[] = [];
+  private deptNames = new Map<string, string>();
   private deptChatsLoadedAt = 0;
+  private deptChatsVersion = 0;
 
-  private async departmentForChat(
+  invalidateDepartmentChats() {
+    this.deptChatsVersion += 1;
+    this.deptChatsLoadedAt = 0;
+  }
+
+  private async departmentsFor(
     chatId: number,
-    threadId?: number,
-    requireNoThread = false,
-  ): Promise<string | undefined> {
-    if (Date.now() - this.deptChatsLoadedAt > 60_000) {
+    topicId: number | undefined,
+    isJoin: boolean,
+  ): Promise<string[]> {
+    if (Date.now() - this.deptChatsLoadedAt > DEPARTMENT_CHATS_TTL_MS) {
+      const version = this.deptChatsVersion;
       const rows = await this.prisma.department.findMany({
         where: { telegramChatId: { not: null } },
-        select: { id: true, telegramChatId: true },
+        select: { id: true, name: true, telegramChatId: true },
       });
       this.deptChats = rows.flatMap((r) => {
         const ref = parseChatRef(r.telegramChatId ?? undefined);
-        return ref ? [{ id: r.id, ...ref }] : [];
+        return ref?.chatId
+          ? [{ departmentId: r.id, chatId: ref.chatId, topicId: ref.threadId }]
+          : [];
       });
-      this.deptChatsLoadedAt = Date.now();
+      this.deptNames = new Map(rows.map((r) => [r.id, r.name]));
+      if (version === this.deptChatsVersion) {
+        this.deptChatsLoadedAt = Date.now();
+      }
     }
-    const match = this.deptChats.find((d) => d.chatId === String(chatId));
-    if (!match) return undefined;
-    if (match.threadId !== undefined) {
-      // Topic-scoped chat: joins aren't topic-scoped, so skip them entirely,
-      // and only count messages posted in that topic.
-      if (requireNoThread || threadId !== match.threadId) return undefined;
+    return matchDepartments(this.deptChats, chatId, topicId, isJoin);
+  }
+
+  private async moveDepartmentChats(fromChatId: number, toChatId: number) {
+    const from = String(fromChatId);
+    try {
+      const rows = await this.prisma.department.findMany({
+        where: {
+          OR: [
+            { telegramChatId: from },
+            { telegramChatId: { startsWith: `${from}/` } },
+          ],
+        },
+        select: { id: true, name: true, telegramChatId: true },
+      });
+      for (const row of rows) {
+        const topic = (row.telegramChatId ?? '').slice(from.length);
+        await this.prisma.department.update({
+          where: { id: row.id },
+          data: { telegramChatId: `${toChatId}${topic}` },
+        });
+        this.logger.log(
+          `Telegram group ${from} became ${toChatId}; updated the chat ID of "${row.name}"`,
+        );
+      }
+      if (rows.length > 0) this.invalidateDepartmentChats();
+      for (const key of ['ADMIN_GROUP_CHAT_ID', 'PARTNERSHIP_CHAT_ID']) {
+        if (
+          parseChatRef(this.configService.get<string>(key))?.chatId === from
+        ) {
+          this.logger.warn(
+            `${key} still points to the old group ${from}; set it to ${toChatId} in .env`,
+          );
+        }
+      }
+    } catch (err) {
+      this.logger.warn(
+        'Failed to update department chats after a group upgrade: ' +
+          (err instanceof Error ? err.message : String(err)),
+      );
     }
-    return match.id;
   }
 
   private registerProjectChatHarvesting(bot: Bot) {
-    // Anyone who writes in a department chat (or its configured topic/гілка).
-    bot.on('message', async (ctx) => {
-      if (!ctx.chat || ctx.chat.type === 'private' || !ctx.from) return;
-      const deptId = await this.departmentForChat(
-        ctx.chat.id,
-        ctx.message.message_thread_id,
-      );
-      if (deptId) await this.harvestUser(ctx.from, deptId);
+    bot.on('message', async (ctx, next) => {
+      if (ctx.chat.type !== 'private') {
+        const {
+          migrate_to_chat_id: movedTo,
+          migrate_from_chat_id: movedFrom,
+          sender_chat: senderChat,
+          left_chat_member: leftMember,
+        } = ctx.message;
+        if (movedTo !== undefined) {
+          await this.moveDepartmentChats(ctx.chat.id, movedTo);
+        }
+        if (movedFrom !== undefined) {
+          await this.moveDepartmentChats(movedFrom, ctx.chat.id);
+        }
+        const joinedSelf = (ctx.message.new_chat_members ?? []).some(
+          (m) => m.id === ctx.from?.id,
+        );
+        const sender =
+          senderChat || leftMember || joinedSelf ? undefined : ctx.from;
+        if (sender) {
+          const topicId = messageTopicId(ctx.message, ctx.chat);
+          const departments = await this.departmentsFor(
+            ctx.chat.id,
+            topicId,
+            false,
+          );
+          for (const departmentId of departments) {
+            await this.harvestUser(sender, departmentId);
+          }
+        }
+        const joined = ctx.message.new_chat_members ?? [];
+        if (joined.length > 0) {
+          const departments = await this.departmentsFor(
+            ctx.chat.id,
+            undefined,
+            true,
+          );
+          for (const departmentId of departments) {
+            for (const member of joined) {
+              await this.harvestUser(member, departmentId);
+            }
+          }
+        }
+      }
+      await next();
     });
 
-    // People added to a department chat (may never send a message).
-    bot.on('message:new_chat_members', async (ctx) => {
-      const deptId = await this.departmentForChat(ctx.chat.id, undefined, true);
-      if (!deptId) return;
-      for (const member of ctx.message.new_chat_members) {
-        await this.harvestUser(member, deptId);
+    bot.on('chat_member', async (ctx, next) => {
+      const member = ctx.chatMember.new_chat_member;
+      const present =
+        member.status === 'member' ||
+        member.status === 'administrator' ||
+        member.status === 'creator' ||
+        (member.status === 'restricted' && member.is_member);
+      if (present) {
+        const departments = await this.departmentsFor(
+          ctx.chatMember.chat.id,
+          undefined,
+          true,
+        );
+        for (const departmentId of departments) {
+          await this.harvestUser(member.user, departmentId);
+        }
       }
-    });
-
-    bot.on('chat_member', async (ctx) => {
-      const deptId = await this.departmentForChat(
-        ctx.chatMember.chat.id,
-        undefined,
-        true,
-      );
-      if (!deptId) return;
-      const status = ctx.chatMember.new_chat_member.status;
-      if (status === 'member' || status === 'administrator') {
-        await this.harvestUser(ctx.chatMember.new_chat_member.user, deptId);
-      }
+      await next();
     });
   }
 
   private async harvestUser(user: User, departmentId: string) {
     if (user.is_bot) return;
     try {
-      const { id, created } = await this.projectParticipants.upsertFromTelegram(
-        {
-          id: user.id,
-          first_name: user.first_name,
-          last_name: user.last_name,
-          username: user.username,
-        },
-        departmentId,
-      );
+      const { id, isNew, needsAvatar } =
+        await this.projectParticipants.upsertFromTelegram(
+          {
+            id: user.id,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            username: user.username,
+          },
+          departmentId,
+        );
+      if (isNew) {
+        this.logger.log(
+          `Added Telegram user ${user.id} to the people of "${this.deptNames.get(departmentId) ?? departmentId}"`,
+        );
+      }
       // Fetch the avatar only for newly-seen participants to avoid a
       // getUserProfilePhotos call on every message in a busy chat. A refresh
       // can be triggered manually from the admin later.
-      if (created) {
+      if (needsAvatar) {
         const avatar = await this.fetchAndStoreAvatar(user.id);
         if (avatar) {
           await this.projectParticipants.setAvatar(
@@ -358,7 +459,9 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       return { messageId: msg.message_id };
     } catch (err) {
       if (err instanceof GrammyError) {
-        throw new BadRequestException(`Телеграм відхилив пост: ${err.description}`);
+        throw new BadRequestException(
+          `Телеграм відхилив пост: ${err.description}`,
+        );
       }
       throw err;
     }

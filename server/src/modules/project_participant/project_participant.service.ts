@@ -1,8 +1,10 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
-import { ProjectParticipantSource } from '@prisma/client';
+import { Prisma, ProjectParticipantSource } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateProjectParticipantDto } from './dto/create-project-participant.dto';
 import { UpdateProjectParticipantDto } from './dto/update-project-participant.dto';
+
+const FULL_NAME_MAX = 120;
 
 export interface TelegramUserLike {
   id: number;
@@ -41,24 +43,40 @@ export class ProjectParticipantService {
   async upsertFromTelegram(
     user: TelegramUserLike,
     departmentId: string,
-  ): Promise<{ id: string; created: boolean }> {
+  ): Promise<{ id: string; isNew: boolean; needsAvatar: boolean }> {
     const telegramId = BigInt(user.id);
-    const fullName =
+    const fullName = Array.from(
       [user.first_name, user.last_name].filter(Boolean).join(' ').trim() ||
-      `id${user.id}`;
+        `id${user.id}`,
+    )
+      .slice(0, FULL_NAME_MAX)
+      .join('');
     const telegramTag = user.username ? `@${user.username}` : null;
 
-    const existing = await this.prisma.projectParticipant.findUnique({
-      where: { departmentId_telegramId: { departmentId, telegramId } },
-      select: { id: true },
-    });
-
+    const existing = await this.findHarvested(departmentId, telegramId);
     if (existing) {
-      await this.prisma.projectParticipant.update({
-        where: { id: existing.id },
-        data: { fullName, telegramTag, lastSeenAt: new Date() },
+      await this.touch(existing, fullName, telegramTag);
+      return { id: existing.id, isNew: false, needsAvatar: false };
+    }
+
+    if (user.username) {
+      const wanted = user.username.toLowerCase();
+      const candidates = await this.prisma.projectParticipant.findMany({
+        where: { departmentId, telegramId: null, telegramTag: { not: null } },
+        select: { id: true, photo: true, telegramTag: true },
       });
-      return { id: existing.id, created: false };
+      const manual = candidates.find(
+        (r) =>
+          (r.telegramTag ?? '').trim().replace(/^@/, '').toLowerCase() ===
+          wanted,
+      );
+      if (manual) {
+        await this.prisma.projectParticipant.update({
+          where: { id: manual.id },
+          data: { telegramId, lastSeenAt: new Date() },
+        });
+        return { id: manual.id, isNew: false, needsAvatar: !manual.photo };
+      }
     }
 
     // Reuse an already-downloaded avatar of the same person from another chat.
@@ -67,19 +85,51 @@ export class ProjectParticipantService {
       select: { photo: true, avatarFileId: true },
     });
 
-    const created = await this.prisma.projectParticipant.create({
-      data: {
-        telegramId,
-        fullName,
-        telegramTag,
-        departmentId,
-        photo: twin?.photo,
-        avatarFileId: twin?.avatarFileId,
-        source: ProjectParticipantSource.HARVESTED,
-      },
-      select: { id: true, photo: true },
+    try {
+      const created = await this.prisma.projectParticipant.create({
+        data: {
+          telegramId,
+          fullName,
+          telegramTag,
+          departmentId,
+          photo: twin?.photo,
+          avatarFileId: twin?.avatarFileId,
+          source: ProjectParticipantSource.HARVESTED,
+        },
+        select: { id: true, photo: true },
+      });
+      return { id: created.id, isNew: true, needsAvatar: !created.photo };
+    } catch (err) {
+      const raced =
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002'
+          ? await this.findHarvested(departmentId, telegramId)
+          : null;
+      if (!raced) throw err;
+      await this.touch(raced, fullName, telegramTag);
+      return { id: raced.id, isNew: false, needsAvatar: false };
+    }
+  }
+
+  private findHarvested(departmentId: string, telegramId: bigint) {
+    return this.prisma.projectParticipant.findUnique({
+      where: { departmentId_telegramId: { departmentId, telegramId } },
+      select: { id: true, source: true },
     });
-    return { id: created.id, created: !created.photo };
+  }
+
+  private touch(
+    row: { id: string; source: ProjectParticipantSource },
+    fullName: string,
+    telegramTag: string | null,
+  ) {
+    return this.prisma.projectParticipant.update({
+      where: { id: row.id },
+      data:
+        row.source === ProjectParticipantSource.MANUAL
+          ? { lastSeenAt: new Date() }
+          : { fullName, telegramTag, lastSeenAt: new Date() },
+    });
   }
 
   async setAvatar(

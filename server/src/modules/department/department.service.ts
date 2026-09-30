@@ -1,12 +1,16 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { BotService } from '../../bot/bot.service';
 import { PrismaService } from '../../database/prisma.service';
 import { CreateDepartmentDto } from './dto/create-department.dto';
 import { UpdateDepartmentDto } from './dto/update-department.dto';
 
 @Injectable()
 export class DepartmentService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly bot: BotService,
+  ) {}
 
   private readonly listInclude: Prisma.DepartmentInclude = {
     head: true,
@@ -26,11 +30,13 @@ export class DepartmentService {
     };
   }
 
-  create(dto: CreateDepartmentDto) {
-    return this.prisma.department.create({
+  async create(dto: CreateDepartmentDto) {
+    const created = await this.prisma.department.create({
       data: this.relationData(dto) as Prisma.DepartmentCreateInput,
       include: this.detailInclude,
     });
+    this.bot.invalidateDepartmentChats();
+    return created;
   }
 
   findAll() {
@@ -53,15 +59,19 @@ export class DepartmentService {
 
   async update(id: string, dto: UpdateDepartmentDto) {
     await this.findOne(id);
-    return this.prisma.department.update({
+    const updated = await this.prisma.department.update({
       where: { id },
       data: this.relationData(dto),
       include: this.detailInclude,
     });
+    this.bot.invalidateDepartmentChats();
+    return updated;
   }
 
   async remove(id: string) {
     await this.findOne(id);
-    return this.prisma.department.delete({ where: { id } });
+    const removed = await this.prisma.department.delete({ where: { id } });
+    this.bot.invalidateDepartmentChats();
+    return removed;
   }
 }

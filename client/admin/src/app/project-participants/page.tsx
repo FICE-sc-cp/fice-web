@@ -42,6 +42,7 @@ export default function ProjectParticipantsPage() {
 
   const [filterDept, setFilterDept] = useState('');
   const [fullName, setFullName] = useState('');
+  const [telegramTag, setTelegramTag] = useState('');
   const [addDept, setAddDept] = useState('');
   const [photo, setPhoto] = useState<string | null>(null);
 
@@ -53,12 +54,16 @@ export default function ProjectParticipantsPage() {
     mutationFn: () =>
       api.createProjectParticipant({
         fullName: fullName.trim(),
+        telegramTag: telegramTag.trim()
+          ? `@${telegramTag.trim().replace(/^@/, '')}`
+          : undefined,
         departmentId: addDept || undefined,
         photo: photo ?? undefined,
       }),
     onSuccess: () => {
       hapticNotify('success');
       setFullName('');
+      setTelegramTag('');
       setPhoto(null);
       invalidate();
     },
@@ -96,6 +101,18 @@ export default function ProjectParticipantsPage() {
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
         />
+        <div className="flex flex-col gap-1.5">
+          <Input
+            label="Telegram (необовʼязково)"
+            placeholder="@username"
+            value={telegramTag}
+            onChange={(e) => setTelegramTag(e.target.value)}
+          />
+          <p className="text-xs text-subtle">
+            Якщо вказати @username, бот не додасть цю людину вдруге, коли вона
+            напише в чаті департаменту.
+          </p>
+        </div>
         <Select
           label="Департамент"
           options={[{ value: '', label: 'Без департаменту' }, ...deptOptions.slice(1)]}
