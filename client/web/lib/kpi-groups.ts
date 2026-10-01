@@ -78,7 +78,7 @@ export function parseKpiGroup(input: string): KpiGroupParseResult {
     return {
       valid: false,
       normalized,
-      error: 'Невірний формат групи. Приклад: ІП-31, ІА-22, КВ-11',
+      error: 'Невірний формат групи. Приклад: ІП-31, ІА-22, ІС-32',
     };
   }
 
