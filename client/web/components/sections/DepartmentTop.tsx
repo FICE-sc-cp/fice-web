@@ -35,6 +35,7 @@ function MemberCard({
   featured,
   accent,
   gradient,
+  className,
 }: {
   name: string;
   role: string;
@@ -45,13 +46,15 @@ function MemberCard({
   featured?: boolean;
   accent: Accent;
   gradient: string;
+  className?: string;
 }) {
   const tg = telegram?.replace(/^@/, "");
   return (
     <article
       className={cn(
-        "flex max-w-full flex-col gap-3",
+        "flex max-w-full flex-col gap-2.5",
         description ? "w-72" : "w-64",
+        className,
       )}
     >
       <div
@@ -79,10 +82,10 @@ function MemberCard({
         </div>
       </div>
       <div className="flex flex-col gap-1">
-        <h3 className="text-lg font-bold text-white">{name}</h3>
+        <h3 className="text-base font-bold text-white sm:text-lg">{name}</h3>
         <p
           className={cn(
-            "text-base font-semibold",
+            "text-xs sm:text-sm font-semibold",
             featured
               ? cn("bg-clip-text text-transparent", gradient)
               : accentText[accent],
@@ -97,19 +100,19 @@ function MemberCard({
             rel="noopener noreferrer"
             className="mt-0.5 flex items-center gap-1.5 text-stone-300 transition-colors hover:text-brand-cyan"
           >
-            <span className="size-4 shrink-0">
+            <span className="size-3.5 shrink-0">
               <TelegramIcon />
             </span>
-            <span className="text-sm">@{tg}</span>
+            <span className="text-xs sm:text-sm">@{tg}</span>
           </a>
         )}
         {quote && (
-          <p className="mt-1 text-sm italic leading-snug text-stone-400">
+          <p className="mt-1 text-xs italic leading-snug text-stone-400">
             «{quote}»
           </p>
         )}
         {description && (
-          <p className="mt-1 text-base leading-relaxed text-stone-400">
+          <p className="mt-1 text-xs sm:text-[13px] leading-relaxed text-stone-400">
             {description}
           </p>
         )}
@@ -354,49 +357,93 @@ export async function DepartmentTop({
               title={d.teamTitle ?? "Команда"}
               gradient={d.gradient}
             />
-            {(teamLead || head) && (
-              <div className="mt-12 flex justify-center">
-                {teamLead ? (
-                  <MemberCard
-                    name={teamLead.name}
-                    role={teamLead.role}
-                    telegram={teamLead.telegram}
-                    photo={teamLead.photo}
-                    description={teamLead.description}
-                    featured
-                    accent={d.accent}
-                    gradient={d.gradient}
-                  />
-                ) : (
-                  head && (
+            {d.slug === "presidium" ? (
+              <div className="mt-12 flex flex-col gap-8 lg:gap-10">
+                {/* Рядок 1: Голова СР, перший зам, секретар */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto w-full justify-items-center">
+                  {teamMembers.slice(0, 3).map((m, i) => (
                     <MemberCard
-                      name={head.name}
-                      role="Голова департаменту"
-                      telegram={head.telegram}
-                      photo={head.photo}
-                      quote={d.headQuote}
-                      featured
+                      key={m.name}
+                      name={m.name}
+                      role={m.role}
+                      telegram={m.telegram}
+                      photo={m.photo}
+                      description={m.description}
+                      featured={m.lead}
+                      accent={d.accent}
+                      gradient={d.gradient}
+                      className={cn(
+                        "w-full max-w-[270px]",
+                        i === 2 && "sm:col-span-2 sm:max-w-[270px] lg:col-span-1",
+                      )}
+                    />
+                  ))}
+                </div>
+
+                {/* Рядок 2: Всі 4 зами */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6 max-w-6xl mx-auto w-full justify-items-center">
+                  {teamMembers.slice(3).map((m) => (
+                    <MemberCard
+                      key={m.name}
+                      name={m.name}
+                      role={m.role}
+                      telegram={m.telegram}
+                      photo={m.photo}
+                      description={m.description}
+                      accent={d.accent}
+                      gradient={d.gradient}
+                      className="w-full max-w-[270px]"
+                    />
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <>
+                {(teamLead || head) && (
+                  <div className="mt-12 flex justify-center">
+                    {teamLead ? (
+                      <MemberCard
+                        name={teamLead.name}
+                        role={teamLead.role}
+                        telegram={teamLead.telegram}
+                        photo={teamLead.photo}
+                        description={teamLead.description}
+                        featured
+                        accent={d.accent}
+                        gradient={d.gradient}
+                      />
+                    ) : (
+                      head && (
+                        <MemberCard
+                          name={head.name}
+                          role="Голова департаменту"
+                          telegram={head.telegram}
+                          photo={head.photo}
+                          quote={d.headQuote}
+                          featured
+                          accent={d.accent}
+                          gradient={d.gradient}
+                        />
+                      )
+                    )}
+                  </div>
+                )}
+                <div className="mt-12 flex flex-wrap justify-center gap-x-6 gap-y-10">
+                  {teamRest.map((m, i) => (
+                    <MemberCard
+                      key={i}
+                      name={m.name}
+                      role={m.role}
+                      telegram={m.telegram}
+                      photo={m.photo}
+                      description={m.description}
                       accent={d.accent}
                       gradient={d.gradient}
                     />
-                  )
-                )}
-              </div>
+                  ))}
+                </div>
+              </>
             )}
-            <div className="mt-12 flex flex-wrap justify-center gap-x-6 gap-y-10">
-              {teamRest.map((m, i) => (
-                <MemberCard
-                  key={i}
-                  name={m.name}
-                  role={m.role}
-                  telegram={m.telegram}
-                  photo={m.photo}
-                  description={m.description}
-                  accent={d.accent}
-                  gradient={d.gradient}
-                />
-              ))}
-            </div>
           </Container>
         </section>
       ) : head ? (
