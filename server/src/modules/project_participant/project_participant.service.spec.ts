@@ -192,3 +192,67 @@ describe('ProjectParticipantService.upsertFromTelegram', () => {
     );
   });
 });
+
+describe('ProjectParticipantService.removeOrHideFromTelegram', () => {
+  let service: ProjectParticipantService;
+  let db: any;
+
+  beforeEach(() => {
+    db = {
+      projectParticipant: {
+        findFirst: jest.fn(() => Promise.resolve(null)),
+        delete: jest.fn(() => Promise.resolve({})),
+        update: jest.fn(() => Promise.resolve({})),
+        findMany: jest.fn(() => Promise.resolve([])),
+      },
+    };
+    service = new ProjectParticipantService(db);
+  });
+
+  it('deletes HARVESTED participant when they leave', async () => {
+    db.projectParticipant.findFirst.mockResolvedValue({
+      id: 'h1',
+      source: ProjectParticipantSource.HARVESTED,
+      hidden: false,
+    });
+    const res = await service.removeOrHideFromTelegram(DEPT, BigInt(USER.id));
+    expect(res).toEqual({ action: 'deleted' });
+    expect(db.projectParticipant.delete).toHaveBeenCalledWith({
+      where: { id: 'h1' },
+    });
+  });
+
+  it('hides MANUAL participant when they leave', async () => {
+    db.projectParticipant.findFirst.mockResolvedValue({
+      id: 'm1',
+      source: ProjectParticipantSource.MANUAL,
+      hidden: false,
+    });
+    const res = await service.removeOrHideFromTelegram(DEPT, BigInt(USER.id));
+    expect(res).toEqual({ action: 'hidden' });
+    expect(db.projectParticipant.update).toHaveBeenCalledWith({
+      where: { id: 'm1' },
+      data: { hidden: true },
+    });
+  });
+
+  it('returns none if participant is not found', async () => {
+    const res = await service.removeOrHideFromTelegram(DEPT, BigInt(USER.id));
+    expect(res).toEqual({ action: 'none' });
+  });
+
+  it('findWithTelegramId returns filtered participants with telegramId', async () => {
+    db.projectParticipant.findMany.mockResolvedValue([
+      { id: '1', telegramId: BigInt(123) },
+    ]);
+    const res = await service.findWithTelegramId('dept-1');
+    expect(res).toHaveLength(1);
+    expect(db.projectParticipant.findMany).toHaveBeenCalledWith({
+      where: {
+        telegramId: { not: null },
+        departmentId: 'dept-1',
+      },
+      select: expect.any(Object),
+    });
+  });
+});

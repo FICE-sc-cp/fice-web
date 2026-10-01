@@ -78,6 +78,21 @@ describe('BotService department people harvesting', () => {
         Promise.resolve({ id: 'p1', isNew: true, needsAvatar: false }),
       ),
       setAvatar: jest.fn(),
+      removeOrHideFromTelegram: jest.fn(() =>
+        Promise.resolve({ action: 'deleted' }),
+      ),
+      findWithTelegramId: jest.fn(() =>
+        Promise.resolve([
+          {
+            id: 'p1',
+            departmentId: 'projects',
+            telegramId: BigInt(USER.id),
+            fullName: 'Denys',
+            source: 'HARVESTED',
+            hidden: false,
+          },
+        ]),
+      ),
     };
     const config = { get: jest.fn((key: string) => env[key]) };
     service = new BotService(config as any, prisma, participants);
@@ -234,13 +249,47 @@ describe('BotService department people harvesting', () => {
     expect(harvestedInto()).toEqual(['projects', 'education']);
   });
 
-  it('does not add anyone when a member leaves or is removed', async () => {
+  it('removes the member when a member leaves or is removed', async () => {
     await send(message({ left_chat_member: USER }));
-    await send({
-      ...message({ left_chat_member: USER }),
-      from: { id: 7, is_bot: false, first_name: 'Admin' },
-    });
+    expect(participants.removeOrHideFromTelegram).toHaveBeenCalledWith(
+      'projects',
+      BigInt(USER.id),
+    );
+    expect(participants.removeOrHideFromTelegram).toHaveBeenCalledWith(
+      'education',
+      BigInt(USER.id),
+    );
     expect(participants.upsertFromTelegram).not.toHaveBeenCalled();
+  });
+
+  it('removes or hides members who leave or are kicked via chat_member update', async () => {
+    const update = (status: string) => ({
+      chatMember: {
+        chat: { id: GROUP },
+        new_chat_member: { status, user: USER },
+      },
+    });
+    participants.removeOrHideFromTelegram.mockClear();
+    await handlers.chat_member(update('left'), next);
+    expect(participants.removeOrHideFromTelegram).toHaveBeenCalledWith(
+      'projects',
+      BigInt(USER.id),
+    );
+    expect(participants.removeOrHideFromTelegram).toHaveBeenCalledWith(
+      'education',
+      BigInt(USER.id),
+    );
+
+    participants.removeOrHideFromTelegram.mockClear();
+    await handlers.chat_member(update('kicked'), next);
+    expect(participants.removeOrHideFromTelegram).toHaveBeenCalledWith(
+      'projects',
+      BigInt(USER.id),
+    );
+    expect(participants.removeOrHideFromTelegram).toHaveBeenCalledWith(
+      'education',
+      BigInt(USER.id),
+    );
   });
 
   it('adds someone who joins by themselves only to whole-group departments', async () => {

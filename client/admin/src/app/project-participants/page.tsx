@@ -84,6 +84,25 @@ export default function ProjectParticipantsPage() {
     },
   });
 
+  const [syncStatus, setSyncStatus] = useState<string | null>(null);
+
+  const syncMutation = useMutation({
+    mutationFn: () => api.syncProjectParticipants(filterDept || undefined),
+    onSuccess: (res) => {
+      hapticNotify('success');
+      setSyncStatus(
+        `Синхронізовано! Перевірено учасників: ${res.checked}, видалено (хто пішов): ${res.removed}, приховано: ${res.hidden}${res.errors > 0 ? `, помилок: ${res.errors}` : ''}.`,
+      );
+      invalidate();
+    },
+    onError: (err) => {
+      hapticNotify('error');
+      setSyncStatus(
+        `Помилка синхронізації: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    },
+  });
+
   return (
     <main className="mx-auto max-w-xl px-4 py-6">
       <PageHeader title="Люди департаментів" />
@@ -130,14 +149,40 @@ export default function ProjectParticipantsPage() {
         </Button>
       </div>
 
-      <div className="mb-4">
-        <Select
-          label="Показати"
-          options={deptOptions}
-          value={filterDept}
-          onChange={(e) => setFilterDept(e.target.value)}
-        />
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+        <div className="flex-1">
+          <Select
+            label="Показати"
+            options={deptOptions}
+            value={filterDept}
+            onChange={(e) => {
+              setFilterDept(e.target.value);
+              setSyncStatus(null);
+            }}
+          />
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={syncMutation.isPending}
+          onClick={() => syncMutation.mutate()}
+          className="whitespace-nowrap"
+        >
+          {syncMutation.isPending ? 'Синхронізація…' : '🔄 Синхронізувати з Telegram'}
+        </Button>
       </div>
+
+      {syncStatus ? (
+        <div
+          className={`mb-4 rounded-xl border p-3 text-sm ${
+            syncMutation.isError
+              ? 'border-brand-red/30 bg-brand-red/10 text-brand-red'
+              : 'border-brand-green/30 bg-brand-green/10 text-brand-green'
+          }`}
+        >
+          {syncStatus}
+        </div>
+      ) : null}
 
       {toggleHidden.error || removeMutation.error ? (
         <div className="mb-3">

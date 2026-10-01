@@ -445,6 +445,13 @@ export interface ProjectParticipantInput {
   departmentId?: string;
 }
 
+export interface SyncParticipantsResult {
+  checked: number;
+  removed: number;
+  hidden: number;
+  errors: number;
+}
+
 export const api = {
   me: () => request<Me>('/auth/me'),
   facts: () => request<Facts>('/facts'),
@@ -599,6 +606,11 @@ export const api = {
     }),
   deleteProjectParticipant: (id: string) =>
     request<unknown>(`/project-participant/${id}`, { method: 'DELETE' }),
+  syncProjectParticipants: (departmentId?: string) =>
+    request<SyncParticipantsResult>(
+      `/project-participant/sync${departmentId ? `?departmentId=${encodeURIComponent(departmentId)}` : ''}`,
+      { method: 'POST' },
+    ),
 
   upload: async (file: File): Promise<{ url: string; filename: string }> => {
     const form = new FormData();

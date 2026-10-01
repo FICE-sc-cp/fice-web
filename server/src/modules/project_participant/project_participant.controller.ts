@@ -16,6 +16,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Admin } from '../../auth/admin.decorator';
+import { BotService } from '../../bot/bot.service';
 import { CreateProjectParticipantDto } from './dto/create-project-participant.dto';
 import { UpdateProjectParticipantDto } from './dto/update-project-participant.dto';
 import { ProjectParticipantEntity } from './entities/project-participant.entity';
@@ -24,7 +25,24 @@ import { ProjectParticipantService } from './project_participant.service';
 @ApiTags('project-participants')
 @Controller('project-participant')
 export class ProjectParticipantController {
-  constructor(private readonly service: ProjectParticipantService) {}
+  constructor(
+    private readonly service: ProjectParticipantService,
+    private readonly botService: BotService,
+  ) {}
+
+  @Post('sync')
+  @Admin()
+  @ApiOperation({
+    summary:
+      'Sync participants with Telegram chats (remove left/kicked members)',
+  })
+  @ApiQuery({ name: 'departmentId', required: false, format: 'uuid' })
+  sync(
+    @Query('departmentId', new ParseUUIDPipe({ optional: true }))
+    departmentId?: string,
+  ) {
+    return this.botService.syncDepartmentChatMembers(departmentId);
+  }
 
   // Public: consumed by the department people walls ("сердечка").
   @Get('public')

@@ -143,6 +143,57 @@ export class ProjectParticipantService {
     });
   }
 
+  /**
+   * Remove or hide a participant when they leave or are kicked from a chat.
+   * HARVESTED entries are deleted; MANUAL entries are hidden to preserve admin edits.
+   */
+  async removeOrHideFromTelegram(
+    departmentId: string,
+    telegramId: bigint,
+  ): Promise<{ action: 'deleted' | 'hidden' | 'none' }> {
+    const existing = await this.prisma.projectParticipant.findFirst({
+      where: { departmentId, telegramId },
+      select: { id: true, source: true, hidden: true },
+    });
+    if (!existing) return { action: 'none' };
+
+    if (existing.source === ProjectParticipantSource.HARVESTED) {
+      await this.prisma.projectParticipant.delete({
+        where: { id: existing.id },
+      });
+      return { action: 'deleted' };
+    } else {
+      if (!existing.hidden) {
+        await this.prisma.projectParticipant.update({
+          where: { id: existing.id },
+          data: { hidden: true },
+        });
+        return { action: 'hidden' };
+      }
+      return { action: 'none' };
+    }
+  }
+
+  /**
+   * Fetch all participants with known Telegram IDs for chat membership verification.
+   */
+  findWithTelegramId(departmentId?: string) {
+    return this.prisma.projectParticipant.findMany({
+      where: {
+        telegramId: { not: null },
+        ...(departmentId ? { departmentId } : {}),
+      },
+      select: {
+        id: true,
+        departmentId: true,
+        telegramId: true,
+        fullName: true,
+        source: true,
+        hidden: true,
+      },
+    });
+  }
+
   // ---- Admin CRUD ---------------------------------------------------------
 
   findAllAdmin() {

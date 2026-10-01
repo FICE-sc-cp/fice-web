@@ -49,6 +49,8 @@ export function parseChatRef(
 export class BotService implements OnModuleInit, OnModuleDestroy {
   private readonly bot?: Bot;
   private readonly logger = new Logger(BotService.name);
+  private syncInitialTimeout?: NodeJS.Timeout;
+  private syncInterval?: NodeJS.Timeout;
 
   constructor(
     private readonly configService: ConfigService,
@@ -125,6 +127,27 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       .catch((err) => {
         this.logger.error('Error during bot long polling', err);
       });
+
+    // Schedule initial and recurring membership sync (clean up members who left/were kicked)
+    this.syncInitialTimeout = setTimeout(() => {
+      this.syncDepartmentChatMembers().catch((err) =>
+        this.logger.warn(
+          'Initial chat members sync failed: ' +
+            (err instanceof Error ? err.message : String(err)),
+        ),
+      );
+    }, 60_000);
+    this.syncInitialTimeout?.unref?.();
+
+    this.syncInterval = setInterval(() => {
+      this.syncDepartmentChatMembers().catch((err) =>
+        this.logger.warn(
+          'Scheduled chat members sync failed: ' +
+            (err instanceof Error ? err.message : String(err)),
+        ),
+      );
+    }, 12 * 60 * 60_000);
+    this.syncInterval?.unref?.();
   }
 
   // ---- Project-chat participant harvesting ("Люди проєктного") ------------
@@ -221,6 +244,18 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
         if (movedFrom !== undefined) {
           await this.moveDepartmentChats(movedFrom, ctx.chat.id);
         }
+        // If a member left or was removed via a service message
+        if (leftMember && !leftMember.is_bot) {
+          const departments = await this.departmentsFor(
+            ctx.chat.id,
+            undefined,
+            false,
+          );
+          for (const departmentId of departments) {
+            await this.removeUser(leftMember.id, departmentId);
+          }
+        }
+
         const joinedSelf = (ctx.message.new_chat_members ?? []).some(
           (m) => m.id === ctx.from?.id,
         );
@@ -269,6 +304,15 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
         );
         for (const departmentId of departments) {
           await this.harvestUser(member.user, departmentId);
+        }
+      } else if (member.status === 'left' || member.status === 'kicked') {
+        const departments = await this.departmentsFor(
+          ctx.chatMember.chat.id,
+          undefined,
+          false,
+        );
+        for (const departmentId of departments) {
+          await this.removeUser(member.user.id, departmentId);
         }
       }
       await next();
@@ -349,7 +393,138 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  /**
+   * Handle user departure (left or kicked) from a department chat.
+   */
+  async removeUser(userId: number, departmentId: string): Promise<void> {
+    try {
+      const res = await this.projectParticipants.removeOrHideFromTelegram(
+        departmentId,
+        BigInt(userId),
+      );
+      if (res.action === 'deleted') {
+        this.logger.log(
+          `Removed departed user ${userId} from department "${this.deptNames.get(departmentId) ?? departmentId}"`,
+        );
+      } else if (res.action === 'hidden') {
+        this.logger.log(
+          `Hid departed manual participant ${userId} from department "${this.deptNames.get(departmentId) ?? departmentId}"`,
+        );
+      }
+    } catch (err) {
+      this.logger.warn(
+        `Failed to handle departure of user ${userId} from department ${departmentId}: ` +
+          (err instanceof Error ? err.message : String(err)),
+      );
+    }
+  }
+
   // ---- Membership + notifications ----------------------------------------
+
+  async checkMemberStatus(
+    chatId: string | number,
+    userId: number,
+  ): Promise<'member' | 'left' | 'error'> {
+    if (!this.bot) return 'error';
+    try {
+      const member = await this.bot.api.getChatMember(chatId, userId);
+      const isMember =
+        member.status === 'creator' ||
+        member.status === 'administrator' ||
+        member.status === 'member' ||
+        (member.status === 'restricted' && member.is_member);
+      return isMember ? 'member' : 'left';
+    } catch (err) {
+      if (err instanceof GrammyError) {
+        if (
+          err.error_code === 400 ||
+          err.description?.toLowerCase().includes('user not found') ||
+          err.description?.toLowerCase().includes('participant')
+        ) {
+          return 'left';
+        }
+      }
+      this.logger.warn(
+        `Failed to check member status for user ${userId} in chat ${chatId}: ` +
+          (err instanceof Error ? err.message : String(err)),
+      );
+      return 'error';
+    }
+  }
+
+  /**
+   * Scan department chat participants against Telegram's getChatMember to remove
+   * people who left or were kicked from the group.
+   */
+  async syncDepartmentChatMembers(departmentId?: string): Promise<{
+    checked: number;
+    removed: number;
+    hidden: number;
+    errors: number;
+  }> {
+    const result = { checked: 0, removed: 0, hidden: 0, errors: 0 };
+    if (!this.bot) {
+      this.logger.warn('Bot is not configured — skipping chat members sync.');
+      return result;
+    }
+
+    try {
+      const departments = await this.prisma.department.findMany({
+        where: {
+          telegramChatId: { not: null },
+          ...(departmentId ? { id: departmentId } : {}),
+        },
+        select: { id: true, name: true, telegramChatId: true },
+      });
+
+      for (const dept of departments) {
+        const ref = parseChatRef(dept.telegramChatId ?? undefined);
+        if (!ref?.chatId) continue;
+
+        const participants = await this.projectParticipants.findWithTelegramId(
+          dept.id,
+        );
+
+        for (const participant of participants) {
+          if (!participant.telegramId) continue;
+          const userId = Number(participant.telegramId);
+
+          const status = await this.checkMemberStatus(ref.chatId, userId);
+          result.checked++;
+
+          if (status === 'left') {
+            const res = await this.projectParticipants.removeOrHideFromTelegram(
+              dept.id,
+              participant.telegramId,
+            );
+            if (res.action === 'deleted') {
+              result.removed++;
+              this.logger.log(
+                `Sync: removed departed user ${userId} (${participant.fullName}) from "${dept.name}"`,
+              );
+            } else if (res.action === 'hidden') {
+              result.hidden++;
+              this.logger.log(
+                `Sync: hid departed manual participant ${userId} (${participant.fullName}) from "${dept.name}"`,
+              );
+            }
+          } else if (status === 'error') {
+            result.errors++;
+          }
+
+          // Small delay to respect Telegram rate limits
+          await new Promise((r) => setTimeout(r, 50));
+        }
+      }
+    } catch (err) {
+      this.logger.error(
+        'Failed to sync department chat members: ' +
+          (err instanceof Error ? err.message : String(err)),
+      );
+    }
+
+    return result;
+  }
 
   async isUserInChat(
     chatId: string | number,
@@ -476,6 +651,9 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy() {
+    if (this.syncInitialTimeout) clearTimeout(this.syncInitialTimeout);
+    if (this.syncInterval) clearInterval(this.syncInterval);
+
     if (!this.bot) {
       return;
     }
