@@ -5,15 +5,14 @@ import {
   Get,
   Headers,
   Param,
+  ParseUUIDPipe,
   Patch,
   Query,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiOperation, ApiSecurity, ApiTags } from '@nestjs/swagger';
-import { validate } from '@tma.js/init-data-node';
 import { Admin } from '../../auth/admin.decorator';
-import { extractTelegramUser } from '../../auth/init-data.util';
+import { resolveValidatedTelegramUser } from '../../auth/init-data.util';
 import { BotUserService } from './bot-user.service';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 
@@ -26,37 +25,8 @@ export class BotUserController {
   ) {}
 
   private resolveTelegramId(initData?: string, fallbackId?: string): bigint {
-    if (this.config.get<string>('AUTH_DISABLED') === 'true' && fallbackId) {
-      return BigInt(fallbackId);
-    }
-
-    const token =
-      this.config.get<string>('USER_BOT_TOKEN') ||
-      this.config.get<string>('TELEGRAM_BOT_TOKEN');
-
-    if (!initData) {
-      if (fallbackId && this.config.get<string>('AUTH_DISABLED') === 'true') {
-        return BigInt(fallbackId);
-      }
-      throw new UnauthorizedException('Відсутні дані авторизації Telegram');
-    }
-
-    if (token) {
-      try {
-        validate(initData, token);
-      } catch {
-        // Fallback check: if token validation fails, let's also check if extracting user directly is allowed in dev
-        if (this.config.get<string>('AUTH_DISABLED') !== 'true') {
-          throw new UnauthorizedException('Невалідні дані Telegram');
-        }
-      }
-    }
-
-    const user = extractTelegramUser(initData);
-    if (!user) {
-      throw new UnauthorizedException('Не вдалося розпізнати користувача Telegram');
-    }
-    return BigInt(user.id);
+    return resolveValidatedTelegramUser(this.config, initData, { id: fallbackId })
+      .telegramId;
   }
 
   @Get('profile')
@@ -97,7 +67,7 @@ export class BotUserController {
   @ApiSecurity('telegram')
   @ApiOperation({ summary: 'Cancel event registration' })
   cancelRegistration(
-    @Param('id') registrationId: string,
+    @Param('id', ParseUUIDPipe) registrationId: string,
     @Headers('x-telegram-init-data') initData?: string,
     @Query('tgUserId') fallbackId?: string,
   ) {

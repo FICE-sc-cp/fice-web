@@ -6,7 +6,7 @@ const LINK_ATTRS =
 
 const linkifyBare = (html: string): string =>
   html.replace(
-    /(^|[\s(])(https?:\/\/[^\s<)]+)/gi,
+    /(^|[\s(])(https?:\/\/[^\s<)"']+)/gi,
     (_m, pre: string, url: string) =>
       `${pre}<a href="${url}" ${LINK_ATTRS}>${url}</a>`,
   );

@@ -1,8 +1,20 @@
+import { UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { validate } from '@tma.js/init-data-node';
+
 export interface TelegramUser {
   id: number;
   username?: string;
   firstName?: string;
   lastName?: string;
+}
+
+export interface ResolvedTelegramUser {
+  telegramId: bigint;
+  username?: string;
+  firstName?: string;
+  lastName?: string;
+  staffName: string;
 }
 
 /**
@@ -29,4 +41,76 @@ export function extractTelegramUser(initData: string): TelegramUser | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Validates and extracts a Telegram user from `x-telegram-init-data`.
+ * Uses USER_BOT_TOKEN or TELEGRAM_BOT_TOKEN from ConfigService.
+ * If AUTH_DISABLED is true, allows fallback parameters for local development.
+ */
+export function resolveValidatedTelegramUser(
+  config: ConfigService,
+  initData?: string,
+  fallback?: { id?: string; tag?: string },
+): ResolvedTelegramUser {
+  const authDisabled = config.get<string>('AUTH_DISABLED') === 'true';
+
+  if (!initData) {
+    if (authDisabled && (fallback?.id || fallback?.tag)) {
+      const id = fallback.id ? BigInt(fallback.id) : BigInt(0);
+      const tag = fallback.tag || (fallback.id ? `dev_${fallback.id}` : 'dev_user');
+      return {
+        telegramId: id,
+        username: tag,
+        firstName: tag,
+        staffName: tag,
+      };
+    }
+    throw new UnauthorizedException('Відсутні дані авторизації Telegram');
+  }
+
+  const token =
+    config.get<string>('USER_BOT_TOKEN') ||
+    config.get<string>('TELEGRAM_BOT_TOKEN');
+
+  if (token) {
+    try {
+      validate(initData, token);
+    } catch {
+      if (!authDisabled) {
+        throw new UnauthorizedException('Невалідні дані Telegram init data');
+      }
+    }
+  } else if (!authDisabled) {
+    throw new UnauthorizedException(
+      'Telegram bot token не налаштовано на сервері',
+    );
+  }
+
+  const user = extractTelegramUser(initData);
+  if (!user) {
+    if (authDisabled && fallback?.id) {
+      return {
+        telegramId: BigInt(fallback.id),
+        username: fallback.tag,
+        staffName: fallback.tag || fallback.id,
+      };
+    }
+    throw new UnauthorizedException(
+      'Telegram init data не містить валідного користувача',
+    );
+  }
+
+  const staffName =
+    [user.firstName, user.lastName].filter(Boolean).join(' ') ||
+    user.username ||
+    String(user.id);
+
+  return {
+    telegramId: BigInt(user.id),
+    username: user.username,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    staffName,
+  };
 }

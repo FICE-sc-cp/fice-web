@@ -10,14 +10,12 @@ import {
   Post,
   Query,
   Res,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ApiOperation, ApiSecurity, ApiTags } from '@nestjs/swagger';
-import { validate } from '@tma.js/init-data-node';
 import type { Response } from 'express';
 import { Admin } from '../../auth/admin.decorator';
-import { extractTelegramUser } from '../../auth/init-data.util';
+import { resolveValidatedTelegramUser } from '../../auth/init-data.util';
 import { CastVoteDto } from './dto/cast-vote.dto';
 import { CreateCandidateDto } from './dto/create-candidate.dto';
 import { UpdateCandidateDto } from './dto/update-candidate.dto';
@@ -35,36 +33,8 @@ export class VotingController {
   ) {}
 
   private resolveTelegramId(initData?: string, fallbackId?: string): bigint {
-    if (this.config.get<string>('AUTH_DISABLED') === 'true' && fallbackId) {
-      return BigInt(fallbackId);
-    }
-
-    const token =
-      this.config.get<string>('USER_BOT_TOKEN') ||
-      this.config.get<string>('TELEGRAM_BOT_TOKEN');
-
-    if (!initData) {
-      if (fallbackId && this.config.get<string>('AUTH_DISABLED') === 'true') {
-        return BigInt(fallbackId);
-      }
-      throw new UnauthorizedException('Відсутні дані авторизації Telegram');
-    }
-
-    if (token) {
-      try {
-        validate(initData, token);
-      } catch {
-        if (this.config.get<string>('AUTH_DISABLED') !== 'true') {
-          throw new UnauthorizedException('Невалідні дані Telegram');
-        }
-      }
-    }
-
-    const user = extractTelegramUser(initData);
-    if (!user) {
-      throw new UnauthorizedException('Не вдалося розпізнати користувача Telegram');
-    }
-    return BigInt(user.id);
+    return resolveValidatedTelegramUser(this.config, initData, { id: fallbackId })
+      .telegramId;
   }
 
   // --- Admin endpoints ---
@@ -235,19 +205,16 @@ export class VotingController {
     @Headers('x-telegram-init-data') initData?: string,
     @Query('tgUserId') fallbackId?: string,
   ) {
-    const telegramId = this.resolveTelegramId(initData, fallbackId);
-    let username: string | undefined;
-    let fullName: string | undefined;
-
-    if (initData) {
-      const user = extractTelegramUser(initData);
-      if (user) {
-        username = user.username;
-        fullName = [user.firstName, user.lastName].filter(Boolean).join(' ') || undefined;
-      }
-    }
-
-    return this.votingService.submitCandidate(id, telegramId, dto, username, fullName);
+    const user = resolveValidatedTelegramUser(this.config, initData, {
+      id: fallbackId,
+    });
+    return this.votingService.submitCandidate(
+      id,
+      user.telegramId,
+      dto,
+      user.username,
+      user.staffName,
+    );
   }
 
   @Post(':id/vote')

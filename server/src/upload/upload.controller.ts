@@ -18,20 +18,40 @@ import {
   UPLOAD_URL_PREFIX,
 } from './upload.constants';
 
+const ALLOWED_MIME_EXTENSIONS: Record<string, string[]> = {
+  'image/jpeg': ['.jpg', '.jpeg'],
+  'image/png': ['.png'],
+  'image/webp': ['.webp'],
+  'application/pdf': ['.pdf'],
+};
+
+function getSafeExtension(mimetype: string, originalname: string): string | null {
+  const mime = mimetype.toLowerCase();
+  const allowedExts = ALLOWED_MIME_EXTENSIONS[mime];
+  if (!allowedExts) return null;
+
+  const rawExt = extname(originalname).toLowerCase();
+  if (allowedExts.includes(rawExt)) {
+    return rawExt;
+  }
+  return allowedExts[0];
+}
+
 const imageOrPdfUpload = FileInterceptor('file', {
   storage: diskStorage({
     destination: UPLOAD_DIR,
-    filename: (_req, file, cb) =>
-      cb(null, `${randomUUID()}${extname(file.originalname)}`),
+    filename: (_req, file, cb) => {
+      const safeExt = getSafeExtension(file.mimetype, file.originalname) ?? '.bin';
+      cb(null, `${randomUUID()}${safeExt}`);
+    },
   }),
   limits: { fileSize: MAX_UPLOAD_BYTES },
   fileFilter: (_req, file, cb) => {
-    const isImage = file.mimetype.startsWith('image/');
-    const isPdf = file.mimetype === 'application/pdf';
-    if (!isImage && !isPdf) {
+    const safeExt = getSafeExtension(file.mimetype, file.originalname);
+    if (!safeExt) {
       cb(
         new BadRequestException(
-          'Дозволені тільки зображення (JPEG, PNG тощо) або PDF-файли',
+          'Дозволені тільки безпечні зображення (JPEG, PNG, WEBP) або PDF-файли. SVG та виконувані файли заборонені.',
         ),
         false,
       );

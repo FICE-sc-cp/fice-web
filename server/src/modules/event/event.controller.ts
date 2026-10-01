@@ -11,6 +11,7 @@ import {
   Query,
   Res,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import type { Response } from 'express';
 import {
   ApiCreatedResponse,
@@ -21,7 +22,10 @@ import {
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { Admin } from '../../auth/admin.decorator';
-import { extractTelegramUser } from '../../auth/init-data.util';
+import {
+  extractTelegramUser,
+  resolveValidatedTelegramUser,
+} from '../../auth/init-data.util';
 import { ApiPaginatedResponse } from '../../common/dto/paginated.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { AddEventPartnerDto } from './dto/add-event-partner.dto';
@@ -36,7 +40,21 @@ import { EventService } from './event.service';
 @ApiTags('events')
 @Controller('event')
 export class EventController {
-  constructor(private readonly eventService: EventService) {}
+  constructor(
+    private readonly eventService: EventService,
+    private readonly configService: ConfigService,
+  ) {}
+
+  private resolveTelegramUser(
+    initData?: string,
+    queryTgUserId?: string,
+    queryTgTag?: string,
+  ): { telegramId?: bigint; username?: string; staffName?: string } {
+    return resolveValidatedTelegramUser(this.configService, initData, {
+      id: queryTgUserId,
+      tag: queryTgTag,
+    });
+  }
 
   @Post()
   @Admin()
@@ -55,7 +73,7 @@ export class EventController {
 
   @Get('registration-session/:token')
   @ApiOperation({ summary: 'Check status of pending web registration session' })
-  getRegistrationSession(@Param('token') token: string) {
+  getRegistrationSession(@Param('token', ParseUUIDPipe) token: string) {
     return this.eventService.getRegistrationSession(token);
   }
 
@@ -66,13 +84,11 @@ export class EventController {
     @Query('tgUserId') queryTgUserId?: string,
     @Query('tgTag') queryTgTag?: string,
   ) {
-    const user = initData ? extractTelegramUser(initData) : null;
-    const telegramId = user?.id
-      ? BigInt(user.id)
-      : queryTgUserId
-      ? BigInt(queryTgUserId)
-      : undefined;
-    const username = user?.username || queryTgTag;
+    const { telegramId, username } = this.resolveTelegramUser(
+      initData,
+      queryTgUserId,
+      queryTgTag,
+    );
     return this.eventService.getCheckInEvents(telegramId, username);
   }
 
@@ -91,13 +107,11 @@ export class EventController {
     @Query('tgUserId') queryTgUserId?: string,
     @Query('tgTag') queryTgTag?: string,
   ) {
-    const user = initData ? extractTelegramUser(initData) : null;
-    const telegramId = user?.id
-      ? BigInt(user.id)
-      : queryTgUserId
-      ? BigInt(queryTgUserId)
-      : undefined;
-    const username = user?.username || queryTgTag;
+    const { telegramId, username } = this.resolveTelegramUser(
+      initData,
+      queryTgUserId,
+      queryTgTag,
+    );
     return this.eventService.getCheckInAccess(id, telegramId, username);
   }
 
@@ -109,13 +123,11 @@ export class EventController {
     @Query('tgUserId') queryTgUserId?: string,
     @Query('tgTag') queryTgTag?: string,
   ) {
-    const user = initData ? extractTelegramUser(initData) : null;
-    const telegramId = user?.id
-      ? BigInt(user.id)
-      : queryTgUserId
-      ? BigInt(queryTgUserId)
-      : undefined;
-    const username = user?.username || queryTgTag;
+    const { telegramId, username } = this.resolveTelegramUser(
+      initData,
+      queryTgUserId,
+      queryTgTag,
+    );
     return this.eventService.getCheckInList(id, telegramId, username);
   }
 
@@ -128,22 +140,17 @@ export class EventController {
     @Query('tgUserId') queryTgUserId?: string,
     @Query('tgTag') queryTgTag?: string,
   ) {
-    const user = initData ? extractTelegramUser(initData) : null;
-    const telegramId = user?.id
-      ? BigInt(user.id)
-      : queryTgUserId
-      ? BigInt(queryTgUserId)
-      : undefined;
-    const username = user?.username || queryTgTag;
-    const staffName = user
-      ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
-      : body.staffName;
+    const { telegramId, username, staffName } = this.resolveTelegramUser(
+      initData,
+      queryTgUserId,
+      queryTgTag,
+    );
     return this.eventService.checkInByCode(
       id,
       body.code,
       telegramId,
       username,
-      staffName,
+      staffName || body.staffName,
     );
   }
 
@@ -157,23 +164,18 @@ export class EventController {
     @Query('tgUserId') queryTgUserId?: string,
     @Query('tgTag') queryTgTag?: string,
   ) {
-    const user = initData ? extractTelegramUser(initData) : null;
-    const telegramId = user?.id
-      ? BigInt(user.id)
-      : queryTgUserId
-      ? BigInt(queryTgUserId)
-      : undefined;
-    const username = user?.username || queryTgTag;
-    const staffName = user
-      ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
-      : body.staffName;
+    const { telegramId, username, staffName } = this.resolveTelegramUser(
+      initData,
+      queryTgUserId,
+      queryTgTag,
+    );
     return this.eventService.toggleCheckIn(
       id,
       registrationId,
       body.attended,
       telegramId,
       username,
-      staffName,
+      staffName || body.staffName,
     );
   }
 
@@ -186,21 +188,13 @@ export class EventController {
     @Param('id', ParseUUIDPipe) id: string,
     @Param('registrationId', ParseUUIDPipe) registrationId: string,
     @Headers('x-telegram-init-data') initData?: string,
-    @Query('tgUserId') queryTgUserId?: string,
-    @Query('tgTag') queryTgTag?: string,
   ) {
     const user = initData ? extractTelegramUser(initData) : null;
-    const telegramId = user?.id
-      ? BigInt(user.id)
-      : queryTgUserId
-      ? BigInt(queryTgUserId)
-      : undefined;
-    const username = user?.username || queryTgTag;
     return this.eventService.confirmPayment(
       id,
       registrationId,
-      telegramId,
-      username,
+      user?.id ? BigInt(user.id) : undefined,
+      user?.username,
     );
   }
 
@@ -212,22 +206,14 @@ export class EventController {
     @Param('registrationId', ParseUUIDPipe) registrationId: string,
     @Body() body: RejectPaymentDto,
     @Headers('x-telegram-init-data') initData?: string,
-    @Query('tgUserId') queryTgUserId?: string,
-    @Query('tgTag') queryTgTag?: string,
   ) {
     const user = initData ? extractTelegramUser(initData) : null;
-    const telegramId = user?.id
-      ? BigInt(user.id)
-      : queryTgUserId
-      ? BigInt(queryTgUserId)
-      : undefined;
-    const username = user?.username || queryTgTag;
     return this.eventService.rejectPayment(
       id,
       registrationId,
       body.reason,
-      telegramId,
-      username,
+      user?.id ? BigInt(user.id) : undefined,
+      user?.username,
     );
   }
 

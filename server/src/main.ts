@@ -17,7 +17,18 @@ import { UPLOAD_DIR, UPLOAD_URL_PREFIX } from './upload/upload.constants';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  app.enableCors({ origin: true, credentials: true });
+  app.getHttpAdapter().getInstance().disable('x-powered-by');
+
+  app.use((_req: any, res: any, next: any) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    next();
+  });
+
+  const allowedOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+    : true;
+  app.enableCors({ origin: allowedOrigins, credentials: true });
 
   app.enableShutdownHooks();
 
