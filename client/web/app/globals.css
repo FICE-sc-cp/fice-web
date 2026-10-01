@@ -16,7 +16,7 @@
   --color-brand-green: #2eff97;
   --color-brand-teal: #00e3c5;
   --color-brand-cyan: #36dfff;
-  --color-brand-blue: #2b7fff;
+  --color-brand-blue: #2563eb;
   --color-brand-purple: #ad46ff;
   --color-brand-magenta: #f6339a;
   --color-brand-violet: #9810fa;
@@ -46,6 +46,8 @@
   );
   --gradient-green: linear-gradient(90deg, #46bf00 0%, #00e3c5 100%);
   --gradient-blue: linear-gradient(90deg, #00e3f3 0%, #2b7fff 100%);
+  --gradient-dark-blue: linear-gradient(90deg, #1d4ed8 0%, #2563eb 100%);
+  --gradient-purple: linear-gradient(90deg, #ad46ff 0%, #7c3aed 100%);
   --gradient-magenta: linear-gradient(90deg, #f6339a 0%, #9810fa 100%);
   --gradient-orange: linear-gradient(90deg, #ff8904 0%, #fb2c36 100%);
 }
@@ -102,6 +104,12 @@
   }
   .bg-gradient-blue {
     background-image: var(--gradient-blue);
+  }
+  .bg-gradient-dark-blue {
+    background-image: var(--gradient-dark-blue);
+  }
+  .bg-gradient-purple {
+    background-image: var(--gradient-purple);
   }
   .bg-gradient-magenta {
     background-image: var(--gradient-magenta);

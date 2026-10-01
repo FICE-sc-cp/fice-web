@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Applicant" ALTER COLUMN "group" SET DATA TYPE VARCHAR(20);

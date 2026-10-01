@@ -132,7 +132,7 @@ model Applicant {
   middleName  String   @db.VarChar(30)
   lastName    String   @db.VarChar(30)
   telegramTag String   @db.VarChar(50)
-  group       String   @db.VarChar(5)
+  group       String   @db.VarChar(20)
   phoneNumber String   @db.VarChar(20)
   motivation  String?  @db.Text
   experience  String?  @db.Text

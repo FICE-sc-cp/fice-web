@@ -46,7 +46,7 @@ const REASONS: {
   {
     num: "04",
     title: "Цікаві проєкти",
-    text: "Реалізуй власні ідеї та отримай ресурси, підтримку команди й досвід, щоб довести їх до результату.",
+    text: "Реалізація власних ідей, підтримка від команди та отримання досвіду.",
     accent: "orange",
     badge: "bg-gradient-orange",
   },
@@ -70,7 +70,10 @@ export default function JoinPage() {
           <Container>
             <div className="mx-auto flex max-w-3xl flex-col items-center gap-5 text-center">
               <h1 className="text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
-                Стань частиною <GradientText>Студради ФІОТ</GradientText>
+                Стань частиною{" "}
+                <GradientText className="whitespace-nowrap">
+                  Студради&nbsp;ФІОТ
+                </GradientText>
               </h1>
               <p className="max-w-xl text-lg text-muted sm:text-xl">
                 Тут твої ідеї перетворюються на реальні проєкти, а факультет —

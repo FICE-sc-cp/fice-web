@@ -11,6 +11,7 @@ import {
   type EventRegistrationPayload,
   type RegistrationPayment,
 } from '@/lib/api';
+import { normalizeKpiGroup, parseKpiGroup } from '@/lib/kpi-groups';
 
 const isUrl = (s: string) => /^https?:\/\//i.test(s.trim());
 
@@ -121,12 +122,32 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
 
     const tgCfg = baseConfig.telegramTag;
     if (tgCfg?.enabled !== false && tgCfg?.required !== false) {
-      if (!telegram.trim()) e.telegram = 'Вкажи Telegram-тег';
+      if (!telegram.trim()) {
+        e.telegram = 'Вкажи Telegram-тег';
+      } else {
+        const clean = telegram.trim().replace(/^@+/, '');
+        if (clean.length < 5 || clean.length > 32 || !/^[a-zA-Z0-9_]+$/.test(clean)) {
+          e.telegram = 'Telegram-тег: 5-32 символи (латиниця, цифри, _)';
+        } else if (!/[a-zA-Z]/.test(clean)) {
+          e.telegram = 'Telegram-тег повинен містити хоча б одну літеру';
+        }
+      }
     }
 
     const grpCfg = baseConfig.group;
     if (grpCfg?.enabled !== false && grpCfg?.required !== false) {
-      if (!group.trim()) e.group = 'Вкажи групу';
+      if (!group.trim()) {
+        e.group = 'Вкажи групу';
+      } else {
+        const parsed = parseKpiGroup(group.trim());
+        if (!parsed.valid) {
+          e.group = parsed.error || 'Невірний формат групи. Приклад: ІП-31, ІА-22';
+        } else if (event.allowedFaculties && event.allowedFaculties.length > 0) {
+          if (!parsed.faculty || !event.allowedFaculties.includes(parsed.faculty)) {
+            e.group = `Реєстрація лише для: ${event.allowedFaculties.join(', ')} (виявлено: ${parsed.facultyName || parsed.faculty})`;
+          }
+        }
+      }
     }
 
     const bdCfg = baseConfig.birthDate;
@@ -136,15 +157,32 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
 
     const phCfg = baseConfig.phone;
     if (phCfg?.enabled && phCfg?.required) {
-      if (!phone.trim()) e.phone = 'Вкажи номер телефону';
+      if (!phone.trim()) {
+        e.phone = 'Вкажи номер телефону';
+      }
+    }
+    if (phone.trim()) {
+      const cleanPhone = phone.replace(/[\s\-\(\)\.]/g, '');
+      if (/^(\+?7|89\d{9}$|80\d{9}$)/.test(cleanPhone) || /^\+?7\d{10}$/.test(cleanPhone)) {
+        e.phone = 'Номери країни-агресора (росії) заборонені';
+      } else if (/^\+?375/.test(cleanPhone)) {
+        e.phone = 'Номери країни-агресора (білорусі) заборонені';
+      } else if (!/^(\+?380|0)\d{9}$/.test(cleanPhone) && !/^\+[1-9]\d{8,14}$/.test(cleanPhone)) {
+        e.phone = 'Вкажи дійсний номер телефону (наприклад: +380 99 123 45 67)';
+      }
     }
 
     if (hasFee && !payment) e.payment = 'Обери спосіб оплати';
     if (payment === 'DONATED' && !receiptUrl) e.receipt = 'Додай скриншот або PDF квитанції';
 
     for (const q of questions) {
-      if (q.required && !(answers[q.id] ?? '').trim()) {
+      const val = (answers[q.id] ?? '').trim();
+      if (q.required && !val) {
         e[`q_${q.id}`] = 'Обовʼязкове поле';
+      } else if (val) {
+        if (/^[\s\p{P}\p{S}]+$/u.test(val)) {
+          e[`q_${q.id}`] = 'Відповідь не може містити лише розділові знаки чи символи';
+        }
       }
     }
 
@@ -165,10 +203,12 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
         .replace(/\s+/g, ' ')
         .trim();
 
+      const normalizedGrp = group.trim() ? normalizeKpiGroup(group.trim()) : 'ФІОТ';
+
       const payload: EventRegistrationPayload = {
         fullName: fullName || 'Учасник',
         telegramTag: `@${telegram.trim().replace(/^@+/, '')}`,
-        group: group.trim() || 'ФІОТ',
+        group: normalizedGrp,
         birthDate: birthDate || undefined,
         phoneNumber: phone.trim() || undefined,
         payment: hasFee ? (payment as RegistrationPayment) : 'NONE',

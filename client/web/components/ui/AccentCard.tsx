@@ -27,8 +27,8 @@ export const accentGradient: Record<Accent, IconGradient> = {
   orange: "orange",
   magenta: "magenta",
   teal: "green",
-  blue: "blue",
-  purple: "magenta",
+  blue: "dark-blue",
+  purple: "purple",
 };
 
 export const accentText: Record<Accent, string> = {

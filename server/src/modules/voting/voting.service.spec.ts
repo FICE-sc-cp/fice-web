@@ -33,6 +33,7 @@ describe('VotingService', () => {
       eventRegistration: {
         findFirst: jest.fn(),
         findMany: jest.fn(),
+        count: jest.fn().mockResolvedValue(10),
       },
       botUser: {
         findUnique: jest.fn(),

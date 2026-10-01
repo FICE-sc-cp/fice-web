@@ -12,31 +12,169 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/lib/utils';
 import { fice, safe, type CreateApplicationPayload, type Department } from '@/lib/api';
+import { normalizeKpiGroup, parseKpiGroup } from '@/lib/kpi-groups';
 
 const MAX_DEPARTMENTS = 2;
 
+const NAME_REGEX = /^[a-zA-Zа-яА-ЯіІїЇєЄґҐ'ʼ’]+(?:[\s\-][a-zA-Zа-яА-ЯіІїЇєЄґҐ'ʼ’]+)*$/;
+
+function validateName(val: string, label: string) {
+  const trimmed = val.trim();
+  if (!trimmed) return `Вкажи ${label.toLowerCase()}`;
+  if (trimmed.length > 30) return 'Не більше 30 символів';
+  if (!NAME_REGEX.test(trimmed)) {
+    return `${label} може містити лише літери та дефіс`;
+  }
+  const letters = (trimmed.match(/[\p{L}]/gu) || []).length;
+  if (letters < 2) {
+    return `${label} має містити щонайменше 2 літери`;
+  }
+  return true;
+}
+
+function validateTelegram(val: string) {
+  const trimmed = val.trim();
+  if (!trimmed) return 'Вкажи Telegram-тег';
+  const clean = trimmed.replace(/^@+/, '');
+  if (clean.length < 5) return 'Telegram-тег має містити щонайменше 5 символів';
+  if (clean.length > 32) return 'Telegram-тег має містити не більше 32 символів';
+  if (!/^[a-zA-Z0-9_]+$/.test(clean)) {
+    return 'Telegram-тег може містити лише латинські літери, цифри та _';
+  }
+  if (clean.startsWith('_') || clean.endsWith('_')) {
+    return 'Telegram-тег не може починатися або закінчуватися на _';
+  }
+  if (!/[a-zA-Z]/.test(clean)) {
+    return 'Telegram-тег повинен містити хоча б одну літеру';
+  }
+  return true;
+}
+
+function validatePhone(val: string) {
+  const trimmed = val.trim();
+  if (!trimmed) return 'Вкажи номер телефону';
+  const clean = trimmed.replace(/[\s\-\(\)\.]/g, '');
+  if (/^(\+?7|89\d{9}$|80\d{9}$)/.test(clean) || /^\+?7\d{10}$/.test(clean)) {
+    return 'Номери країни-агресора (росії) заборонені';
+  }
+  if (/^\+?375/.test(clean)) {
+    return 'Номери країни-агресора (білорусі) заборонені';
+  }
+  const isUa = /^(\+?380|0)\d{9}$/.test(clean);
+  const isIntl = /^\+[1-9]\d{8,14}$/.test(clean);
+  if (!isUa && !isIntl) {
+    return 'Вкажи дійсний номер телефону (наприклад: +380 99 123 45 67)';
+  }
+  return true;
+}
+
+function validateGroup(val: string) {
+  const trimmed = val.trim();
+  if (!trimmed) return 'Вкажи академічну групу';
+  const parsed = parseKpiGroup(trimmed);
+  if (!parsed.valid) {
+    return parsed.error || 'Невірний формат групи. Приклад: ІП-31, ІА-22';
+  }
+  if (parsed.faculty !== 'ФІОТ') {
+    return `Подати заявку до Студради ФІОТ можуть лише студенти ФІОТ (виявлено: ${parsed.facultyName || parsed.faculty})`;
+  }
+  return true;
+}
+
+function validateMotivation(val: string) {
+  const trimmed = val.trim();
+  if (!trimmed) return 'Розкажи про мотивацію';
+  if (/^[\s\p{P}\p{S}]+$/u.test(trimmed)) {
+    return 'Поле не може містити лише розділові знаки чи символи';
+  }
+  const letters = (trimmed.match(/[\p{L}]/gu) || []).length;
+  if (letters < 15) {
+    return 'Розкажи детальніше (щонайменше 15 літер змістовного тексту)';
+  }
+  const words = trimmed.split(/\s+/).filter((w) => /[\p{L}]{2,}/u.test(w));
+  if (words.length < 3) {
+    return 'Будь ласка, напиши хоча б кілька змістовних слів';
+  }
+  if (trimmed.length > 2000) return 'Не більше 2000 символів';
+  return true;
+}
+
+function validateExperience(val: string) {
+  const trimmed = val.trim();
+  if (!trimmed) return true;
+  if (/^[\s\p{P}\p{S}]+$/u.test(trimmed)) {
+    return 'Поле не може містити лише розділові знаки чи символи';
+  }
+  const letters = (trimmed.match(/[\p{L}]/gu) || []).length;
+  if (letters < 5) {
+    return 'Вкажи змістовний опис досвіду або залиш поле порожнім';
+  }
+  if (trimmed.length > 2000) return 'Не більше 2000 символів';
+  return true;
+}
+
 const schema = z.object({
-  lastName: z.string().trim().min(1, 'Вкажи прізвище').max(30, 'Занадто довге'),
-  firstName: z.string().trim().min(1, 'Вкажи імʼя').max(30, 'Занадто довге'),
-  middleName: z.string().trim().min(1, 'Вкажи по батькові').max(30, 'Занадто довге'),
-  telegram: z.string().trim().min(1, 'Вкажи Telegram-тег').max(49, 'Занадто довгий'),
-  group: z.string().trim().min(1, 'Вкажи групу').max(5, 'Не більше 5 символів'),
+  lastName: z
+    .string()
+    .trim()
+    .superRefine((val, ctx) => {
+      const res = validateName(val, 'Прізвище');
+      if (res !== true) ctx.addIssue({ code: z.ZodIssueCode.custom, message: res });
+    }),
+  firstName: z
+    .string()
+    .trim()
+    .superRefine((val, ctx) => {
+      const res = validateName(val, 'Імʼя');
+      if (res !== true) ctx.addIssue({ code: z.ZodIssueCode.custom, message: res });
+    }),
+  middleName: z
+    .string()
+    .trim()
+    .superRefine((val, ctx) => {
+      const res = validateName(val, 'По батькові');
+      if (res !== true) ctx.addIssue({ code: z.ZodIssueCode.custom, message: res });
+    }),
+  telegram: z
+    .string()
+    .trim()
+    .superRefine((val, ctx) => {
+      const res = validateTelegram(val);
+      if (res !== true) ctx.addIssue({ code: z.ZodIssueCode.custom, message: res });
+    }),
+  group: z
+    .string()
+    .trim()
+    .superRefine((val, ctx) => {
+      const res = validateGroup(val);
+      if (res !== true) ctx.addIssue({ code: z.ZodIssueCode.custom, message: res });
+    }),
   phoneNumber: z
     .string()
     .trim()
-    .min(5, 'Вкажи номер телефону')
-    .max(20, 'Занадто довгий'),
+    .superRefine((val, ctx) => {
+      const res = validatePhone(val);
+      if (res !== true) ctx.addIssue({ code: z.ZodIssueCode.custom, message: res });
+    }),
   motivation: z
     .string()
     .trim()
-    .min(1, 'Розкажи про мотивацію')
-    .min(10, 'Хоча б кілька речень, будь ласка'),
-  experience: z.string().trim().max(2000, 'Занадто довго'),
+    .superRefine((val, ctx) => {
+      const res = validateMotivation(val);
+      if (res !== true) ctx.addIssue({ code: z.ZodIssueCode.custom, message: res });
+    }),
+  experience: z
+    .string()
+    .trim()
+    .superRefine((val, ctx) => {
+      const res = validateExperience(val);
+      if (res !== true) ctx.addIssue({ code: z.ZodIssueCode.custom, message: res });
+    }),
   departmentIds: z
     .array(z.string())
     .min(1, 'Обери хоча б один департамент')
     .max(MAX_DEPARTMENTS, `Можна обрати щонайбільше ${MAX_DEPARTMENTS}`),
-  consent: z.boolean().refine((v) => v === true, 'Потрібна згода на обробку даних'),
+  consent: z.boolean().refine((v) => v === true, 'Потрібна згода на обробку персональних даних'),
 });
 
 type FormValues = z.infer<typeof schema>;
@@ -112,21 +250,30 @@ export function ApplicationFormSection() {
   const onSubmit = handleSubmit(async (data) => {
     setSubmitError(null);
     try {
+      const cleanPhone = data.phoneNumber.trim().replace(/[\s\-\(\)\.]/g, '');
+      const formattedPhone = cleanPhone.startsWith('0')
+        ? `+38${cleanPhone}`
+        : cleanPhone.startsWith('+')
+          ? cleanPhone
+          : `+${cleanPhone}`;
+
       const payload: CreateApplicationPayload = {
         firstName: data.firstName.trim(),
         middleName: data.middleName.trim(),
         lastName: data.lastName.trim(),
         telegramTag: `@${data.telegram.trim().replace(/^@+/, '')}`,
-        group: data.group.trim(),
-        phoneNumber: data.phoneNumber.trim(),
+        group: normalizeKpiGroup(data.group.trim()),
+        phoneNumber: formattedPhone,
         motivation: data.motivation.trim() || undefined,
         experience: data.experience.trim() || undefined,
         departments: data.departmentIds.map((departmentId) => ({ departmentId })),
       };
       await fice.submitApplication(payload);
       setSubmittedName(data.firstName.trim());
-    } catch {
-      setSubmitError('Не вдалося надіслати заявку. Спробуй ще раз трохи згодом.');
+    } catch (err: any) {
+      setSubmitError(
+        err?.message || 'Не вдалося надіслати заявку. Спробуй ще раз трохи згодом.',
+      );
     }
   });
 
@@ -267,7 +414,7 @@ export function ApplicationFormSection() {
                 <Input
                   label="Група"
                   placeholder="ІП-31"
-                  maxLength={5}
+                  maxLength={12}
                   error={errors.group?.message}
                   {...register('group')}
                 />

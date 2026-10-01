@@ -1,7 +1,7 @@
 import { ComponentType, SVGProps } from 'react';
 import { cn } from '@/lib/utils';
 
-export type IconGradient = 'magenta' | 'orange' | 'blue' | 'green' | 'main';
+export type IconGradient = 'magenta' | 'orange' | 'blue' | 'green' | 'main' | 'purple' | 'dark-blue';
 
 export interface IconProps extends Omit<SVGProps<SVGSVGElement>, 'fill' | 'stroke'> {
   gradient?: IconGradient;
@@ -17,6 +17,10 @@ export function IconDefs() {
           <stop stopColor="#F6339A" />
           <stop offset="1" stopColor="#9810FA" />
         </linearGradient>
+        <linearGradient id="grad-purple" x1="0" y1="0" x2="1" y2="0">
+          <stop stopColor="#AD46FF" />
+          <stop offset="1" stopColor="#7C3AED" />
+        </linearGradient>
         <linearGradient id="grad-orange" x1="0" y1="0" x2="1" y2="0">
           <stop stopColor="#FF8904" />
           <stop offset="1" stopColor="#FB2C36" />
@@ -24,6 +28,10 @@ export function IconDefs() {
         <linearGradient id="grad-blue" x1="0" y1="0" x2="1" y2="0">
           <stop stopColor="#00E3F3" />
           <stop offset="1" stopColor="#2B7FFF" />
+        </linearGradient>
+        <linearGradient id="grad-dark-blue" x1="0" y1="0" x2="1" y2="0">
+          <stop stopColor="#1D4ED8" />
+          <stop offset="1" stopColor="#2563EB" />
         </linearGradient>
         <linearGradient id="grad-green" x1="0" y1="0" x2="1" y2="0">
           <stop stopColor="#46BF00" />

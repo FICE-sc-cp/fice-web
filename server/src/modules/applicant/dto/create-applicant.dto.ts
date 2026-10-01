@@ -49,10 +49,10 @@ export class CreateApplicantDto {
   @MaxLength(50)
   telegramTag: string;
 
-  @ApiProperty({ maxLength: 5, example: 'ІП-21' })
+  @ApiProperty({ maxLength: 20, example: 'ІП-21' })
   @IsString()
   @IsNotEmpty()
-  @MaxLength(5)
+  @MaxLength(20)
   group: string;
 
   @ApiProperty({ maxLength: 20, example: '+380991234567' })
