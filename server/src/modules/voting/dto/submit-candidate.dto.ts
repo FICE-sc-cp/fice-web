@@ -8,7 +8,9 @@ export class SubmitCandidateDto {
   @MaxLength(120)
   name: string;
 
-  @ApiPropertyOptional({ example: 'Костюм створено власноруч із неоновими елементами' })
+  @ApiPropertyOptional({
+    example: 'Костюм створено власноруч із неоновими елементами',
+  })
   @IsOptional()
   @IsString()
   description?: string;

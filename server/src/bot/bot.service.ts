@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { writeFile } from 'node:fs/promises';
-import { resolve } from 'node:path';
+import { basename, resolve } from 'node:path';
 import {
   BadRequestException,
   Injectable,
@@ -139,14 +139,17 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     }, 60_000);
     this.syncInitialTimeout?.unref?.();
 
-    this.syncInterval = setInterval(() => {
-      this.syncDepartmentChatMembers().catch((err) =>
-        this.logger.warn(
-          'Scheduled chat members sync failed: ' +
-            (err instanceof Error ? err.message : String(err)),
-        ),
-      );
-    }, 12 * 60 * 60_000);
+    this.syncInterval = setInterval(
+      () => {
+        this.syncDepartmentChatMembers().catch((err) =>
+          this.logger.warn(
+            'Scheduled chat members sync failed: ' +
+              (err instanceof Error ? err.message : String(err)),
+          ),
+        );
+      },
+      12 * 60 * 60_000,
+    );
     this.syncInterval?.unref?.();
   }
 
@@ -646,7 +649,9 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     if (/^https?:\/\//i.test(photoUrl)) return photoUrl;
     // Locally-stored upload path like "/uploads/<file>": send the bytes
     // directly so Telegram doesn't need to reach our (possibly private) host.
-    const filename = photoUrl.replace(/^\/?uploads\//, '');
+    // Strictly isolate to filename within UPLOAD_DIR to prevent directory traversal.
+    const clean = photoUrl.replace(/^\/?uploads\//, '');
+    const filename = basename(clean);
     return new InputFile(resolve(UPLOAD_DIR, filename));
   }
 

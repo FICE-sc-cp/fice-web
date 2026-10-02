@@ -32,6 +32,11 @@ import { AddEventPartnerDto } from './dto/add-event-partner.dto';
 import { CreateEventDto } from './dto/create-event.dto';
 import { EventQueryDto } from './dto/event-query.dto';
 import { CreateEventRegistrationDto } from './dto/create-event-registration.dto';
+import {
+  CancelRegistrationDto,
+  ScanCheckInDto,
+  ToggleCheckInDto,
+} from './dto/check-in.dto';
 import { RejectPaymentDto } from './dto/reject-payment.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { EventEntity } from './entities/event.entity';
@@ -68,7 +73,12 @@ export class EventController {
   @ApiOperation({ summary: 'List events with details and partners' })
   @ApiPaginatedResponse(EventEntity)
   findAll(@Query() query: EventQueryDto) {
-    return this.eventService.findAll(query, query.past, query.abitfest, query.draft);
+    return this.eventService.findAll(
+      query,
+      query.past,
+      query.abitfest,
+      query.draft,
+    );
   }
 
   @Get('registration-session/:token')
@@ -100,7 +110,9 @@ export class EventController {
   }
 
   @Get(':id/checkin/access')
-  @ApiOperation({ summary: 'Check if user has check-in permissions for this event' })
+  @ApiOperation({
+    summary: 'Check if user has check-in permissions for this event',
+  })
   getCheckInAccess(
     @Param('id', ParseUUIDPipe) id: string,
     @Headers('x-telegram-init-data') initData?: string,
@@ -135,7 +147,7 @@ export class EventController {
   @ApiOperation({ summary: 'Scan permanent QR code to check in a participant' })
   scanCheckIn(
     @Param('id', ParseUUIDPipe) id: string,
-    @Body() body: { code: string; staffName?: string },
+    @Body() body: ScanCheckInDto,
     @Headers('x-telegram-init-data') initData?: string,
     @Query('tgUserId') queryTgUserId?: string,
     @Query('tgTag') queryTgTag?: string,
@@ -159,7 +171,7 @@ export class EventController {
   toggleCheckIn(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('registrationId', ParseUUIDPipe) registrationId: string,
-    @Body() body: { attended: boolean; staffName?: string },
+    @Body() body: ToggleCheckInDto,
     @Headers('x-telegram-init-data') initData?: string,
     @Query('tgUserId') queryTgUserId?: string,
     @Query('tgTag') queryTgTag?: string,
@@ -258,8 +270,9 @@ export class EventController {
   register(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: CreateEventRegistrationDto,
+    @Headers('x-telegram-init-data') initData?: string,
   ) {
-    return this.eventService.register(id, dto);
+    return this.eventService.register(id, dto, initData);
   }
 
   @Get(':id/registrations')
@@ -295,8 +308,12 @@ export class EventController {
   cancelRegistration(
     @Param('id', ParseUUIDPipe) id: string,
     @Param('registrationId', ParseUUIDPipe) registrationId: string,
-    @Body() body?: { reason?: string },
+    @Body() body?: CancelRegistrationDto,
   ) {
-    return this.eventService.cancelRegistration(id, registrationId, body?.reason);
+    return this.eventService.cancelRegistration(
+      id,
+      registrationId,
+      body?.reason,
+    );
   }
 }

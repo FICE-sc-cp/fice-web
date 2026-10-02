@@ -15,9 +15,20 @@ lerna-debug.log*
 
 # dotenv environment variable files
 .env
+.env.*
 .env.development
 .env.test
 .env.production
+.env*.local
+
+# uploads
+/server/uploads/*
+!/server/uploads/.gitkeep
+uploads/
+
+# Next.js
+.next/
+out/
 
 # temp directory
 .temp

@@ -18,7 +18,8 @@ const linkifyBare = (html: string): string =>
  * markup from breaking the page. Not for untrusted input.
  * richtext: no tag nesting/validation; a tag can't span a news paragraph break.
  */
-export function renderRichInline(text: string): string {
+export function renderRichInline(text?: string | null): string {
+  if (!text || typeof text !== 'string') return '';
   const html = escapeHtml(text)
     .replace(/&lt;(\/?)(b|strong|u|i|em|s|strike|del)&gt;/gi, '<$1$2>')
     .replace(/&lt;br\s*\/?&gt;/gi, '<br>')

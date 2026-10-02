@@ -38,7 +38,10 @@ export class EventProgramItemDto {
 }
 
 export class EventQuestionDto {
-  @ApiPropertyOptional({ format: 'uuid', description: 'Existing question id (omit to create)' })
+  @ApiPropertyOptional({
+    format: 'uuid',
+    description: 'Existing question id (omit to create)',
+  })
   @IsOptional()
   @IsUUID()
   id?: string;
@@ -58,7 +61,10 @@ export class EventQuestionDto {
   @IsBoolean()
   required?: boolean;
 
-  @ApiPropertyOptional({ type: [String], description: 'Choices for SINGLE_CHOICE' })
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'Choices for SINGLE_CHOICE',
+  })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
@@ -115,7 +121,10 @@ export class CreateEventDto {
   @IsDate()
   registrationCloseDate?: Date;
 
-  @ApiPropertyOptional({ description: 'Maximum participants limit. Registration closes when reached.' })
+  @ApiPropertyOptional({
+    description:
+      'Maximum participants limit. Registration closes when reached.',
+  })
   @IsOptional()
   @IsInt()
   @Min(1)
@@ -127,25 +136,34 @@ export class CreateEventDto {
   @IsString()
   photoAlbumUrl?: string;
 
-  @ApiPropertyOptional({ description: 'Online contribution amount; omit/0 for a free event' })
+  @ApiPropertyOptional({
+    description: 'Online contribution amount; omit/0 for a free event',
+  })
   @IsOptional()
   @IsNumber()
   @Min(0)
   feeAmount?: number;
 
-  @ApiPropertyOptional({ description: 'Contribution amount when paying at the event' })
+  @ApiPropertyOptional({
+    description: 'Contribution amount when paying at the event',
+  })
   @IsOptional()
   @IsNumber()
   @Min(0)
   feeAtEventAmount?: number;
 
-  @ApiPropertyOptional({ maxLength: 255, description: 'Donate requisites shown when paying' })
+  @ApiPropertyOptional({
+    maxLength: 255,
+    description: 'Donate requisites shown when paying',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(255)
   feeRequisites?: string;
 
-  @ApiPropertyOptional({ description: 'Show this event on the applicants page' })
+  @ApiPropertyOptional({
+    description: 'Show this event on the applicants page',
+  })
   @IsOptional()
   @IsBoolean()
   isAbitfest?: boolean;
@@ -155,29 +173,45 @@ export class CreateEventDto {
   @IsBoolean()
   noRegistration?: boolean;
 
-  @ApiPropertyOptional({ default: false, description: 'Is event in draft state' })
+  @ApiPropertyOptional({
+    default: false,
+    description: 'Is event in draft state',
+  })
   @IsOptional()
   @IsBoolean()
   isDraft?: boolean;
 
-  @ApiPropertyOptional({ default: true, description: 'Whether the event has a specified start time' })
+  @ApiPropertyOptional({
+    default: true,
+    description: 'Whether the event has a specified start time',
+  })
   @IsOptional()
   @IsBoolean()
   hasTime?: boolean;
 
-  @ApiPropertyOptional({ example: '18:30', description: 'Event time string if hasTime is true' })
+  @ApiPropertyOptional({
+    example: '18:30',
+    description: 'Event time string if hasTime is true',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(10)
   time?: string;
 
-  @ApiPropertyOptional({ type: [String], description: 'Allowed faculties, e.g. ["ФІОТ"]' })
+  @ApiPropertyOptional({
+    type: [String],
+    description: 'Allowed faculties, e.g. ["ФІОТ"]',
+  })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })
   allowedFaculties?: string[];
 
-  @ApiPropertyOptional({ type: [String], description: 'Telegram tags of organizers allowed to check-in participants, e.g. ["@moderator"]' })
+  @ApiPropertyOptional({
+    type: [String],
+    description:
+      'Telegram tags of organizers allowed to check-in participants, e.g. ["@moderator"]',
+  })
   @IsOptional()
   @IsArray()
   @IsString({ each: true })

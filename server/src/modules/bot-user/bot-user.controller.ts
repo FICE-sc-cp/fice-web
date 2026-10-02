@@ -25,8 +25,9 @@ export class BotUserController {
   ) {}
 
   private resolveTelegramId(initData?: string, fallbackId?: string): bigint {
-    return resolveValidatedTelegramUser(this.config, initData, { id: fallbackId })
-      .telegramId;
+    return resolveValidatedTelegramUser(this.config, initData, {
+      id: fallbackId,
+    }).telegramId;
   }
 
   @Get('profile')

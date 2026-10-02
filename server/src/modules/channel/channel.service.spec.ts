@@ -3,7 +3,10 @@ import { ChannelService } from './channel.service';
 
 type Cfg = Record<string, string | undefined>;
 
-function makeService(cfg: Cfg, event: { id: string; photoUrl: string | null } | null) {
+function makeService(
+  cfg: Cfg,
+  event: { id: string; photoUrl: string | null } | null,
+) {
   const postToChannel = jest.fn().mockResolvedValue({ messageId: 42 });
   const prisma = {
     event: { findUnique: jest.fn().mockResolvedValue(event) },
@@ -62,7 +65,10 @@ describe('ChannelService', () => {
   });
 
   it('uses a manual buttonUrl for free-text posts (no event)', async () => {
-    const { service, postToChannel } = makeService({ PUBLIC_WEB_URL: WEB }, null);
+    const { service, postToChannel } = makeService(
+      { PUBLIC_WEB_URL: WEB },
+      null,
+    );
 
     await service.post({ text: 'hi', buttonUrl: 'https://t.me/foo' });
 
@@ -74,7 +80,10 @@ describe('ChannelService', () => {
   });
 
   it('posts without a button when neither event nor buttonUrl is given', async () => {
-    const { service, postToChannel } = makeService({ PUBLIC_WEB_URL: WEB }, null);
+    const { service, postToChannel } = makeService(
+      { PUBLIC_WEB_URL: WEB },
+      null,
+    );
 
     await service.post({ text: 'plain' });
 

@@ -42,14 +42,16 @@ export class BroadcastService {
       this.configService.get<string>('USER_BOT_USERNAME') || 'fice_event_bot';
     const appName =
       this.configService.get<string>('USER_MINI_APP_NAME') || 'app';
-    const publicWebUrl =
-      this.configService.get<string>('PUBLIC_WEB_URL') || '';
+    const publicWebUrl = this.configService.get<string>('PUBLIC_WEB_URL') || '';
     const userMiniAppUrl =
       this.configService.get<string>('USER_MINI_APP_URL') ||
-      (publicWebUrl ? `${publicWebUrl.replace(/\/$/, '')}/app` : `https://t.me/${botUsername}/${appName}`);
+      (publicWebUrl
+        ? `${publicWebUrl.replace(/\/$/, '')}/app`
+        : `https://t.me/${botUsername}/${appName}`);
     const defaultUrl = `${userMiniAppUrl}?startapp=event_${eventId}`;
     const buttonUrl =
-      dto.buttonUrl?.trim() || (dto.buttonText?.trim() ? defaultUrl : undefined);
+      dto.buttonUrl?.trim() ||
+      (dto.buttonText?.trim() ? defaultUrl : undefined);
 
     const result = await this.userBot.sendBroadcast(recipients, {
       text: dto.text,
@@ -137,11 +139,12 @@ export class BroadcastService {
       this.configService.get<string>('USER_BOT_USERNAME') || 'fice_event_bot';
     const appName =
       this.configService.get<string>('USER_MINI_APP_NAME') || 'app';
-    const publicWebUrl =
-      this.configService.get<string>('PUBLIC_WEB_URL') || '';
+    const publicWebUrl = this.configService.get<string>('PUBLIC_WEB_URL') || '';
     const userMiniAppUrl =
       this.configService.get<string>('USER_MINI_APP_URL') ||
-      (publicWebUrl ? `${publicWebUrl.replace(/\/$/, '')}/app` : `https://t.me/${botUsername}/${appName}`);
+      (publicWebUrl
+        ? `${publicWebUrl.replace(/\/$/, '')}/app`
+        : `https://t.me/${botUsername}/${appName}`);
 
     return {
       eventId,

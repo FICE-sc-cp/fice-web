@@ -302,10 +302,17 @@ export const fice = {
         `${abitfest === undefined ? '' : `&abitfest=${abitfest}`}`,
     ),
   event: (id: string) => request<EventItem>(`/event/${id}`),
-  registerEvent: (id: string, body: EventRegistrationPayload) =>
+  registerEvent: (
+    id: string,
+    body: EventRegistrationPayload,
+    initData?: string,
+  ) =>
     request<EventRegistrationResult>(`/event/${id}/register`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(initData ? { 'x-telegram-init-data': initData } : {}),
+      },
       body: JSON.stringify(body),
     }),
   getRegistrationSession: (token: string) =>

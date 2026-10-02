@@ -1,8 +1,17 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 export class CreateBlockedUserDto {
-  @ApiProperty({ example: '@student_tag', description: 'Telegram username with or without @' })
+  @ApiProperty({
+    example: '@student_tag',
+    description: 'Telegram username with or without @',
+  })
   @IsString()
   @IsNotEmpty()
   @MaxLength(50)

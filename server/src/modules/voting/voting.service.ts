@@ -26,7 +26,9 @@ export class VotingService {
 
   private getScreenUrl(votingId: string): string {
     const publicUrl = this.config.get<string>('PUBLIC_WEB_URL');
-    const base = publicUrl ? publicUrl.replace(/\/$/, '') : 'http://localhost:3002';
+    const base = publicUrl
+      ? publicUrl.replace(/\/$/, '')
+      : 'http://localhost:3002';
     return `${base}/screen/voting/${votingId}`;
   }
 
@@ -59,7 +61,9 @@ export class VotingService {
       createdAt: v.createdAt,
       totalVotes: v._count.votes,
       screenUrl: this.getScreenUrl(v.id),
-      pendingSubmissionsCount: v.candidates.filter((c) => c.status === 'PENDING').length,
+      pendingSubmissionsCount: v.candidates.filter(
+        (c) => c.status === 'PENDING',
+      ).length,
       candidates: v.candidates.map((c) => ({
         id: c.id,
         name: c.name,
@@ -69,7 +73,9 @@ export class VotingService {
         status: c.status,
         submittedByName: c.submittedByName,
         submittedByTag: c.submittedByTag,
-        submittedByTelegramId: c.submittedByTelegramId ? c.submittedByTelegramId.toString() : null,
+        submittedByTelegramId: c.submittedByTelegramId
+          ? c.submittedByTelegramId.toString()
+          : null,
         rejectionReason: c.rejectionReason,
         createdAt: c.createdAt,
         votesCount: c._count.votes,
@@ -78,7 +84,9 @@ export class VotingService {
   }
 
   async createVoting(eventId: string, dto: CreateVotingDto) {
-    const event = await this.prisma.event.findUnique({ where: { id: eventId } });
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+    });
     if (!event) throw new NotFoundException(`Event ${eventId} not found`);
 
     return this.prisma.eventVoting.create({
@@ -154,14 +162,19 @@ export class VotingService {
     const candidate = await this.prisma.votingCandidate.findUnique({
       where: { id: candidateId },
     });
-    if (!candidate) throw new NotFoundException(`Candidate ${candidateId} not found`);
+    if (!candidate)
+      throw new NotFoundException(`Candidate ${candidateId} not found`);
 
     return this.prisma.votingCandidate.update({
       where: { id: candidateId },
       data: {
         name: dto.name?.trim() ?? undefined,
-        description: dto.description !== undefined ? dto.description?.trim() || null : undefined,
-        photoUrl: dto.photoUrl !== undefined ? dto.photoUrl?.trim() || null : undefined,
+        description:
+          dto.description !== undefined
+            ? dto.description?.trim() || null
+            : undefined,
+        photoUrl:
+          dto.photoUrl !== undefined ? dto.photoUrl?.trim() || null : undefined,
         order: dto.order !== undefined ? dto.order : undefined,
       },
     });
@@ -171,7 +184,8 @@ export class VotingService {
     const candidate = await this.prisma.votingCandidate.findUnique({
       where: { id: candidateId },
     });
-    if (!candidate) throw new NotFoundException(`Candidate ${candidateId} not found`);
+    if (!candidate)
+      throw new NotFoundException(`Candidate ${candidateId} not found`);
     return this.prisma.votingCandidate.delete({ where: { id: candidateId } });
   }
 
@@ -179,7 +193,14 @@ export class VotingService {
     const voting = await this.prisma.eventVoting.findUnique({
       where: { id },
       include: {
-        event: { select: { id: true, name: true, noRegistration: true, maxRegistrations: true } },
+        event: {
+          select: {
+            id: true,
+            name: true,
+            noRegistration: true,
+            maxRegistrations: true,
+          },
+        },
         candidates: {
           where: { status: CandidateStatus.APPROVED },
           orderBy: { order: 'asc' },
@@ -246,18 +267,21 @@ export class VotingService {
     const canSeeResults =
       voting.showResultsLive || voting.status === VotingStatus.CLOSED;
 
-    const [totalRegistrations, confirmedRegistrations, attendedCount] = await Promise.all([
-      this.prisma.eventRegistration.count({ where: { eventId: voting.eventId } }),
-      this.prisma.eventRegistration.count({
-        where: {
-          eventId: voting.eventId,
-          paymentStatus: { in: ['CONFIRMED', 'NOT_REQUIRED'] },
-        },
-      }),
-      this.prisma.eventRegistration.count({
-        where: { eventId: voting.eventId, attended: true },
-      }),
-    ]);
+    const [totalRegistrations, confirmedRegistrations, attendedCount] =
+      await Promise.all([
+        this.prisma.eventRegistration.count({
+          where: { eventId: voting.eventId },
+        }),
+        this.prisma.eventRegistration.count({
+          where: {
+            eventId: voting.eventId,
+            paymentStatus: { in: ['CONFIRMED', 'NOT_REQUIRED'] },
+          },
+        }),
+        this.prisma.eventRegistration.count({
+          where: { eventId: voting.eventId, attended: true },
+        }),
+      ]);
 
     const expectedVoters =
       voting.event?.maxRegistrations && voting.event.maxRegistrations > 0
@@ -279,7 +303,9 @@ export class VotingService {
       (turnoutPercentage !== null && turnoutPercentage >= 49) ||
       (totalVotes >= 5 &&
         voting.candidates.some(
-          (c) => totalVotes > 0 && Math.round((c._count.votes / totalVotes) * 100) >= 49,
+          (c) =>
+            totalVotes > 0 &&
+            Math.round((c._count.votes / totalVotes) * 100) >= 49,
         ));
 
     const hideCandidateVotes =
@@ -310,7 +336,8 @@ export class VotingService {
         description: c.description,
         photoUrl: c.photoUrl,
         order: c.order,
-        votesCount: canSeeResults && !hideCandidateVotes ? c._count.votes : undefined,
+        votesCount:
+          canSeeResults && !hideCandidateVotes ? c._count.votes : undefined,
         percent:
           canSeeResults && !hideCandidateVotes && totalVotes > 0
             ? Math.round((c._count.votes / totalVotes) * 100)
@@ -332,7 +359,9 @@ export class VotingService {
     if (!voting) throw new NotFoundException(`Voting ${votingId} not found`);
 
     if (!voting.allowSubmissions) {
-      throw new BadRequestException('Подання заявок не передбачено для цієї номінації');
+      throw new BadRequestException(
+        'Подання заявок не передбачено для цієї номінації',
+      );
     }
 
     if (!voting.submissionsOpen) {
@@ -373,7 +402,9 @@ export class VotingService {
           status: CandidateStatus.PENDING,
           rejectionReason: null,
           submittedByName: fullName || existing.submittedByName,
-          submittedByTag: username ? `@${username.replace(/^@/, '')}` : existing.submittedByTag,
+          submittedByTag: username
+            ? `@${username.replace(/^@/, '')}`
+            : existing.submittedByTag,
         },
       });
     }
@@ -404,7 +435,9 @@ export class VotingService {
 
     return list.map((c) => ({
       ...c,
-      submittedByTelegramId: c.submittedByTelegramId ? c.submittedByTelegramId.toString() : null,
+      submittedByTelegramId: c.submittedByTelegramId
+        ? c.submittedByTelegramId.toString()
+        : null,
     }));
   }
 
@@ -419,7 +452,8 @@ export class VotingService {
         },
       },
     });
-    if (!candidate) throw new NotFoundException(`Candidate ${candidateId} not found`);
+    if (!candidate)
+      throw new NotFoundException(`Candidate ${candidateId} not found`);
 
     const updated = await this.prisma.votingCandidate.update({
       where: { id: candidateId },
@@ -460,7 +494,8 @@ export class VotingService {
         },
       },
     });
-    if (!candidate) throw new NotFoundException(`Candidate ${candidateId} not found`);
+    if (!candidate)
+      throw new NotFoundException(`Candidate ${candidateId} not found`);
 
     const updated = await this.prisma.votingCandidate.update({
       where: { id: candidateId },
@@ -634,9 +669,13 @@ export class VotingService {
         voterName:
           v.registration?.fullName ||
           v.botUser?.fullName ||
-          [v.botUser?.firstName, v.botUser?.lastName].filter(Boolean).join(' ') ||
+          [v.botUser?.firstName, v.botUser?.lastName]
+            .filter(Boolean)
+            .join(' ') ||
           'Анонім',
-        telegramTag: v.registration?.telegramTag || (v.botUser?.username ? `@${v.botUser.username}` : null),
+        telegramTag:
+          v.registration?.telegramTag ||
+          (v.botUser?.username ? `@${v.botUser.username}` : null),
         group: v.registration?.group || v.botUser?.group || null,
         createdAt: v.createdAt,
       })),
@@ -671,18 +710,21 @@ export class VotingService {
 
     const totalVotes = voting._count.votes;
 
-    const [totalRegistrations, confirmedRegistrations, attendedCount] = await Promise.all([
-      this.prisma.eventRegistration.count({ where: { eventId: voting.eventId } }),
-      this.prisma.eventRegistration.count({
-        where: {
-          eventId: voting.eventId,
-          paymentStatus: { in: ['CONFIRMED', 'NOT_REQUIRED'] },
-        },
-      }),
-      this.prisma.eventRegistration.count({
-        where: { eventId: voting.eventId, attended: true },
-      }),
-    ]);
+    const [totalRegistrations, confirmedRegistrations, attendedCount] =
+      await Promise.all([
+        this.prisma.eventRegistration.count({
+          where: { eventId: voting.eventId },
+        }),
+        this.prisma.eventRegistration.count({
+          where: {
+            eventId: voting.eventId,
+            paymentStatus: { in: ['CONFIRMED', 'NOT_REQUIRED'] },
+          },
+        }),
+        this.prisma.eventRegistration.count({
+          where: { eventId: voting.eventId, attended: true },
+        }),
+      ]);
 
     const candidates = voting.candidates
       .map((c) => ({
@@ -782,7 +824,9 @@ export class VotingService {
 
     for (const v of data.votes) {
       votesSheet.addRow({
-        time: new Date(v.createdAt).toLocaleString('uk-UA', { timeZone: 'Europe/Kyiv' }),
+        time: new Date(v.createdAt).toLocaleString('uk-UA', {
+          timeZone: 'Europe/Kyiv',
+        }),
         candidate: v.candidateName,
         name: v.voterName,
         telegram: v.telegramTag ?? '',

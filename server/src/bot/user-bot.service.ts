@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Bot, GrammyError, InputFile } from 'grammy';
-import { resolve } from 'node:path';
+import { basename, resolve } from 'node:path';
 import * as QRCode from 'qrcode';
 import { PrismaService } from '../database/prisma.service';
 import { UPLOAD_DIR } from '../upload/upload.constants';
@@ -128,8 +128,14 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
 
           if (pending && !pending.completed && pending.expiresAt > new Date()) {
             const payload = pending.payload as any;
-            const fromUsername = (from.username || '').trim().toLowerCase().replace(/^@+/, '');
-            const pendingTag = pending.telegramTag.trim().toLowerCase().replace(/^@+/, '');
+            const fromUsername = (from.username || '')
+              .trim()
+              .toLowerCase()
+              .replace(/^@+/, '');
+            const pendingTag = pending.telegramTag
+              .trim()
+              .toLowerCase()
+              .replace(/^@+/, '');
 
             // Cross-account spoofing prevention: verify current Telegram user matches the tag in the form
             if (!fromUsername || fromUsername !== pendingTag) {
@@ -148,7 +154,9 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
                 eventId: pending.eventId,
                 OR: [
                   { telegramUserId: telegramId },
-                  { telegramTag: { equals: normalizedTag, mode: 'insensitive' } },
+                  {
+                    telegramTag: { equals: normalizedTag, mode: 'insensitive' },
+                  },
                 ],
               },
             });
@@ -163,7 +171,12 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
                 {
                   reply_markup: {
                     inline_keyboard: [
-                      [{ text: 'Мої реєстрації в боті', web_app: { url: `${baseAppUrl}?tab=my-events` } }],
+                      [
+                        {
+                          text: 'Мої реєстрації в боті',
+                          web_app: { url: `${baseAppUrl}?tab=my-events` },
+                        },
+                      ],
                     ],
                   },
                 },
@@ -176,7 +189,9 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
             });
             const validIds = new Set(questions.map((q) => q.id));
             const answerData = ((payload.answers as any[]) ?? [])
-              .filter((a) => validIds.has(a.questionId) && (a.value ?? '').length > 0)
+              .filter(
+                (a) => validIds.has(a.questionId) && (a.value ?? '').length > 0,
+              )
               .map((a) => ({ questionId: a.questionId, value: a.value }));
 
             const botUser = await this.prisma.botUser.upsert({
@@ -189,7 +204,9 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
                 lastName: from.last_name || null,
                 fullName: payload.fullName || null,
                 group: payload.group || null,
-                birthDate: payload.birthDate ? new Date(payload.birthDate) : null,
+                birthDate: payload.birthDate
+                  ? new Date(payload.birthDate)
+                  : null,
                 phoneNumber: payload.phoneNumber || null,
                 isBlocked: false,
               },
@@ -213,7 +230,9 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
                 fullName: payload.fullName,
                 telegramTag: normalizedTag,
                 group: payload.group,
-                birthDate: payload.birthDate ? new Date(payload.birthDate) : null,
+                birthDate: payload.birthDate
+                  ? new Date(payload.birthDate)
+                  : null,
                 source: 'WEB',
                 payment,
                 paymentStatus,
@@ -228,14 +247,23 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
             });
 
             if (paymentStatus === 'NOT_REQUIRED') {
-              await this.sendTicketToUser(telegramId, createdReg, pending.event);
+              await this.sendTicketToUser(
+                telegramId,
+                createdReg,
+                pending.event,
+              );
             } else {
               await ctx.reply(
                 `🎉 Чудово, ${from.first_name || 'друже'}! Твою реєстрацію на захід «${pending.event.name}» прийнято.\n\n🧾 Твій платіж передано на перевірку адміністраторам. Щойно оплату буде підтверджено — бот надішле сюди твій постійний QR-квиток для входу! 🎫`,
                 {
                   reply_markup: {
                     inline_keyboard: [
-                      [{ text: 'Мої реєстрації в боті', web_app: { url: `${baseAppUrl}?tab=my-events` } }],
+                      [
+                        {
+                          text: 'Мої реєстрації в боті',
+                          web_app: { url: `${baseAppUrl}?tab=my-events` },
+                        },
+                      ],
                     ],
                   },
                 },
@@ -244,13 +272,17 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
             return;
           }
         } catch (regErr) {
-          this.logger.error('Failed to complete pending web registration on /start', regErr);
+          this.logger.error(
+            'Failed to complete pending web registration on /start',
+            regErr,
+          );
         }
       } else if (match.startsWith('event_')) {
         const eventId = match.replace('event_', '');
         targetAppUrl = `${baseAppUrl}?startapp=event_${eventId}`;
         buttonText = 'Зареєструватися на захід';
-        greeting += '\n\nНатисни кнопку нижче, щоб відкрити реєстрацію на обраний захід:';
+        greeting +=
+          '\n\nНатисни кнопку нижче, щоб відкрити реєстрацію на обраний захід:';
       } else if (match.startsWith('vote_')) {
         const votingId = match.replace('vote_', '');
         targetAppUrl = `${baseAppUrl}?startapp=vote_${votingId}`;
@@ -294,7 +326,9 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
         allowed_updates: ['message', 'my_chat_member'],
         onStart: async (botInfo) => {
           this.botUsername = botInfo.username;
-          this.logger.log(`User Bot started successfully as @${botInfo.username}`);
+          this.logger.log(
+            `User Bot started successfully as @${botInfo.username}`,
+          );
 
           try {
             await this.bot?.api.setChatMenuButton({
@@ -305,7 +339,9 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
               },
             });
           } catch (e) {
-            this.logger.warn('Failed to set chat menu button for user bot: ' + e);
+            this.logger.warn(
+              'Failed to set chat menu button for user bot: ' + e,
+            );
           }
         },
       })
@@ -392,7 +428,8 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
 
     const resolvePhoto = (photoUrl: string): string | InputFile => {
       if (/^https?:\/\//i.test(photoUrl)) return photoUrl;
-      const filename = photoUrl.replace(/^\/?uploads\//, '');
+      const clean = photoUrl.replace(/^\/?uploads\//, '');
+      const filename = basename(clean);
       return new InputFile(resolve(UPLOAD_DIR, filename));
     };
 
@@ -418,12 +455,18 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
         sent++;
       } catch (err) {
         failed++;
-        if (err instanceof GrammyError && (err.error_code === 403 || err.description.includes('bot was blocked'))) {
+        if (
+          err instanceof GrammyError &&
+          (err.error_code === 403 ||
+            err.description.includes('bot was blocked'))
+        ) {
           if (recipient.telegramId) {
-            await this.prisma.botUser.updateMany({
-              where: { telegramId: recipient.telegramId },
-              data: { isBlocked: true },
-            }).catch(() => {});
+            await this.prisma.botUser
+              .updateMany({
+                where: { telegramId: recipient.telegramId },
+                data: { isBlocked: true },
+              })
+              .catch(() => {});
           }
         }
         this.logger.warn(`Failed to send broadcast to ${chatIdNumber}: ${err}`);
@@ -494,7 +537,12 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
       payment?: string;
       paymentStatus?: string;
     },
-    event: { id: string; name: string; date: Date | string; location?: string | null },
+    event: {
+      id: string;
+      name: string;
+      date: Date | string;
+      location?: string | null;
+    },
   ): Promise<boolean> {
     if (!this.bot) return false;
     const botUser = await this.prisma.botUser.findUnique({
@@ -569,7 +617,9 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
 
       return true;
     } catch (err) {
-      this.logger.error(`Failed to send ticket to user ${telegramUserId}: ${err}`);
+      this.logger.error(
+        `Failed to send ticket to user ${telegramUserId}: ${err}`,
+      );
       return false;
     }
   }

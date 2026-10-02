@@ -68,7 +68,11 @@ export interface KpiGroupParseResult {
 export function parseKpiGroup(input: string): KpiGroupParseResult {
   const normalized = normalizeKpiGroup(input);
   if (!normalized) {
-    return { valid: false, normalized: '', error: 'Вкажи шифр академічної групи' };
+    return {
+      valid: false,
+      normalized: '',
+      error: 'Вкажи шифр академічної групи',
+    };
   }
 
   // Regex matching KPI group nomenclature: ЛЛ-ттЦЦррх

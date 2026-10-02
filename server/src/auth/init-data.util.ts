@@ -58,7 +58,8 @@ export function resolveValidatedTelegramUser(
   if (!initData) {
     if (authDisabled && (fallback?.id || fallback?.tag)) {
       const id = fallback.id ? BigInt(fallback.id) : BigInt(0);
-      const tag = fallback.tag || (fallback.id ? `dev_${fallback.id}` : 'dev_user');
+      const tag =
+        fallback.tag || (fallback.id ? `dev_${fallback.id}` : 'dev_user');
       return {
         telegramId: id,
         username: tag,
@@ -69,17 +70,25 @@ export function resolveValidatedTelegramUser(
     throw new UnauthorizedException('Відсутні дані авторизації Telegram');
   }
 
-  const token =
-    config.get<string>('USER_BOT_TOKEN') ||
-    config.get<string>('TELEGRAM_BOT_TOKEN');
+  const userToken = config.get<string>('USER_BOT_TOKEN');
+  const adminToken = config.get<string>('TELEGRAM_BOT_TOKEN');
 
-  if (token) {
-    try {
-      validate(initData, token);
-    } catch {
-      if (!authDisabled) {
-        throw new UnauthorizedException('Невалідні дані Telegram init data');
-      }
+  if (userToken || adminToken) {
+    let isValid = false;
+    if (userToken) {
+      try {
+        validate(initData, userToken);
+        isValid = true;
+      } catch {}
+    }
+    if (!isValid && adminToken) {
+      try {
+        validate(initData, adminToken);
+        isValid = true;
+      } catch {}
+    }
+    if (!isValid && !authDisabled) {
+      throw new UnauthorizedException('Невалідні дані Telegram init data');
     }
   } else if (!authDisabled) {
     throw new UnauthorizedException(

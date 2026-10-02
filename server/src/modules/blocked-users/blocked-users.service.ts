@@ -67,7 +67,9 @@ export class BlockedUsersService {
   }
 
   async update(id: string, dto: UpdateBlockedUserDto) {
-    const existing = await this.prisma.blockedUser.findUnique({ where: { id } });
+    const existing = await this.prisma.blockedUser.findUnique({
+      where: { id },
+    });
     if (!existing) throw new NotFoundException(`BlockedUser ${id} not found`);
 
     let faculty = dto.faculty ?? existing.faculty;
@@ -90,7 +92,9 @@ export class BlockedUsersService {
   }
 
   async remove(id: string) {
-    const existing = await this.prisma.blockedUser.findUnique({ where: { id } });
+    const existing = await this.prisma.blockedUser.findUnique({
+      where: { id },
+    });
     if (!existing) throw new NotFoundException(`BlockedUser ${id} not found`);
     return this.prisma.blockedUser.delete({ where: { id } });
   }

@@ -27,7 +27,10 @@ describe('ApplicantService', () => {
       notifyGroup: jest.fn().mockResolvedValue(undefined),
     };
 
-    service = new ApplicantService(prisma as unknown as PrismaService, bot as unknown as BotService);
+    service = new ApplicantService(
+      prisma as unknown as PrismaService,
+      bot as unknown as BotService,
+    );
   });
 
   const validDto = {
@@ -37,7 +40,8 @@ describe('ApplicantService', () => {
     telegramTag: '@taras_sheva',
     group: 'ІП-31',
     phoneNumber: '+380991234567',
-    motivation: 'Хочу розвивати факультет та створювати круті студентські проєкти для студентів.',
+    motivation:
+      'Хочу розвивати факультет та створювати круті студентські проєкти для студентів.',
     experience: 'Маю досвід в організації заходів.',
     departments: [{ departmentId: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' }],
   };

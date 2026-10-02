@@ -10,7 +10,9 @@ const CHECK_INTERVAL_MS = 15 * 60_000;
 const FIRST_CHECK_DELAY_MS = 10_000;
 
 @Injectable()
-export class FundraiserScheduleService implements OnModuleInit, OnModuleDestroy {
+export class FundraiserScheduleService
+  implements OnModuleInit, OnModuleDestroy
+{
   private readonly logger = new Logger(FundraiserScheduleService.name);
   private timer?: NodeJS.Timeout;
   private firstCheck?: NodeJS.Timeout;

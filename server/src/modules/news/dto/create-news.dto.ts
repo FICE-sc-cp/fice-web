@@ -58,12 +58,17 @@ export class CreateNewsDto {
   @MaxLength(100)
   eventLocation?: string | null;
 
-  @ApiPropertyOptional({ description: 'Registration link for the announced event' })
+  @ApiPropertyOptional({
+    description: 'Registration link for the announced event',
+  })
   @IsOptional()
   @IsString()
   registrationLink?: string | null;
 
-  @ApiPropertyOptional({ default: false, description: 'Is news in draft status' })
+  @ApiPropertyOptional({
+    default: false,
+    description: 'Is news in draft status',
+  })
   @IsOptional()
   isDraft?: boolean;
 }

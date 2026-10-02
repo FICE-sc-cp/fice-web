@@ -1272,6 +1272,7 @@ export default function EventRegistrationsPage() {
                 <iframe
                   src={mediaUrl(receiptModal.receiptUrl)}
                   title={`Квитанція - ${receiptModal.fullName}`}
+                  sandbox="allow-same-origin"
                   className="w-full h-[65vh] rounded-2xl border border-border bg-white"
                 />
               ) : (

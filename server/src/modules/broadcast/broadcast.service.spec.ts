@@ -45,7 +45,10 @@ describe('BroadcastService', () => {
     });
 
     it('collects distinct telegram IDs and sends broadcast', async () => {
-      prisma.event.findUnique.mockResolvedValue({ id: eventId, name: 'Вечірка' });
+      prisma.event.findUnique.mockResolvedValue({
+        id: eventId,
+        name: 'Вечірка',
+      });
       prisma.eventRegistration.findMany.mockResolvedValue([
         { telegramUserId: BigInt(100) },
         { telegramUserId: BigInt(200) },

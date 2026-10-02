@@ -20,7 +20,9 @@ export class BroadcastController {
   constructor(private readonly broadcastService: BroadcastService) {}
 
   @Post('event/:eventId')
-  @ApiOperation({ summary: 'Send broadcast to attendees of a specific event (admin)' })
+  @ApiOperation({
+    summary: 'Send broadcast to attendees of a specific event (admin)',
+  })
   broadcastToEvent(
     @Param('eventId', ParseUUIDPipe) eventId: string,
     @Body() dto: CreateBroadcastDto,
@@ -29,7 +31,9 @@ export class BroadcastController {
   }
 
   @Get('event/:eventId/preview')
-  @ApiOperation({ summary: 'Get attendee count with Telegram ID for event broadcast (admin)' })
+  @ApiOperation({
+    summary: 'Get attendee count with Telegram ID for event broadcast (admin)',
+  })
   getEventPreview(@Param('eventId', ParseUUIDPipe) eventId: string) {
     return this.broadcastService.getEventPreview(eventId);
   }

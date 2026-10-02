@@ -28,11 +28,15 @@ export class FundraiserEntity {
   @ApiPropertyOptional({ nullable: true })
   jarUrl: string | null;
 
-  @ApiPropertyOptional({ nullable: true, description: 'Monobank jar widget link' })
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Monobank jar widget link',
+  })
   jarWidgetUrl: string | null;
 
   @ApiProperty({
-    description: 'Whether the linked jar has its own goal (then goalAmount comes from the jar)',
+    description:
+      'Whether the linked jar has its own goal (then goalAmount comes from the jar)',
   })
   jarHasGoal: boolean;
 

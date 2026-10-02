@@ -33,8 +33,9 @@ export class VotingController {
   ) {}
 
   private resolveTelegramId(initData?: string, fallbackId?: string): bigint {
-    return resolveValidatedTelegramUser(this.config, initData, { id: fallbackId })
-      .telegramId;
+    return resolveValidatedTelegramUser(this.config, initData, {
+      id: fallbackId,
+    }).telegramId;
   }
 
   // --- Admin endpoints ---
@@ -133,7 +134,9 @@ export class VotingController {
 
   @Post(':id/notify')
   @Admin()
-  @ApiOperation({ summary: 'Broadcast voting launch to event attendees (admin)' })
+  @ApiOperation({
+    summary: 'Broadcast voting launch to event attendees (admin)',
+  })
   notifyVotingStarted(@Param('id', ParseUUIDPipe) id: string) {
     return this.votingService.notifyVotingStarted(id);
   }
@@ -191,7 +194,9 @@ export class VotingController {
   }
 
   @Get(':id/screen')
-  @ApiOperation({ summary: 'Get live results for stage/projector screen (public)' })
+  @ApiOperation({
+    summary: 'Get live results for stage/projector screen (public)',
+  })
   getLiveScreenData(@Param('id', ParseUUIDPipe) id: string) {
     return this.votingService.getLiveScreenData(id);
   }

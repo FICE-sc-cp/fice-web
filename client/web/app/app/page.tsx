@@ -783,23 +783,27 @@ function MiniAppContent() {
     setRegSubmitting(true);
     try {
       const tgId = user?.id ? String(user.id) : undefined;
-      await fice.registerEvent(selectedEvent.id, {
-        fullName: regFullName.trim(),
-        telegramTag: `@${regTelegram.trim().replace(/^@+/, '')}`,
-        group: regGroup.trim(),
-        birthDate: regBirthDate || undefined,
-        payment: hasFee ? (regPayment as RegistrationPayment) : 'NONE',
-        receiptUrl: regReceiptUrl ?? undefined,
-        telegramUserId: tgId,
-        phoneNumber: regPhone.trim() || undefined,
-        saveProfile: regSaveProfile,
-        answers: questions
-          .map((q) => ({
-            questionId: q.id,
-            value: (regAnswers[q.id] ?? '').trim(),
-          }))
-          .filter((a) => a.value.length > 0),
-      });
+      await fice.registerEvent(
+        selectedEvent.id,
+        {
+          fullName: regFullName.trim(),
+          telegramTag: `@${regTelegram.trim().replace(/^@+/, '')}`,
+          group: regGroup.trim(),
+          birthDate: regBirthDate || undefined,
+          payment: hasFee ? (regPayment as RegistrationPayment) : 'NONE',
+          receiptUrl: regReceiptUrl ?? undefined,
+          telegramUserId: tgId,
+          phoneNumber: regPhone.trim() || undefined,
+          saveProfile: regSaveProfile,
+          answers: questions
+            .map((q) => ({
+              questionId: q.id,
+              value: (regAnswers[q.id] ?? '').trim(),
+            }))
+            .filter((a) => a.value.length > 0),
+        },
+        initData,
+      );
 
       hapticNotify('success');
       setRegSuccess(true);

@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { BotService } from '../../bot/bot.service';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
@@ -23,7 +28,9 @@ export class ApplicantService {
     // 1. Group validation & check FICT
     const parsedGroup = parseKpiGroup(dto.group);
     if (!parsedGroup.valid) {
-      throw new BadRequestException(parsedGroup.error || 'Невірний формат академічної групи');
+      throw new BadRequestException(
+        parsedGroup.error || 'Невірний формат академічної групи',
+      );
     }
     if (parsedGroup.faculty !== 'ФІОТ') {
       throw new BadRequestException(
@@ -33,39 +40,65 @@ export class ApplicantService {
 
     // 2. Phone validation (prohibit aggressor countries)
     const cleanPhone = dto.phoneNumber.replace(/[\s\-\(\)\.]/g, '');
-    if (/^(\+?7|89\d{9}$|80\d{9}$)/.test(cleanPhone) || /^\+?7\d{10}$/.test(cleanPhone)) {
-      throw new BadRequestException('Номери країни-агресора (росії) заборонені');
+    if (
+      /^(\+?7|89\d{9}$|80\d{9}$)/.test(cleanPhone) ||
+      /^\+?7\d{10}$/.test(cleanPhone)
+    ) {
+      throw new BadRequestException(
+        'Номери країни-агресора (росії) заборонені',
+      );
     }
     if (/^\+?375/.test(cleanPhone)) {
-      throw new BadRequestException('Номери країни-агресора (білорусі) заборонені');
+      throw new BadRequestException(
+        'Номери країни-агресора (білорусі) заборонені',
+      );
     }
-    if (!/^(\+?380|0)\d{9}$/.test(cleanPhone) && !/^\+[1-9]\d{8,14}$/.test(cleanPhone)) {
-      throw new BadRequestException('Вкажи дійсний номер телефону (наприклад: +380 99 123 45 67)');
+    if (
+      !/^(\+?380|0)\d{9}$/.test(cleanPhone) &&
+      !/^\+[1-9]\d{8,14}$/.test(cleanPhone)
+    ) {
+      throw new BadRequestException(
+        'Вкажи дійсний номер телефону (наприклад: +380 99 123 45 67)',
+      );
     }
 
     // 3. Telegram tag validation
     const cleanTag = dto.telegramTag.trim().replace(/^@+/, '');
-    if (cleanTag.length < 5 || cleanTag.length > 32 || !/^[a-zA-Z0-9_]+$/.test(cleanTag)) {
-      throw new BadRequestException('Невірний формат Telegram-тегу (5-32 символи, латиниця, цифри, _)');
+    if (
+      cleanTag.length < 5 ||
+      cleanTag.length > 32 ||
+      !/^[a-zA-Z0-9_]+$/.test(cleanTag)
+    ) {
+      throw new BadRequestException(
+        'Невірний формат Telegram-тегу (5-32 символи, латиниця, цифри, _)',
+      );
     }
     if (!/[a-zA-Z]/.test(cleanTag)) {
-      throw new BadRequestException('Telegram-тег повинен містити хоча б одну літеру');
+      throw new BadRequestException(
+        'Telegram-тег повинен містити хоча б одну літеру',
+      );
     }
 
     // 4. Textarea substantive validation
     if (dto.motivation) {
       if (/^[\s\p{P}\p{S}]+$/u.test(dto.motivation)) {
-        throw new BadRequestException('Поле мотивації не може містити лише розділові знаки чи символи');
+        throw new BadRequestException(
+          'Поле мотивації не може містити лише розділові знаки чи символи',
+        );
       }
       const letters = (dto.motivation.match(/[\p{L}]/gu) || []).length;
       if (letters < 10) {
-        throw new BadRequestException('Текст мотивації має містити змістовні слова, а не лише символи');
+        throw new BadRequestException(
+          'Текст мотивації має містити змістовні слова, а не лише символи',
+        );
       }
     }
 
     if (dto.experience) {
       if (/^[\s\p{P}\p{S}]+$/u.test(dto.experience)) {
-        throw new BadRequestException('Поле досвіду не може містити лише розділові знаки чи символи');
+        throw new BadRequestException(
+          'Поле досвіду не може містити лише розділові знаки чи символи',
+        );
       }
     }
 

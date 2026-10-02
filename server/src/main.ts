@@ -44,7 +44,17 @@ async function bootstrap() {
 
   const uploadPath = resolve(UPLOAD_DIR);
   mkdirSync(uploadPath, { recursive: true });
-  app.useStaticAssets(uploadPath, { prefix: `${UPLOAD_URL_PREFIX}/` });
+  app.useStaticAssets(uploadPath, {
+    prefix: `${UPLOAD_URL_PREFIX}/`,
+    setHeaders: (res: any) => {
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader(
+        'Content-Security-Policy',
+        "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+      );
+      res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
+    },
+  });
 
   const config = new DocumentBuilder()
     .setTitle('Fice API')

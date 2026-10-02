@@ -1,4 +1,8 @@
-import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+} from '@nestjs/common';
 import { VotingStatus } from '@prisma/client';
 import { VotingService } from './voting.service';
 
@@ -39,7 +43,9 @@ describe('VotingService', () => {
         findUnique: jest.fn(),
       },
       event: {
-        findUnique: jest.fn().mockResolvedValue({ id: 'evt-1', noRegistration: false }),
+        findUnique: jest
+          .fn()
+          .mockResolvedValue({ id: 'evt-1', noRegistration: false }),
       },
     };
     userBot = {
@@ -96,7 +102,9 @@ describe('VotingService', () => {
       });
       prisma.votingCandidate.findFirst.mockResolvedValue({ id: candidateId });
       prisma.vote.findUnique.mockResolvedValue({ id: 'existing-vote' });
-      prisma.vote.update = jest.fn().mockResolvedValue({ id: 'existing-vote', candidateId });
+      prisma.vote.update = jest
+        .fn()
+        .mockResolvedValue({ id: 'existing-vote', candidateId });
 
       const res = await service.castVote(votingId, telegramId, { candidateId });
       expect(res.ok).toBe(true);
@@ -202,7 +210,11 @@ describe('VotingService', () => {
       const res = await service.submitCandidate(
         votingId,
         telegramId,
-        { name: 'Batman', description: 'Dark Knight', photoUrl: '/uploads/batman.jpg' },
+        {
+          name: 'Batman',
+          description: 'Dark Knight',
+          photoUrl: '/uploads/batman.jpg',
+        },
         'bruce_wayne',
         'Bruce Wayne',
       );
@@ -222,8 +234,13 @@ describe('VotingService', () => {
     });
 
     it('approves candidate successfully', async () => {
-      prisma.votingCandidate.findUnique.mockResolvedValue({ id: 'cand-1', status: 'PENDING' });
-      prisma.votingCandidate.update = jest.fn().mockResolvedValue({ id: 'cand-1', status: 'APPROVED' });
+      prisma.votingCandidate.findUnique.mockResolvedValue({
+        id: 'cand-1',
+        status: 'PENDING',
+      });
+      prisma.votingCandidate.update = jest
+        .fn()
+        .mockResolvedValue({ id: 'cand-1', status: 'APPROVED' });
 
       const res = await service.approveCandidate('cand-1');
       expect(res.status).toBe('APPROVED');
@@ -234,7 +251,10 @@ describe('VotingService', () => {
     });
 
     it('rejects candidate with reason successfully', async () => {
-      prisma.votingCandidate.findUnique.mockResolvedValue({ id: 'cand-1', status: 'PENDING' });
+      prisma.votingCandidate.findUnique.mockResolvedValue({
+        id: 'cand-1',
+        status: 'PENDING',
+      });
       prisma.votingCandidate.update = jest.fn().mockResolvedValue({
         id: 'cand-1',
         status: 'REJECTED',

@@ -53,12 +53,17 @@ export class CreateEventRegistrationDto {
   @IsEnum(RegistrationPayment)
   payment?: RegistrationPayment;
 
-  @ApiPropertyOptional({ enum: RegistrationSource, default: RegistrationSource.WEB })
+  @ApiPropertyOptional({
+    enum: RegistrationSource,
+    default: RegistrationSource.WEB,
+  })
   @IsOptional()
   @IsEnum(RegistrationSource)
   source?: RegistrationSource;
 
-  @ApiPropertyOptional({ description: 'Uploaded receipt URL when payment = DONATED' })
+  @ApiPropertyOptional({
+    description: 'Uploaded receipt URL when payment = DONATED',
+  })
   @IsOptional()
   @IsString()
   receiptUrl?: string;

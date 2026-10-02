@@ -59,7 +59,9 @@ export class ProjectParticipantController {
 
   @Get()
   @Admin()
-  @ApiOperation({ summary: 'List all project participants incl. hidden (admin)' })
+  @ApiOperation({
+    summary: 'List all project participants incl. hidden (admin)',
+  })
   @ApiOkResponse({ type: [ProjectParticipantEntity] })
   findAll() {
     return this.service.findAllAdmin();
@@ -75,7 +77,9 @@ export class ProjectParticipantController {
 
   @Patch(':id')
   @Admin()
-  @ApiOperation({ summary: 'Edit / hide / unhide a project participant (admin)' })
+  @ApiOperation({
+    summary: 'Edit / hide / unhide a project participant (admin)',
+  })
   @ApiOkResponse({ type: ProjectParticipantEntity })
   update(
     @Param('id', ParseUUIDPipe) id: string,

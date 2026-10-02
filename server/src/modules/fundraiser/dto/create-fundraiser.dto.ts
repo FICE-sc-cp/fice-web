@@ -14,7 +14,10 @@ import {
 } from 'class-validator';
 
 export class CreateFundraiserDto {
-  @ApiProperty({ maxLength: 120, example: 'Пікап для евакуаційної групи 47-ї бригади' })
+  @ApiProperty({
+    maxLength: 120,
+    example: 'Пікап для евакуаційної групи 47-ї бригади',
+  })
   @IsString()
   @IsNotEmpty()
   @MaxLength(120)
@@ -28,7 +31,10 @@ export class CreateFundraiserDto {
   @IsEnum(FundraiserStatus)
   status?: FundraiserStatus;
 
-  @ApiProperty({ maxLength: 255, description: 'Short lead shown under the title' })
+  @ApiProperty({
+    maxLength: 255,
+    description: 'Short lead shown under the title',
+  })
   @IsString()
   @IsNotEmpty()
   @MaxLength(255)
@@ -53,7 +59,8 @@ export class CreateFundraiserDto {
   @ApiPropertyOptional({
     example: 480000,
     default: 0,
-    description: 'Target amount; replaced by the jar goal when a linked jar has one',
+    description:
+      'Target amount; replaced by the jar goal when a linked jar has one',
   })
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
@@ -76,7 +83,10 @@ export class CreateFundraiserDto {
   @MaxLength(25)
   cardNumber?: string;
 
-  @ApiPropertyOptional({ description: 'Monobank jar link', example: 'https://send.monobank.ua/jar/…' })
+  @ApiPropertyOptional({
+    description: 'Monobank jar link',
+    example: 'https://send.monobank.ua/jar/…',
+  })
   @IsOptional()
   @IsUrl()
   jarUrl?: string;

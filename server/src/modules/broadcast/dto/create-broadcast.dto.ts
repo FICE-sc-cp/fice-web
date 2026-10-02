@@ -7,7 +7,9 @@ export class CreateBroadcastDto {
   @IsNotEmpty()
   text: string;
 
-  @ApiPropertyOptional({ description: 'Photo URL or uploaded receipt/image URL' })
+  @ApiPropertyOptional({
+    description: 'Photo URL or uploaded receipt/image URL',
+  })
   @IsOptional()
   @IsString()
   imageUrl?: string;

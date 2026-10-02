@@ -56,7 +56,10 @@ export class ChannelService {
     }
 
     if (dto.buttonUrl) {
-      button = { text: dto.buttonText?.trim() || 'Перейти', url: dto.buttonUrl.trim() };
+      button = {
+        text: dto.buttonText?.trim() || 'Перейти',
+        url: dto.buttonUrl.trim(),
+      };
     } else if (dto.eventId) {
       const botUsername =
         this.config.get<string>('USER_BOT_USERNAME') ||

@@ -23,7 +23,11 @@ export class BlockedUsersController {
   @Get()
   @Admin()
   @ApiOperation({ summary: 'List all blocked users (admin)' })
-  @ApiQuery({ name: 'search', required: false, description: 'Search by tag, group, faculty' })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Search by tag, group, faculty',
+  })
   list(@Query('search') search?: string) {
     return this.service.list(search);
   }
@@ -37,7 +41,9 @@ export class BlockedUsersController {
 
   @Patch(':id')
   @Admin()
-  @ApiOperation({ summary: 'Update blocked user status, group, or faculty (admin)' })
+  @ApiOperation({
+    summary: 'Update blocked user status, group, or faculty (admin)',
+  })
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateBlockedUserDto,

@@ -5,9 +5,11 @@ export function RichText({
   text,
   linkClassName,
 }: {
-  text: string;
+  text?: string | null;
   linkClassName?: string;
 }) {
+  if (!text || typeof text !== "string") return null;
+
   const nodes: ReactNode[] = [];
   const re = /\[([^\]]+)\]\(([^)]+)\)/g;
   let last = 0;
@@ -16,8 +18,10 @@ export function RichText({
 
   while ((match = re.exec(text)) !== null) {
     if (match.index > last) nodes.push(text.slice(last, match.index));
-    const href = match[2];
-    const external = /^https?:\/\//.test(href);
+    const rawHref = match[2].trim();
+    const isSafe = /^(https?:\/\/|mailto:|tel:|\/)/i.test(rawHref);
+    const href = isSafe ? rawHref : "#";
+    const external = /^https?:\/\//i.test(href);
     nodes.push(
       <a
         key={key++}

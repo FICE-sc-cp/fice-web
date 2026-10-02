@@ -24,6 +24,7 @@ import { UpdateEventDto } from './dto/update-event.dto';
 
 import { BotService } from '../../bot/bot.service';
 import { UserBotService } from '../../bot/user-bot.service';
+import { resolveValidatedTelegramUser } from '../../auth/init-data.util';
 
 const PAYMENT_LABEL: Record<RegistrationPayment, string> = {
   NONE: '—',
@@ -66,11 +67,20 @@ export class EventService {
   };
 
   create(dto: CreateEventDto) {
-    const { detailsId, program, questions, partners, checkInStaffTags, ...rest } = dto;
+    const {
+      detailsId,
+      program,
+      questions,
+      partners,
+      checkInStaffTags,
+      ...rest
+    } = dto;
     return this.prisma.event.create({
       data: {
         ...rest,
-        checkInStaffTags: checkInStaffTags ? normalizeTags(checkInStaffTags) : [],
+        checkInStaffTags: checkInStaffTags
+          ? normalizeTags(checkInStaffTags)
+          : [],
         details: detailsId ? { connect: { id: detailsId } } : undefined,
         eventPartners: partners?.length
           ? {
@@ -149,7 +159,14 @@ export class EventService {
 
   async update(id: string, dto: UpdateEventDto) {
     await this.findOne(id);
-    const { detailsId, program, questions, partners, checkInStaffTags, ...rest } = dto;
+    const {
+      detailsId,
+      program,
+      questions,
+      partners,
+      checkInStaffTags,
+      ...rest
+    } = dto;
 
     return this.prisma.$transaction(async (tx) => {
       await tx.event.update({
@@ -252,7 +269,11 @@ export class EventService {
     return this.prisma.eventPartner.delete({ where: { id: link.id } });
   }
 
-  async register(eventId: string, dto: CreateEventRegistrationDto) {
+  async register(
+    eventId: string,
+    dto: CreateEventRegistrationDto,
+    initData?: string,
+  ) {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
       include: { questions: true },
@@ -299,29 +320,34 @@ export class EventService {
     if (event.allowedFaculties && event.allowedFaculties.length > 0) {
       const parsed = parseKpiGroup(dto.group);
       if (!parsed.valid) {
-        throw new BadRequestException(parsed.error || 'Невірний шифр академічної групи');
-      }
-      if (!parsed.faculty || !event.allowedFaculties.includes(parsed.faculty)) {
-        await this.prisma.blockedUser.upsert({
-          where: { telegramTag: normalizedTag },
-          create: {
-            telegramTag: normalizedTag,
-            group: dto.group.trim(),
-            faculty: parsed.faculty || null,
-            reason: `Спроба реєстрації з недозволеного факультету (${dto.group.trim()}, ${parsed.faculty ?? 'невідомий'}) на захід «${event.name}»`,
-            isBlocked: true,
-          },
-          update: {
-            group: dto.group.trim(),
-            faculty: parsed.faculty || null,
-            reason: `Спроба реєстрації з недозволеного факультету (${dto.group.trim()}, ${parsed.faculty ?? 'невідомий'}) на захід «${event.name}»`,
-            isBlocked: true,
-          },
-        });
-        throw new ForbiddenException(
-          `Реєстрація доступна лише для студентів [${event.allowedFaculties.join(', ')}]. Ваш Telegram додано до списку заблокованих. Якщо ви помилились у шифрі групи, зверніться до підтримки: @fice_robot`,
+        throw new BadRequestException(
+          parsed.error || 'Невірний шифр академічної групи',
         );
       }
+      if (!parsed.faculty || !event.allowedFaculties.includes(parsed.faculty)) {
+        throw new ForbiddenException(
+          `Реєстрація доступна лише для студентів [${event.allowedFaculties.join(', ')}]. Якщо ви помилились у шифрі групи, зверніться до підтримки: @fice_robot`,
+        );
+      }
+    }
+
+    // 2.1 Resolve authenticated Telegram user if initData is supplied
+    let telegramUserId: bigint | undefined;
+    if (initData) {
+      try {
+        const resolved = resolveValidatedTelegramUser(
+          this.configService,
+          initData,
+        );
+        telegramUserId = resolved.telegramId;
+      } catch {
+        // Untrusted initData; fallback to standard web registration
+      }
+    } else if (
+      dto.telegramUserId &&
+      this.configService.get<string>('AUTH_DISABLED') === 'true'
+    ) {
+      telegramUserId = BigInt(dto.telegramUserId);
     }
 
     // 2.5 Check if user is already registered for this event
@@ -330,7 +356,7 @@ export class EventService {
         eventId,
         OR: [
           { telegramTag: { equals: normalizedTag, mode: 'insensitive' } },
-          ...(dto.telegramUserId ? [{ telegramUserId: BigInt(dto.telegramUserId) }] : []),
+          ...(telegramUserId ? [{ telegramUserId }] : []),
         ],
       },
     });
@@ -352,11 +378,8 @@ export class EventService {
       .map((a) => ({ questionId: a.questionId, value: a.value }));
 
     let botUserId: string | undefined;
-    let telegramUserId: bigint | undefined;
 
-    if (dto.telegramUserId) {
-      telegramUserId = BigInt(dto.telegramUserId);
-
+    if (telegramUserId) {
       const user = await this.prisma.botUser.upsert({
         where: { telegramId: telegramUserId },
         create: {
@@ -366,7 +389,8 @@ export class EventService {
           fullName: dto.saveProfile ? dto.fullName : null,
           group: dto.saveProfile ? dto.group : null,
           birthDate: dto.saveProfile && dto.birthDate ? dto.birthDate : null,
-          phoneNumber: dto.saveProfile && dto.phoneNumber ? dto.phoneNumber : null,
+          phoneNumber:
+            dto.saveProfile && dto.phoneNumber ? dto.phoneNumber : null,
           isBlocked: false,
         },
         update: {
@@ -406,7 +430,8 @@ export class EventService {
         });
 
         const botUsername =
-          this.configService.get<string>('USER_BOT_USERNAME') || 'fice_event_bot';
+          this.configService.get<string>('USER_BOT_USERNAME') ||
+          'fice_event_bot';
 
         return {
           requiresBotStart: true,
@@ -485,7 +510,8 @@ export class EventService {
     });
 
     if (!pending) throw new NotFoundException('Реєстраційна сесія не знайдена');
-    if (pending.completed) return { alreadyCompleted: true, event: pending.event };
+    if (pending.completed)
+      return { alreadyCompleted: true, event: pending.event };
     if (pending.expiresAt < new Date()) {
       throw new BadRequestException('Термін дії посилання реєстрації минув');
     }
@@ -602,7 +628,10 @@ export class EventService {
     };
   }
 
-  async listRegistrations(eventId: string, { page, limit }: PaginationQueryDto) {
+  async listRegistrations(
+    eventId: string,
+    { page, limit }: PaginationQueryDto,
+  ) {
     const event = await this.findOne(eventId);
     const [
       items,
@@ -622,9 +651,15 @@ export class EventService {
         take: limit,
       }),
       this.prisma.eventRegistration.count({ where: { eventId } }),
-      this.prisma.eventRegistration.count({ where: { eventId, source: 'WEB' } }),
-      this.prisma.eventRegistration.count({ where: { eventId, source: 'BOT' } }),
-      this.prisma.eventRegistration.count({ where: { eventId, attended: true } }),
+      this.prisma.eventRegistration.count({
+        where: { eventId, source: 'WEB' },
+      }),
+      this.prisma.eventRegistration.count({
+        where: { eventId, source: 'BOT' },
+      }),
+      this.prisma.eventRegistration.count({
+        where: { eventId, attended: true },
+      }),
       this.prisma.eventRegistration.count({
         where: { eventId, paymentStatus: 'PENDING' },
       }),
@@ -638,12 +673,12 @@ export class EventService {
 
     const isClosedByDate = Boolean(
       event.registrationCloseDate &&
-        event.registrationCloseDate.getTime() < Date.now(),
+      event.registrationCloseDate.getTime() < Date.now(),
     );
     const isClosedByLimit = Boolean(
       event.maxRegistrations &&
-        event.maxRegistrations > 0 &&
-        total >= event.maxRegistrations,
+      event.maxRegistrations > 0 &&
+      total >= event.maxRegistrations,
     );
 
     return {
@@ -721,10 +756,10 @@ export class EventService {
         reg.paymentStatus === 'CONFIRMED'
           ? 'Підтверджено'
           : reg.paymentStatus === 'REJECTED'
-          ? `Відхилено${reg.paymentRejectionReason ? `: ${reg.paymentRejectionReason}` : ''}`
-          : reg.paymentStatus === 'PENDING'
-          ? 'Очікує підтвердження'
-          : '—',
+            ? `Відхилено${reg.paymentRejectionReason ? `: ${reg.paymentRejectionReason}` : ''}`
+            : reg.paymentStatus === 'PENDING'
+              ? 'Очікує підтвердження'
+              : '—',
         reg.receiptUrl ?? '',
         reg.ticketCode ?? '',
         reg.createdAt.toISOString().slice(0, 16).replace('T', ' '),
@@ -741,7 +776,11 @@ export class EventService {
     return Buffer.from(buffer as ArrayBuffer);
   }
 
-  async verifyCheckInAccess(eventId: string, telegramId?: bigint, username?: string) {
+  async verifyCheckInAccess(
+    eventId: string,
+    telegramId?: bigint,
+    username?: string,
+  ) {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
       select: { id: true, name: true, checkInStaffTags: true },
@@ -752,7 +791,10 @@ export class EventService {
     const adminGroupId = this.configService.get<string>('ADMIN_GROUP_CHAT_ID');
 
     if (telegramId && adminGroupId) {
-      isAdmin = await this.botService.isUserInChat(adminGroupId, Number(telegramId));
+      isAdmin = await this.botService.isUserInChat(
+        adminGroupId,
+        Number(telegramId),
+      );
     }
 
     if (this.configService.get<string>('AUTH_DISABLED') === 'true') {
@@ -771,31 +813,35 @@ export class EventService {
     return { canCheckIn, isAdmin, isStaff, event };
   }
 
-  async getCheckInAccess(eventId: string, telegramId?: bigint, username?: string) {
-    const { canCheckIn, isAdmin, isStaff, event } = await this.verifyCheckInAccess(
-      eventId,
-      telegramId,
-      username,
-    );
+  async getCheckInAccess(
+    eventId: string,
+    telegramId?: bigint,
+    username?: string,
+  ) {
+    const { canCheckIn, isAdmin, isStaff, event } =
+      await this.verifyCheckInAccess(eventId, telegramId, username);
     return { canCheckIn, isAdmin, isStaff, eventName: event.name };
   }
 
-  async getCheckInList(eventId: string, telegramId?: bigint, username?: string) {
+  async getCheckInList(
+    eventId: string,
+    telegramId?: bigint,
+    username?: string,
+  ) {
     const { canCheckIn, event } = await this.verifyCheckInAccess(
       eventId,
       telegramId,
       username,
     );
     if (!canCheckIn) {
-      throw new ForbiddenException('У вас немає доступу до відмітки учасників на цьому заході');
+      throw new ForbiddenException(
+        'У вас немає доступу до відмітки учасників на цьому заході',
+      );
     }
 
     const registrations = await this.prisma.eventRegistration.findMany({
       where: { eventId },
-      orderBy: [
-        { attended: 'asc' },
-        { createdAt: 'desc' },
-      ],
+      orderBy: [{ attended: 'asc' }, { createdAt: 'desc' }],
       include: {
         answers: { include: { question: { select: { label: true } } } },
       },
@@ -961,8 +1007,8 @@ export class EventService {
       message: isPaymentRejected
         ? `⛔️ Увага! Оплату учасника було ВІДХИЛЕНО!`
         : isPaymentPending
-        ? `⚠️ Відмічено, але оплата ще НЕ підтверджена адміном! Перевірте чек.`
-        : `✅ Успішно відмічено: ${reg.fullName}`,
+          ? `⚠️ Відмічено, але оплата ще НЕ підтверджена адміном! Перевірте чек.`
+          : `✅ Успішно відмічено: ${reg.fullName}`,
       registration: {
         id: updated.id,
         fullName: updated.fullName,
@@ -1115,7 +1161,9 @@ export class EventService {
       username,
     );
     if (!canCheckIn) {
-      throw new ForbiddenException('У вас немає доступу до відмітки учасників на цьому заході');
+      throw new ForbiddenException(
+        'У вас немає доступу до відмітки учасників на цьому заході',
+      );
     }
 
     const reg = await this.prisma.eventRegistration.findFirst({
@@ -1123,7 +1171,9 @@ export class EventService {
     });
     if (!reg) throw new NotFoundException('Реєстрацію не знайдено');
 
-    const staffTag = username ? `@${username.replace(/^@+/, '')}` : (staffName || 'Організатор');
+    const staffTag = username
+      ? `@${username.replace(/^@+/, '')}`
+      : staffName || 'Організатор';
 
     const updated = await this.prisma.eventRegistration.update({
       where: { id: registrationId },
@@ -1134,7 +1184,9 @@ export class EventService {
       },
     });
 
-    const total = await this.prisma.eventRegistration.count({ where: { eventId } });
+    const total = await this.prisma.eventRegistration.count({
+      where: { eventId },
+    });
     const attendedCount = await this.prisma.eventRegistration.count({
       where: { eventId, attended: true },
     });
@@ -1158,7 +1210,10 @@ export class EventService {
     const adminGroupId = this.configService.get<string>('ADMIN_GROUP_CHAT_ID');
     let isAdmin = false;
     if (telegramId && adminGroupId) {
-      isAdmin = await this.botService.isUserInChat(adminGroupId, Number(telegramId));
+      isAdmin = await this.botService.isUserInChat(
+        adminGroupId,
+        Number(telegramId),
+      );
     }
     if (this.configService.get<string>('AUTH_DISABLED') === 'true') {
       isAdmin = true;
