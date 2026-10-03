@@ -9,9 +9,11 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   MaxLength,
   ValidateNested,
 } from 'class-validator';
+import { OWN_UPLOAD_URL } from '../../../upload/own-upload';
 
 export class EventAnswerDto {
   @ApiProperty({ format: 'uuid' })
@@ -66,6 +68,9 @@ export class CreateEventRegistrationDto {
   })
   @IsOptional()
   @IsString()
+  @Matches(OWN_UPLOAD_URL, {
+    message: 'Квитанцію потрібно завантажити через форму реєстрації',
+  })
   receiptUrl?: string;
 
   @ApiPropertyOptional({ description: 'Telegram User ID for bot linking' })

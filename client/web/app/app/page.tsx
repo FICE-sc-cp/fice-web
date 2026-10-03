@@ -755,8 +755,9 @@ function MiniAppContent() {
       errs.telegram = 'Встанови username у налаштуваннях Telegram';
     if (!regGroup.trim()) errs.group = 'Вкажи академічну групу';
 
-    const fee = selectedEvent.feeAmount ? Number(selectedEvent.feeAmount) : 0;
-    const hasFee = fee > 0;
+    const hasFee =
+      Number(selectedEvent.feeAmount ?? 0) > 0 ||
+      Number(selectedEvent.feeAtEventAmount ?? 0) > 0;
     if (hasFee && !regPayment) errs.payment = 'Обери спосіб оплати';
     if (regPayment === 'DONATED' && !regReceiptUrl) {
       errs.receipt = 'Додай скриншот оплати';
@@ -2439,12 +2440,14 @@ function MiniAppContent() {
                 ))}
 
                 {/* Fee payment choices */}
-                {selectedEvent.feeAmount && Number(selectedEvent.feeAmount) > 0 && (
+                {(Number(selectedEvent.feeAmount ?? 0) > 0 ||
+                  Number(selectedEvent.feeAtEventAmount ?? 0) > 0) && (
                   <div className="space-y-2 pt-2 border-t border-border">
                     <label className="text-sm font-semibold text-fg">
                       Оплата благодійного внеску
                     </label>
                     <div className="grid grid-cols-2 gap-2.5">
+                      {Number(selectedEvent.feeAmount ?? 0) > 0 && (
                       <button
                         type="button"
                         onClick={() => setRegPayment('DONATED')}
@@ -2454,8 +2457,10 @@ function MiniAppContent() {
                             : 'border-border bg-bg/50 text-muted'
                         }`}
                       >
-                        Онлайн зараз
+                        Онлайн зараз · {Number(selectedEvent.feeAmount)} грн
                       </button>
+                      )}
+                      {Number(selectedEvent.feeAtEventAmount ?? 0) > 0 && (
                       <button
                         type="button"
                         onClick={() => setRegPayment('AT_EVENT')}
@@ -2465,8 +2470,9 @@ function MiniAppContent() {
                             : 'border-border bg-bg/50 text-muted'
                         }`}
                       >
-                        На вході
+                        На вході · {Number(selectedEvent.feeAtEventAmount)} грн
                       </button>
+                      )}
                     </div>
                     {regErrors.payment && (
                       <span className="text-xs text-red-400">

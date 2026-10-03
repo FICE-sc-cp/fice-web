@@ -33,6 +33,8 @@ import {
   withRegistrationState,
 } from './event-timing';
 import { createRegistrationGuarded } from './registration-writer';
+import { paymentRuleViolation } from './payment-rules';
+import { ownUploadExists } from '../../upload/own-upload';
 import { AddEventPartnerDto } from './dto/add-event-partner.dto';
 import { CreateEventDto } from './dto/create-event.dto';
 import { CreateEventRegistrationDto } from './dto/create-event-registration.dto';
@@ -360,8 +362,22 @@ export class EventService {
       }
     }
 
+    const payment = dto.payment ?? RegistrationPayment.NONE;
+    const paymentProblem = paymentRuleViolation(
+      event,
+      payment,
+      !!dto.receiptUrl && ownUploadExists(dto.receiptUrl),
+    );
+    if (paymentProblem) throw new BadRequestException(paymentProblem);
+    const receiptUrl =
+      payment === RegistrationPayment.DONATED ? (dto.receiptUrl ?? null) : null;
+
     if (registrant.telegramUserId === undefined) {
-      return this.createPendingWebRegistration(eventId, dto, telegramTag);
+      return this.createPendingWebRegistration(
+        eventId,
+        { ...dto, payment, receiptUrl: receiptUrl ?? undefined },
+        telegramTag,
+      );
     }
     const telegramUserId = registrant.telegramUserId;
 
@@ -396,7 +412,6 @@ export class EventService {
       },
     });
 
-    const payment = dto.payment ?? RegistrationPayment.NONE;
     const paymentStatus =
       payment === RegistrationPayment.DONATED
         ? PaymentStatus.PENDING
@@ -413,7 +428,7 @@ export class EventService {
       source: dto.source ?? RegistrationSource.BOT,
       payment,
       paymentStatus,
-      receiptUrl: dto.receiptUrl ?? null,
+      receiptUrl,
       answers: answerData,
     });
     if (!result.created) {

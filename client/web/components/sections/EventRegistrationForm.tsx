@@ -47,7 +47,7 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
   const questions = event.questions ?? [];
   const fee = event.feeAmount != null ? Number(event.feeAmount) : 0;
   const feeAtEvent =
-    event.feeAtEventAmount != null ? Number(event.feeAtEventAmount) : fee;
+    event.feeAtEventAmount != null ? Number(event.feeAtEventAmount) : 0;
   const hasFee = fee > 0 || feeAtEvent > 0;
 
   const baseConfig: BaseQuestionsConfig = (event.baseQuestionsConfig as BaseQuestionsConfig) ?? {
@@ -577,22 +577,26 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
                   Спосіб оплати внеску
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setPayment('DONATED')}
-                    aria-pressed={payment === 'DONATED'}
-                    className={chip(payment === 'DONATED')}
-                  >
-                    Задонатив онлайн{fee > 0 ? ` · ${fee} грн` : ''}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPayment('AT_EVENT')}
-                    aria-pressed={payment === 'AT_EVENT'}
-                    className={chip(payment === 'AT_EVENT')}
-                  >
-                    Оплачу на заході{feeAtEvent > 0 ? ` · ${feeAtEvent} грн` : ''}
-                  </button>
+                  {fee > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setPayment('DONATED')}
+                      aria-pressed={payment === 'DONATED'}
+                      className={chip(payment === 'DONATED')}
+                    >
+                      Задонатив онлайн · {fee} грн
+                    </button>
+                  )}
+                  {feeAtEvent > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setPayment('AT_EVENT')}
+                      aria-pressed={payment === 'AT_EVENT'}
+                      className={chip(payment === 'AT_EVENT')}
+                    >
+                      Оплачу на заході · {feeAtEvent} грн
+                    </button>
+                  )}
                 </div>
 
                 {payment === 'DONATED' && (

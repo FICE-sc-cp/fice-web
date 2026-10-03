@@ -135,6 +135,32 @@ describe('EventService.register identity', () => {
     );
   });
 
+  describe('payment rules', () => {
+    beforeEach(() => {
+      prisma.event.findUnique.mockResolvedValue({
+        ...EVENT,
+        feeAmount: '150.00',
+        feeAtEventAmount: null,
+      });
+    });
+
+    it('refuses NONE for a paid event', async () => {
+      await expect(
+        service.register('e1', dto({ payment: 'NONE' })),
+      ).rejects.toThrow('оберіть спосіб оплати');
+      expect(prisma.pendingWebRegistration.create).not.toHaveBeenCalled();
+    });
+
+    it('refuses DONATED with an external receipt URL', async () => {
+      await expect(
+        service.register(
+          'e1',
+          dto({ payment: 'DONATED', receiptUrl: 'https://evil.example/r.jpg' }),
+        ),
+      ).rejects.toThrow('квитанції');
+    });
+  });
+
   describe('Mini App (validated initData)', () => {
     beforeEach(() => {
       resolveUser.mockReturnValue({
