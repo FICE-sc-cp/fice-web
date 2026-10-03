@@ -26,6 +26,13 @@ import {
   PublicUploadQuotaInterceptor,
 } from './public-upload-quota.interceptor';
 import { PublicUploadService } from './public-upload.service';
+import {
+  ADMIN_IMAGE_PROFILE,
+  ImageProfile,
+  isProcessableImage,
+  PUBLIC_IMAGE_PROFILE,
+  reencodeImage,
+} from './image-processing';
 
 const ALLOWED_MIME_EXTENSIONS: Record<string, string[]> = {
   'image/jpeg': ['.jpg', '.jpeg'],
@@ -131,6 +138,27 @@ function toResult(file?: Express.Multer.File) {
   };
 }
 
+async function processUpload(
+  profile: ImageProfile,
+  file?: Express.Multer.File,
+): Promise<{ filename: string; url: string; size: number }> {
+  const result = toResult(file);
+  const uploaded = file!;
+  const ext = extname(uploaded.filename).toLowerCase();
+  if (!isProcessableImage(ext)) return { ...result, size: uploaded.size };
+  try {
+    const size = await reencodeImage(uploaded.path, ext, profile);
+    return { ...result, size };
+  } catch {
+    try {
+      unlinkSync(uploaded.path);
+    } catch {}
+    throw new BadRequestException(
+      'Не вдалося обробити зображення. Спробуйте інший файл.',
+    );
+  }
+}
+
 const fileBody = {
   schema: {
     type: 'object',
@@ -149,8 +177,9 @@ export class UploadController {
   @ApiOperation({ summary: 'Upload an image and get its URL (admin)' })
   @ApiBody(fileBody)
   @UseInterceptors(imageOrPdfUpload)
-  upload(@UploadedFile() file?: Express.Multer.File) {
-    return toResult(file);
+  async upload(@UploadedFile() file?: Express.Multer.File) {
+    const { filename, url } = await processUpload(ADMIN_IMAGE_PROFILE, file);
+    return { filename, url };
   }
 
   @Post('public')
@@ -167,12 +196,11 @@ export class UploadController {
     @Req() req: Request,
     @UploadedFile() file?: Express.Multer.File,
   ) {
-    const result = toResult(file);
-    await this.publicUploads.record(
-      result.filename,
-      file!.size,
-      clientIpHash(req),
+    const { filename, url, size } = await processUpload(
+      PUBLIC_IMAGE_PROFILE,
+      file,
     );
-    return result;
+    await this.publicUploads.record(filename, size, clientIpHash(req));
+    return { filename, url };
   }
 }
