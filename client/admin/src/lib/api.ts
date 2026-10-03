@@ -1,7 +1,7 @@
 import { getInitData } from './auth';
 import { ApiError, errorText } from './errors';
 
-const BASE = '/api-proxy';
+const BASE = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/api-proxy`;
 
 export interface Paginated<T> {
   items: T[];
