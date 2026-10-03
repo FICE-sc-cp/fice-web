@@ -23,6 +23,7 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Glow } from '@/components/ui/Glow';
 import { cn } from '@/lib/utils';
 import { USER_BOT_USERNAME } from '@/lib/bot';
+import { baseQuestionsOf, choiceOptions } from '@/lib/registrationConfig';
 
 function getAgeInfo(birthDate?: string | null) {
   if (!birthDate) return null;
@@ -89,6 +90,7 @@ function MiniAppContent() {
   const [votingData, setVotingData] = useState<PublicVoting | null>(null);
   const [isLoadingVoting, setIsLoadingVoting] = useState(false);
   const [votingError, setVotingError] = useState<string | null>(null);
+  const [voteActionError, setVoteActionError] = useState<string | null>(null);
   const [isVotingSubmitting, setIsVotingSubmitting] = useState(false);
 
   // Organizer Check-In State
@@ -601,6 +603,7 @@ function MiniAppContent() {
     const tgId = user?.id ? String(user.id) : undefined;
     setIsLoadingVoting(true);
     setVotingError(null);
+    setVoteActionError(null);
     fice
       .publicVoting(activeVotingId, initData, tgId)
       .then((v) => setVotingData(v))
@@ -613,7 +616,7 @@ function MiniAppContent() {
     if (!activeVotingId) return;
     haptic('medium');
     setIsVotingSubmitting(true);
-    setVotingError(null);
+    setVoteActionError(null);
     try {
       const tgId = user?.id ? String(user.id) : undefined;
       await fice.castVote(activeVotingId, candidateId, initData, tgId);
@@ -623,7 +626,7 @@ function MiniAppContent() {
       setVotingData(v);
     } catch (err: unknown) {
       hapticNotify('error');
-      setVotingError(
+      setVoteActionError(
         err instanceof Error ? err.message : 'Помилка при голосуванні',
       );
     } finally {
@@ -771,11 +774,23 @@ function MiniAppContent() {
     if (!selectedEvent) return;
     setRegSubmitError(null);
 
+    const base = baseQuestionsOf(selectedEvent);
+    const askName = base.fullName?.enabled !== false;
+    const askGroup = base.group?.enabled !== false;
+    const askBirthDate = base.birthDate?.enabled !== false;
+    const askPhone = base.phone?.enabled === true;
+
     const errs: Record<string, string> = {};
-    if (!regFullName.trim()) errs.fullName = 'Вкажи ПІБ';
+    if (askName && base.fullName?.required !== false && !regFullName.trim())
+      errs.fullName = 'Вкажи ПІБ';
     if (!regTelegram.trim())
       errs.telegram = 'Встанови username у налаштуваннях Telegram';
-    if (!regGroup.trim()) errs.group = 'Вкажи академічну групу';
+    if (askGroup && base.group?.required !== false && !regGroup.trim())
+      errs.group = 'Вкажи академічну групу';
+    if (askBirthDate && base.birthDate?.required && !regBirthDate)
+      errs.birthDate = 'Вкажи дату народження';
+    if (askPhone && base.phone?.required && !regPhone.trim())
+      errs.phone = 'Вкажи номер телефону';
 
     const hasFee =
       Number(selectedEvent.feeAmount ?? 0) > 0 ||
@@ -806,17 +821,17 @@ function MiniAppContent() {
     setRegSubmitting(true);
     try {
       const tgId = user?.id ? String(user.id) : undefined;
-      await fice.registerEvent(
+      const res = await fice.registerEvent(
         selectedEvent.id,
         {
-          fullName: regFullName.trim(),
+          fullName: (askName && regFullName.trim()) || 'Учасник',
           telegramTag: `@${regTelegram.trim().replace(/^@+/, '')}`,
-          group: regGroup.trim(),
-          birthDate: regBirthDate || undefined,
+          group: (askGroup && regGroup.trim()) || 'ФІОТ',
+          birthDate: (askBirthDate && regBirthDate) || undefined,
           payment: hasFee ? (regPayment as RegistrationPayment) : 'NONE',
           receiptUrl: regReceiptUrl ?? undefined,
           telegramUserId: tgId,
-          phoneNumber: regPhone.trim() || undefined,
+          phoneNumber: (askPhone && regPhone.trim()) || undefined,
           saveProfile: regSaveProfile,
           answers: questions
             .map((q) => ({
@@ -827,6 +842,14 @@ function MiniAppContent() {
         },
         initData,
       );
+
+      if (res.requiresBotStart) {
+        hapticNotify('warning');
+        setRegSubmitError(
+          'Не вдалося підтвердити твій Telegram-акаунт. Закрий і знову відкрий додаток через бота та спробуй ще раз.',
+        );
+        return;
+      }
 
       hapticNotify('success');
       setRegSuccess(true);
@@ -1028,6 +1051,11 @@ function MiniAppContent() {
                 </div>
               ) : votingData ? (
                 <div className="space-y-4">
+                  {voteActionError && (
+                    <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-400">
+                      {voteActionError}
+                    </div>
+                  )}
                   {votingData.description && (
                     <p className="text-sm text-muted whitespace-pre-line">
                       {votingData.description}
@@ -2234,8 +2262,20 @@ function MiniAppContent() {
                             Ви зареєстровані
                           </span>
                         </div>
-                        <p className="text-xs text-muted">
-                          Ваша реєстрація дійсна для входу
+                        <p
+                          className={`text-xs ${
+                            existingReg.paymentStatus === 'REJECTED'
+                              ? 'text-red-400 font-bold'
+                              : existingReg.paymentStatus === 'PENDING'
+                                ? 'text-amber-300'
+                                : 'text-muted'
+                          }`}
+                        >
+                          {existingReg.paymentStatus === 'REJECTED'
+                            ? 'Оплату відхилено — реєстрація поки не дійсна для входу'
+                            : existingReg.paymentStatus === 'PENDING'
+                              ? 'Оплата на перевірці — квиток прийде після підтвердження'
+                              : 'Ваша реєстрація дійсна для входу'}
                         </p>
                       </div>
                     </div>
@@ -2384,24 +2424,28 @@ function MiniAppContent() {
                   </p>
                 </div>
 
-                <Input
-                  label="ПІБ"
-                  placeholder="Шевченко Тарас Григорович"
-                  value={regFullName}
-                  onChange={(e) => setRegFullName(e.target.value)}
-                  error={regErrors.fullName}
-                  required
-                />
+                {baseQuestionsOf(selectedEvent).fullName?.enabled !== false && (
+                  <Input
+                    label={baseQuestionsOf(selectedEvent).fullName?.label || 'ПІБ'}
+                    placeholder="Шевченко Тарас Григорович"
+                    value={regFullName}
+                    onChange={(e) => setRegFullName(e.target.value)}
+                    error={regErrors.fullName}
+                    required={baseQuestionsOf(selectedEvent).fullName?.required !== false}
+                  />
+                )}
 
                 <div className="grid grid-cols-2 gap-2.5">
-                  <Input
-                    label="Група"
-                    placeholder="ІП-31"
-                    value={regGroup}
-                    onChange={(e) => setRegGroup(e.target.value)}
-                    error={regErrors.group}
-                    required
-                  />
+                  {baseQuestionsOf(selectedEvent).group?.enabled !== false && (
+                    <Input
+                      label={baseQuestionsOf(selectedEvent).group?.label || 'Група'}
+                      placeholder="ІП-31"
+                      value={regGroup}
+                      onChange={(e) => setRegGroup(e.target.value)}
+                      error={regErrors.group}
+                      required={baseQuestionsOf(selectedEvent).group?.required !== false}
+                    />
+                  )}
                   <Input
                     label="Telegram"
                     placeholder="@username"
@@ -2413,25 +2457,63 @@ function MiniAppContent() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-2.5">
-                  <Input
-                    label="Дата народження"
-                    type="date"
-                    value={regBirthDate}
-                    onChange={(e) => setRegBirthDate(e.target.value)}
-                  />
-                  <Input
-                    label="Номер телефону"
-                    type="tel"
-                    placeholder="+380..."
-                    value={regPhone}
-                    onChange={(e) => setRegPhone(e.target.value)}
-                  />
+                  {baseQuestionsOf(selectedEvent).birthDate?.enabled !== false && (
+                    <Input
+                      label={baseQuestionsOf(selectedEvent).birthDate?.label || 'Дата народження'}
+                      type="date"
+                      value={regBirthDate}
+                      onChange={(e) => setRegBirthDate(e.target.value)}
+                      error={regErrors.birthDate}
+                      required={!!baseQuestionsOf(selectedEvent).birthDate?.required}
+                    />
+                  )}
+                  {baseQuestionsOf(selectedEvent).phone?.enabled === true && (
+                    <Input
+                      label={baseQuestionsOf(selectedEvent).phone?.label || 'Номер телефону'}
+                      type="tel"
+                      placeholder="+380..."
+                      value={regPhone}
+                      onChange={(e) => setRegPhone(e.target.value)}
+                      error={regErrors.phone}
+                      required={!!baseQuestionsOf(selectedEvent).phone?.required}
+                    />
+                  )}
                 </div>
 
                 {/* Custom event questions */}
                 {(selectedEvent.questions ?? []).map((q) => (
                   <div key={q.id}>
-                    {q.type === 'LONG_TEXT' ? (
+                    {choiceOptions(q) ? (
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-semibold text-muted">
+                          {q.label}
+                          {q.required ? ' *' : ''}
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {choiceOptions(q)!.map((opt) => (
+                            <button
+                              key={opt}
+                              type="button"
+                              onClick={() =>
+                                setRegAnswers((prev) => ({ ...prev, [q.id]: opt }))
+                              }
+                              className={`rounded-xl border px-3 py-1.5 text-xs font-bold transition-all ${
+                                regAnswers[q.id] === opt
+                                  ? 'border-brand-cyan bg-brand-cyan/15 text-brand-cyan'
+                                  : 'border-border bg-bg/50 text-muted'
+                              }`}
+                            >
+                              {opt}
+                            </button>
+                          ))}
+                        </div>
+                        {regErrors[`q_${q.id}`] && (
+                          <span className="text-xs text-red-400">
+                            {regErrors[`q_${q.id}`]}
+                          </span>
+                        )}
+                      </div>
+                    ) : q.type === 'LONG_TEXT' ? (
                       <Textarea
                         label={q.label}
                         value={regAnswers[q.id] || ''}

@@ -46,6 +46,8 @@ export interface TelegramUser {
   username?: string;
 }
 
+let activeBackHandler: (() => void) | null = null;
+
 export function useTelegram() {
   const [ready, setReady] = useState(false);
   const [initData, setInitData] = useState<string>('');
@@ -123,8 +125,10 @@ export function useTelegram() {
     try {
       const tg = window.Telegram?.WebApp;
       if (tg?.BackButton) {
-        tg.BackButton.show();
+        if (activeBackHandler) tg.BackButton.offClick(activeBackHandler);
+        activeBackHandler = cb;
         tg.BackButton.onClick(cb);
+        tg.BackButton.show();
       }
     } catch {}
   };
@@ -133,6 +137,8 @@ export function useTelegram() {
     try {
       const tg = window.Telegram?.WebApp;
       if (tg?.BackButton) {
+        if (activeBackHandler) tg.BackButton.offClick(activeBackHandler);
+        activeBackHandler = null;
         tg.BackButton.hide();
       }
     } catch {}

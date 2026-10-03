@@ -13,22 +13,9 @@ import {
   type RegistrationPayment,
 } from '@/lib/api';
 import { normalizeKpiGroup, parseKpiGroup } from '@/lib/kpi-groups';
+import { baseQuestionsOf, choiceOptions } from '@/lib/registrationConfig';
 
 const isUrl = (s: string) => /^https?:\/\//i.test(s.trim());
-
-interface BaseQuestionConfig {
-  enabled: boolean;
-  required: boolean;
-  label: string;
-}
-
-interface BaseQuestionsConfig {
-  fullName?: BaseQuestionConfig;
-  telegramTag?: BaseQuestionConfig;
-  group?: BaseQuestionConfig;
-  birthDate?: BaseQuestionConfig;
-  phone?: BaseQuestionConfig;
-}
 
 function TelegramIcon({ className = 'size-5' }: { className?: string }) {
   return (
@@ -50,13 +37,7 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
     event.feeAtEventAmount != null ? Number(event.feeAtEventAmount) : 0;
   const hasFee = fee > 0 || feeAtEvent > 0;
 
-  const baseConfig: BaseQuestionsConfig = (event.baseQuestionsConfig as BaseQuestionsConfig) ?? {
-    fullName: { enabled: true, required: true, label: 'ПІБ' },
-    telegramTag: { enabled: true, required: true, label: 'Telegram-тег' },
-    group: { enabled: true, required: true, label: 'Академічна група' },
-    birthDate: { enabled: true, required: false, label: 'Дата народження' },
-    phone: { enabled: false, required: false, label: 'Номер телефону' },
-  };
+  const baseConfig = baseQuestionsOf(event);
 
   const [lastName, setLastName] = useState('');
   const [firstName, setFirstName] = useState('');
@@ -536,7 +517,7 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
                 );
               }
               if (q.type === 'SINGLE_CHOICE' || q.type === 'YES_NO') {
-                const opts = q.type === 'YES_NO' ? ['Так', 'Ні'] : q.options;
+                const opts = choiceOptions(q) ?? [];
                 return (
                   <div key={q.id} className="flex flex-col gap-2">
                     <label className="text-sm font-semibold text-muted">{q.label}</label>
