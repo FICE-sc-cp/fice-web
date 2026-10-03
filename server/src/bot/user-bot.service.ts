@@ -49,9 +49,6 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
     const userUrl = this.configService.get<string>('USER_MINI_APP_URL');
     if (userUrl) return userUrl.replace(/\/$/, '');
 
-    const miniAppUrl = this.configService.get<string>('MINI_APP_URL');
-    if (miniAppUrl) return `${miniAppUrl.replace(/\/$/, '')}/app`;
-
     const webUrl = this.configService.get<string>('PUBLIC_WEB_URL');
     if (webUrl) return `${webUrl.replace(/\/$/, '')}/app`;
 
