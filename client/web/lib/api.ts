@@ -467,6 +467,15 @@ export const fice = {
     ),
   votingScreen: (votingId: string) =>
     request<VotingScreenData>(`/voting/${votingId}/screen`),
+  getCheckInEvents: (initData?: string, tgUserId?: string, tgTag?: string) => {
+    const params = new URLSearchParams();
+    if (tgUserId) params.set('tgUserId', tgUserId);
+    if (tgTag) params.set('tgTag', tgTag);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return request<CheckInEventSummary[]>(`/event/checkin/events${qs}`, {
+      headers: initData ? { 'x-telegram-init-data': initData } : undefined,
+    });
+  },
   getCheckInAccess: (
     eventId: string,
     initData?: string,
@@ -558,6 +567,16 @@ export const fice = {
     });
   },
 };
+
+export interface CheckInEventSummary {
+  id: string;
+  name: string;
+  date: string;
+  hasTime?: boolean;
+  location: string | null;
+  photoUrl: string | null;
+  isAdmin: boolean;
+}
 
 export interface CheckInItem {
   id: string;

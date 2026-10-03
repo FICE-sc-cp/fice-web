@@ -8,6 +8,7 @@ import {
   fice,
   mediaUrl,
   type BotUserProfile,
+  type CheckInEventSummary,
   type CheckInItem,
   type EventItem,
   type MyEventRegistration,
@@ -92,6 +93,7 @@ function MiniAppContent() {
 
   // Organizer Check-In State
   const [canCheckIn, setCanCheckIn] = useState(false);
+  const [checkInEvents, setCheckInEvents] = useState<CheckInEventSummary[]>([]);
   const [checkInModalOpen, setCheckInModalOpen] = useState(false);
   const [checkInList, setCheckInList] = useState<CheckInItem[]>([]);
   const [serverCheckInStats, setServerCheckInStats] = useState<{
@@ -282,6 +284,26 @@ function MiniAppContent() {
       .then((votings) => setEventVotings(votings))
       .catch(() => setEventVotings([]));
   }, [selectedEventId, profile, user]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const tgId = String(user.id);
+    const tgTag = user.username ? `@${user.username}` : undefined;
+    fice
+      .getCheckInEvents(initData, tgId, tgTag)
+      .then((list) => {
+        const now = Date.now();
+        setCheckInEvents(
+          list
+            .filter((ev) => {
+              const at = new Date(ev.date).getTime();
+              return at >= now - 36 * 3600_000 && at <= now + 48 * 3600_000;
+            })
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
+        );
+      })
+      .catch(() => setCheckInEvents([]));
+  }, [user, initData]);
 
   // Verify organizer check-in access when selectedEventId changes
   useEffect(() => {
@@ -2590,6 +2612,36 @@ function MiniAppContent() {
         {/* ================= VIEW: EVENTS CATALOG TAB ================= */}
         {!selectedEventId && activeTab === 'events' && (
           <div className="space-y-3">
+            {checkInEvents.length > 0 && (
+              <div className="rounded-3xl border border-brand-green/30 bg-brand-green/5 p-3 space-y-2">
+                <h2 className="px-1 text-xs font-black uppercase tracking-wider text-brand-green">
+                  Відмітка учасників
+                </h2>
+                {checkInEvents.map((ev) => (
+                  <button
+                    key={ev.id}
+                    type="button"
+                    onClick={() => {
+                      haptic('light');
+                      setSelectedEventId(ev.id);
+                    }}
+                    className="flex w-full items-center justify-between gap-3 rounded-2xl border border-border bg-surface px-3 py-2.5 text-left transition-colors hover:border-brand-green/50"
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-bold text-fg">
+                        {ev.name}
+                      </span>
+                      <span className="block text-xs text-muted">
+                        {fmtDate(ev.date, ev.hasTime, null)}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-xs font-bold text-brand-green">
+                      Відкрити →
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="flex justify-between items-center px-1">
               <h2 className="text-base sm:text-lg font-black uppercase tracking-wider text-muted">
                 Майбутні події
