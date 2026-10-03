@@ -1,3 +1,5 @@
+import { cache } from 'react';
+
 // Base URL for data fetches. On the server (SSR/RSC) reach the backend via the
 // internal docker network name (`INTERNAL_API_URL`, e.g. http://server:3001);
 // in the browser go through the same-origin /api-proxy rewrite.
@@ -203,8 +205,10 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${apiBase()}${path}`, { cache: 'no-store', ...init });
+const SERVER_FETCH_TIMEOUT_MS = 8_000;
+
+async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, { cache: 'no-store', ...init });
   if (!res.ok) {
     let msg = `Помилка запиту (${res.status})`;
     try {
@@ -216,6 +220,22 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new ApiError(msg, res.status);
   }
   return res.json() as Promise<T>;
+}
+
+const serverGet = cache((url: string) =>
+  fetchJson<unknown>(url, {
+    signal: AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS),
+  }),
+);
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const url = `${apiBase()}${path}`;
+  if (typeof window !== 'undefined') return fetchJson<T>(url, init);
+  if (!init) return serverGet(url) as Promise<T>;
+  return fetchJson<T>(url, {
+    ...init,
+    signal: init.signal ?? AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS),
+  });
 }
 
 export function mediaUrl(path: string | null | undefined): string | null {
