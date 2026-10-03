@@ -14,6 +14,7 @@ import {
 } from '@/lib/api';
 import { normalizeKpiGroup, parseKpiGroup } from '@/lib/kpi-groups';
 import { baseQuestionsOf, choiceOptions } from '@/lib/registrationConfig';
+import { MAX_UPLOAD_MB, RECEIPT_ACCEPT, uploadProblem } from '@/lib/uploads';
 
 const isUrl = (s: string) => /^https?:\/\//i.test(s.trim());
 
@@ -80,13 +81,22 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
   const onReceiptChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
+    const problem = uploadProblem(f, { allowPdf: true });
+    if (problem) {
+      setErrors((prev) => ({ ...prev, receipt: problem }));
+      e.target.value = '';
+      return;
+    }
     setUploading(true);
     setErrors((prev) => ({ ...prev, receipt: '' }));
     try {
       const { url } = await fice.uploadReceipt(f);
       setReceiptUrl(url);
-    } catch {
-      setErrors((prev) => ({ ...prev, receipt: 'Не вдалося завантажити файл' }));
+    } catch (err) {
+      setErrors((prev) => ({
+        ...prev,
+        receipt: err instanceof Error ? err.message : 'Не вдалося завантажити файл',
+      }));
     } finally {
       setUploading(false);
     }
@@ -599,7 +609,7 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
                     <input
                       ref={fileRef}
                       type="file"
-                      accept="image/*,application/pdf,.pdf"
+                      accept={RECEIPT_ACCEPT}
                       className="hidden"
                       onChange={onReceiptChange}
                     />
@@ -620,7 +630,7 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
                         <>
                           <span>⬆️ Додати скриншот оплати або PDF квитанцію</span>
                           <span className="text-xs font-normal text-muted/70">
-                            Формати: JPG, PNG, PDF (до 10 МБ)
+                            Формати: JPG, PNG, WEBP, PDF (до {MAX_UPLOAD_MB} МБ)
                           </span>
                         </>
                       )}

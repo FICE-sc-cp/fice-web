@@ -24,6 +24,12 @@ import { Glow } from '@/components/ui/Glow';
 import { cn } from '@/lib/utils';
 import { USER_BOT_USERNAME } from '@/lib/bot';
 import { baseQuestionsOf, choiceOptions } from '@/lib/registrationConfig';
+import {
+  MAX_UPLOAD_MB,
+  PHOTO_ACCEPT,
+  RECEIPT_ACCEPT,
+  uploadProblem,
+} from '@/lib/uploads';
 
 function getAgeInfo(birthDate?: string | null) {
   if (!birthDate) return null;
@@ -656,14 +662,21 @@ function MiniAppContent() {
   const handleCostumePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const problem = uploadProblem(file, { allowPdf: false });
+    if (problem) {
+      setCostumeError(problem);
+      e.target.value = '';
+      hapticNotify('error');
+      return;
+    }
     setCostumeUploading(true);
     setCostumeError(null);
     try {
       const { url } = await fice.uploadReceipt(file);
       setCostumePhotoUrl(url);
       hapticNotify('success');
-    } catch {
-      setCostumeError('Не вдалося завантажити фото');
+    } catch (err) {
+      setCostumeError(err instanceof Error ? err.message : 'Не вдалося завантажити фото');
       hapticNotify('error');
     } finally {
       setCostumeUploading(false);
@@ -756,12 +769,24 @@ function MiniAppContent() {
   const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const problem = uploadProblem(file, { allowPdf: true });
+    if (problem) {
+      setRegErrors((prev) => ({ ...prev, receipt: problem }));
+      e.target.value = '';
+      hapticNotify('error');
+      return;
+    }
     setRegUploading(true);
+    setRegErrors((prev) => ({ ...prev, receipt: '' }));
     try {
       const { url } = await fice.uploadReceipt(file);
       setRegReceiptUrl(url);
       hapticNotify('success');
-    } catch {
+    } catch (err) {
+      setRegErrors((prev) => ({
+        ...prev,
+        receipt: err instanceof Error ? err.message : 'Не вдалося завантажити файл',
+      }));
       hapticNotify('error');
     } finally {
       setRegUploading(false);
@@ -1926,7 +1951,7 @@ function MiniAppContent() {
                           <span>Змінити фото</span>
                           <input
                             type="file"
-                            accept="image/*"
+                            accept={PHOTO_ACCEPT}
                             onChange={handleCostumePhotoUpload}
                             className="hidden"
                           />
@@ -1952,7 +1977,7 @@ function MiniAppContent() {
                         )}
                         <input
                           type="file"
-                          accept="image/*"
+                          accept={PHOTO_ACCEPT}
                           onChange={handleCostumePhotoUpload}
                           disabled={costumeUploading}
                           className="hidden"
@@ -2593,11 +2618,11 @@ function MiniAppContent() {
                           {selectedEvent.feeRequisites || 'Уточнюйте у організаторів'}
                         </div>
                         <label className="block text-xs font-semibold text-fg pt-1">
-                          Завантажити квитанцію або скриншот (PDF, зображення):
+                          Завантажити квитанцію або скриншот (JPG, PNG, WEBP, PDF, до {MAX_UPLOAD_MB} МБ):
                         </label>
                         <input
                           type="file"
-                          accept="image/*,application/pdf"
+                          accept={RECEIPT_ACCEPT}
                           onChange={handleReceiptUpload}
                           className="text-xs text-muted file:mr-2 file:py-1 file:px-3 file:rounded-xl file:border-0 file:bg-surface file:text-xs file:font-semibold file:text-fg"
                         />

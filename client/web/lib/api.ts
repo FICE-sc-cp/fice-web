@@ -330,7 +330,21 @@ export const fice = {
       method: 'POST',
       body: form,
     });
-    if (!res.ok) throw new Error(`Upload failed ${res.status}`);
+    if (!res.ok) {
+      let msg =
+        res.status === 413
+          ? 'Файл завеликий: максимум 5 МБ.'
+          : res.status === 429
+            ? 'Забагато завантажень. Спробуйте трохи згодом.'
+            : `Не вдалося завантажити файл (${res.status})`;
+      try {
+        const data = await res.json();
+        if (data?.message) {
+          msg = Array.isArray(data.message) ? data.message.join(', ') : data.message;
+        }
+      } catch {}
+      throw new ApiError(msg, res.status);
+    }
     return res.json() as Promise<{ url: string }>;
   },
   fundraisers: (limit = 6, page = 1, status?: FundraiserStatus) =>
