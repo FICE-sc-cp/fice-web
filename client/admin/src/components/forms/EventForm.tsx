@@ -746,6 +746,7 @@ export function EventForm({
                 { key: 'phone', defLabel: 'Номер телефону', defaultReq: false },
               ].map(({ key, defLabel }) => {
                 const cfg = baseQuestions[key as keyof BaseQuestionsConfig];
+                const locked = key === 'telegramTag';
                 return (
                   <div
                     key={key}
@@ -754,7 +755,13 @@ export function EventForm({
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <input
                         type="checkbox"
-                        checked={cfg.enabled}
+                        checked={locked || cfg.enabled}
+                        disabled={locked}
+                        title={
+                          locked
+                            ? 'Telegram-тег потрібен завжди: реєстрацію з сайту підтверджують через бота'
+                            : undefined
+                        }
                         onChange={(e) =>
                           setBaseQuestions((prev) => ({
                             ...prev,
@@ -776,11 +783,12 @@ export function EventForm({
                         className="min-w-0 flex-1 bg-transparent text-sm font-medium text-fg outline-none border-b border-transparent focus:border-brand-cyan"
                       />
                     </div>
-                    {cfg.enabled && (
+                    {(locked || cfg.enabled) && (
                       <label className="flex items-center gap-2 text-xs text-muted shrink-0 pl-7 sm:pl-0 cursor-pointer">
                         <input
                           type="checkbox"
-                          checked={cfg.required}
+                          checked={locked || cfg.required}
+                          disabled={locked}
                           onChange={(e) =>
                             setBaseQuestions((prev) => ({
                               ...prev,

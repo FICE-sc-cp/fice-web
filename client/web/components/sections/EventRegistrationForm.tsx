@@ -102,17 +102,14 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
       if (!middleName.trim()) e.middleName = 'Вкажи по батькові';
     }
 
-    const tgCfg = baseConfig.telegramTag;
-    if (tgCfg?.enabled !== false && tgCfg?.required !== false) {
-      if (!telegram.trim()) {
-        e.telegram = 'Вкажи Telegram-тег';
-      } else {
-        const clean = telegram.trim().replace(/^@+/, '');
-        if (clean.length < 5 || clean.length > 32 || !/^[a-zA-Z0-9_]+$/.test(clean)) {
-          e.telegram = 'Telegram-тег: 5-32 символи (латиниця, цифри, _)';
-        } else if (!/[a-zA-Z]/.test(clean)) {
-          e.telegram = 'Telegram-тег повинен містити хоча б одну літеру';
-        }
+    if (!telegram.trim()) {
+      e.telegram = 'Вкажи Telegram-тег';
+    } else {
+      const clean = telegram.trim().replace(/^@+/, '');
+      if (clean.length < 5 || clean.length > 32 || !/^[a-zA-Z0-9_]+$/.test(clean)) {
+        e.telegram = 'Telegram-тег: 5-32 символи (латиниця, цифри, _)';
+      } else if (!/[a-zA-Z]/.test(clean)) {
+        e.telegram = 'Telegram-тег повинен містити хоча б одну літеру';
       }
     }
 
@@ -449,33 +446,31 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
                 />
               )}
 
-              {baseConfig.telegramTag?.enabled !== false && (
-                <div className="flex w-full flex-col gap-1.5">
-                  <label className="text-sm font-semibold text-muted">
-                    {baseConfig.telegramTag?.label || 'Telegram-тег'}
-                  </label>
-                  <div
-                    className={cn(
-                      'flex items-center rounded-xl border bg-surface px-4 transition-colors focus-within:border-brand-cyan',
-                      errors.telegram ? 'border-brand-red' : 'border-border',
-                    )}
-                  >
-                    <span className="pr-1 font-bold text-subtle">@</span>
-                    <input
-                      type="text"
-                      placeholder="username"
-                      className="w-full bg-transparent py-3 text-fg outline-none placeholder:text-subtle"
-                      value={telegram}
-                      onChange={(e) => setTelegram(e.target.value)}
-                    />
-                  </div>
-                  {errors.telegram && (
-                    <span className="text-xs font-medium text-brand-red">
-                      {errors.telegram}
-                    </span>
+              <div className="flex w-full flex-col gap-1.5">
+                <label className="text-sm font-semibold text-muted">
+                  {baseConfig.telegramTag?.label || 'Telegram-тег'}
+                </label>
+                <div
+                  className={cn(
+                    'flex items-center rounded-xl border bg-surface px-4 transition-colors focus-within:border-brand-cyan',
+                    errors.telegram ? 'border-brand-red' : 'border-border',
                   )}
+                >
+                  <span className="pr-1 font-bold text-subtle">@</span>
+                  <input
+                    type="text"
+                    placeholder="username"
+                    className="w-full bg-transparent py-3 text-fg outline-none placeholder:text-subtle"
+                    value={telegram}
+                    onChange={(e) => setTelegram(e.target.value)}
+                  />
                 </div>
-              )}
+                {errors.telegram && (
+                  <span className="text-xs font-medium text-brand-red">
+                    {errors.telegram}
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Birth Date & Phone */}
