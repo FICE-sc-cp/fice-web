@@ -86,6 +86,22 @@ describe('VotingService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
+    it('only counts votes for approved candidates', async () => {
+      prisma.eventVoting.findUnique.mockResolvedValue({
+        id: votingId,
+        status: VotingStatus.ACTIVE,
+        allowChangeVote: false,
+      });
+      prisma.votingCandidate.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.castVote(votingId, telegramId, { candidateId }),
+      ).rejects.toThrow(NotFoundException);
+      expect(prisma.votingCandidate.findFirst).toHaveBeenCalledWith({
+        where: { id: candidateId, votingId, status: 'APPROVED' },
+      });
+    });
+
     it('rejects if user has already voted and allowChangeVote is false', async () => {
       prisma.eventVoting.findUnique.mockResolvedValue({
         id: votingId,

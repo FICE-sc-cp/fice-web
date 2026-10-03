@@ -556,7 +556,11 @@ export class VotingService {
     }
 
     const candidate = await this.prisma.votingCandidate.findFirst({
-      where: { id: dto.candidateId, votingId },
+      where: {
+        id: dto.candidateId,
+        votingId,
+        status: CandidateStatus.APPROVED,
+      },
     });
     if (!candidate) {
       throw new NotFoundException('Кандидата не знайдено в цьому голосуванні');
