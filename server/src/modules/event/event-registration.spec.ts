@@ -171,6 +171,17 @@ describe('EventService.register identity', () => {
       ).not.toContain('victim');
     });
 
+    it('checks for duplicates by exact tag and id, never with ILIKE', async () => {
+      await service.register('e1', dto(), 'init');
+
+      expect(prisma.eventRegistration.findFirst).toHaveBeenCalledWith({
+        where: {
+          eventId: 'e1',
+          OR: [{ telegramTag: '@attacker' }, { telegramUserId: 42n }],
+        },
+      });
+    });
+
     it('does not return the ticket code or the Telegram id', async () => {
       const result = await service.register('e1', dto(), 'init');
 

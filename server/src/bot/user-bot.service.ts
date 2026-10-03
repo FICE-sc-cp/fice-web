@@ -163,9 +163,7 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
                 eventId: pending.eventId,
                 OR: [
                   { telegramUserId: telegramId },
-                  {
-                    telegramTag: { equals: normalizedTag, mode: 'insensitive' },
-                  },
+                  { telegramTag: normalizedTag },
                 ],
               },
             });

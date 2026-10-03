@@ -356,10 +356,7 @@ export class EventService {
     const existingRegistration = await this.prisma.eventRegistration.findFirst({
       where: {
         eventId,
-        OR: [
-          { telegramTag: { equals: telegramTag, mode: 'insensitive' } },
-          { telegramUserId },
-        ],
+        OR: [{ telegramTag }, { telegramUserId }],
       },
     });
     if (existingRegistration) {

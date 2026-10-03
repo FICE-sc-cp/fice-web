@@ -118,4 +118,15 @@ describe('UserBotService /start reg_ confirmation', () => {
       data: { completed: true },
     });
   });
+
+  it('checks for an existing registration by exact tag, never with ILIKE', async () => {
+    await startHandler(ctxFrom({ username: 'Victim' }));
+
+    expect(prisma.eventRegistration.findFirst).toHaveBeenCalledWith({
+      where: {
+        eventId: 'e1',
+        OR: [{ telegramUserId: 4242n }, { telegramTag: '@victim' }],
+      },
+    });
+  });
 });
