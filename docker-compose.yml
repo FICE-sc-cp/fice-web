@@ -82,8 +82,6 @@ services:
       - "127.0.0.1:3000:3000"
     environment:
       TZ: Europe/Kyiv
-      NEXT_PUBLIC_API_URL: http://localhost:3001
-      NEXT_PUBLIC_WEB_URL: ${PUBLIC_WEB_URL:-http://localhost:3002}
       # The /api-proxy rewrite runs inside this container, so it must reach the
       # backend via the compose service name — `localhost` would be the admin
       # container itself.
@@ -97,14 +95,13 @@ services:
       dockerfile: Dockerfile
       args:
         BACKEND_URL: http://server:3001
+        NEXT_PUBLIC_USER_BOT_USERNAME: ${USER_BOT_USERNAME:-}
     container_name: fice-web
     restart: always
     ports:
       - "127.0.0.1:3002:3000"
     environment:
       TZ: Europe/Kyiv
-      # Public URL the browser uses (images, client-side calls).
-      NEXT_PUBLIC_API_URL: http://localhost:3001
       # Internal URL for server-side (SSR/RSC) data fetches on the compose network.
       INTERNAL_API_URL: http://server:3001
       BACKEND_URL: http://server:3001

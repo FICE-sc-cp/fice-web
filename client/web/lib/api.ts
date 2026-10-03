@@ -1,12 +1,9 @@
-// Public base URL — what the browser uses (e.g. building <img> src). Baked at build.
-const PUBLIC_API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
-
 // Base URL for data fetches. On the server (SSR/RSC) reach the backend via the
 // internal docker network name (`INTERNAL_API_URL`, e.g. http://server:3001);
-// in the browser fall back to the public URL.
+// in the browser go through the same-origin /api-proxy rewrite.
 function apiBase(): string {
   if (typeof window === 'undefined') {
-    return process.env.INTERNAL_API_URL ?? PUBLIC_API_URL;
+    return process.env.INTERNAL_API_URL ?? 'http://localhost:3001';
   }
   return '/api-proxy';
 }

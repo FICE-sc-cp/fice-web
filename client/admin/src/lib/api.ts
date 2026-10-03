@@ -413,6 +413,9 @@ export interface ChannelStatus {
   channelIdSet: boolean;
   botTokenSet: boolean;
   webUrlSet: boolean;
+  publicWebUrl: string;
+  botUsername: string | null;
+  appName: string;
 }
 
 export interface ChannelPostInput {

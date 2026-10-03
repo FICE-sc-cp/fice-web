@@ -25,7 +25,6 @@ export interface BroadcastPayload {
 export class UserBotService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(UserBotService.name);
   private bot?: Bot;
-  private botUsername?: string;
 
   constructor(
     private readonly configService: ConfigService,
@@ -40,9 +39,11 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
   }
 
   getUsername(): string | undefined {
-    return (
-      this.configService.get<string>('USER_BOT_USERNAME') || this.botUsername
-    );
+    const name = this.configService
+      .get<string>('USER_BOT_USERNAME')
+      ?.trim()
+      .replace(/^@/, '');
+    return name || undefined;
   }
 
   getMiniAppUrl(): string {
@@ -322,10 +323,18 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
       .start({
         allowed_updates: ['message', 'my_chat_member'],
         onStart: async (botInfo) => {
-          this.botUsername = botInfo.username;
           this.logger.log(
             `User Bot started successfully as @${botInfo.username}`,
           );
+          const configured = this.getUsername();
+          if (
+            configured &&
+            configured.toLowerCase() !== botInfo.username.toLowerCase()
+          ) {
+            this.logger.warn(
+              `USER_BOT_USERNAME is @${configured}, but USER_BOT_TOKEN belongs to @${botInfo.username}`,
+            );
+          }
 
           try {
             await this.bot?.api.setChatMenuButton({

@@ -52,7 +52,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         <p className="text-lg font-semibold text-fg">Сесію не підтверджено</p>
         <p>
           Не вдалося перевірити Telegram-сесію. Повністю закрий і знову відкрий
-          панель через кнопку бота (@fice_admin_bot).
+          панель через кнопку адмін-бота.
         </p>
         <p className="text-xs text-subtle">
           Деталі: {error instanceof Error ? error.message : 'невідома помилка'}

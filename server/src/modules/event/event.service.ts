@@ -4,6 +4,7 @@ import {
   GoneException,
   Injectable,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -418,7 +419,12 @@ export class EventService {
       });
 
       if (!botUser) {
-        // Create pending web registration with token
+        const botUsername = this.userBotService.getUsername();
+        if (!botUsername) {
+          throw new ServiceUnavailableException(
+            'Реєстрація через сайт тимчасово недоступна: бот не налаштований.',
+          );
+        }
         const token = randomUUID().replace(/-/g, '');
         const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
@@ -431,10 +437,6 @@ export class EventService {
             expiresAt,
           },
         });
-
-        const botUsername =
-          this.configService.get<string>('USER_BOT_USERNAME') ||
-          'fice_event_bot';
 
         return {
           requiresBotStart: true,
