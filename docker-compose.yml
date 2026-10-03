@@ -111,6 +111,25 @@ services:
     depends_on:
       - server
 
+  caddy:
+    image: caddy:2-alpine
+    container_name: fice-caddy
+    profiles: ["prod"]
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - admin
+
 volumes:
   fice_pg_data:
   fice_uploads:
+  caddy_data:
+  caddy_config:
