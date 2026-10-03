@@ -11,6 +11,7 @@ import * as QRCode from 'qrcode';
 import { PrismaService } from '../database/prisma.service';
 import { escapeHtml } from '../common/html';
 import { PollingStatus, PollingSupervisor } from './polling';
+import { errorMessage } from '../common/log-safe';
 import { UPLOAD_DIR } from '../upload/upload.constants';
 
 export interface BroadcastPayload {
@@ -106,7 +107,9 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
           },
         });
       } catch (err) {
-        this.logger.error('Failed to upsert BotUser on /start', err);
+        this.logger.error(
+          'Failed to upsert BotUser on /start: ' + errorMessage(err),
+        );
       }
 
       const match = ctx.match?.trim() ?? '';
@@ -274,8 +277,8 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
           }
         } catch (regErr) {
           this.logger.error(
-            'Failed to complete pending web registration on /start',
-            regErr,
+            'Failed to complete pending web registration on /start: ' +
+              errorMessage(regErr),
           );
         }
       } else if (match.startsWith('event_')) {
@@ -300,10 +303,7 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
           },
         });
       } catch (err) {
-        this.logger.warn(
-          'Failed to send /start reply: ' +
-            (err instanceof Error ? err.message : String(err)),
-        );
+        this.logger.warn('Failed to send /start reply: ' + errorMessage(err));
       }
     });
 
@@ -318,14 +318,15 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
           data: { isBlocked },
         });
       } catch (err) {
-        this.logger.warn('Failed to update bot user block status', err);
+        this.logger.warn(
+          'Failed to update bot user block status: ' + errorMessage(err),
+        );
       }
     });
 
     this.bot.catch((err) => {
       this.logger.error(
-        'Failed to handle Telegram update: ' +
-          (err.error instanceof Error ? err.error.message : String(err.error)),
+        'Failed to handle Telegram update: ' + errorMessage(err.error),
       );
     });
 
@@ -354,7 +355,9 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
             },
           });
         } catch (e) {
-          this.logger.warn('Failed to set chat menu button for user bot: ' + e);
+          this.logger.warn(
+            'Failed to set chat menu button for user bot: ' + errorMessage(e),
+          );
         }
       },
     });
@@ -484,7 +487,9 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
               .catch(() => {});
           }
         }
-        this.logger.warn(`Failed to send broadcast to ${chatIdNumber}: ${err}`);
+        this.logger.warn(
+          `Failed to send broadcast to ${chatIdNumber}: ${errorMessage(err)}`,
+        );
       }
 
       await new Promise((r) => setTimeout(r, 40));
@@ -535,7 +540,7 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
       return true;
     } catch (err) {
       this.logger.warn(
-        `Failed to send direct message to user ${chatIdNum}: ${err}`,
+        `Failed to send direct message to user ${chatIdNum}: ${errorMessage(err)}`,
       );
       return false;
     }
@@ -635,7 +640,7 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
       return true;
     } catch (err) {
       this.logger.error(
-        `Failed to send ticket to user ${telegramUserId}: ${err}`,
+        `Failed to send ticket to user ${telegramUserId}: ${errorMessage(err)}`,
       );
       return false;
     }

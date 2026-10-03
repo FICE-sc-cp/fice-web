@@ -1,5 +1,6 @@
 import type { Logger } from '@nestjs/common';
 import type { Bot, PollingOptions } from 'grammy';
+import { errorMessage } from '../common/log-safe';
 
 export type PollingStatus =
   | 'disabled'
@@ -26,8 +27,7 @@ export class PollingSupervisor {
     private readonly bot: PollableBot,
     private readonly logger: Pick<Logger, 'error'>,
     private readonly options: PollingOptions = {},
-    private readonly describe: (err: unknown) => string = (err) =>
-      err instanceof Error ? err.message : String(err),
+    private readonly describe: (err: unknown) => string = errorMessage,
     private readonly delays: number[] = RESTART_DELAYS_MS,
   ) {}
 

@@ -7,6 +7,7 @@ import { paginated, skipFor } from '../../common/pagination';
 import { ApplyPartnerDto } from './dto/apply-partner.dto';
 import { CreatePartnerDto } from './dto/create-partner.dto';
 import { UpdatePartnerDto } from './dto/update-partner.dto';
+import { errorMessage } from '../../common/log-safe';
 
 @Injectable()
 export class PartnerService {
@@ -32,7 +33,7 @@ export class PartnerService {
     });
 
     void this.notifyHeads(partner).catch((err) =>
-      this.logger.warn('Partner notification failed: ' + String(err)),
+      this.logger.warn('Partner notification failed: ' + errorMessage(err)),
     );
 
     return {
