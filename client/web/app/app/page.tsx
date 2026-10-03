@@ -254,9 +254,7 @@ function MiniAppContent() {
       })
       .catch(() => {});
 
-    if (user?.username && !regTelegram) {
-      setRegTelegram(`@${user.username}`);
-    }
+    setRegTelegram(user?.username ? `@${user.username}` : '');
   }, [user, initData]);
 
   // Load selected event details
@@ -753,7 +751,8 @@ function MiniAppContent() {
 
     const errs: Record<string, string> = {};
     if (!regFullName.trim()) errs.fullName = 'Вкажи ПІБ';
-    if (!regTelegram.trim()) errs.telegram = 'Вкажи Telegram';
+    if (!regTelegram.trim())
+      errs.telegram = 'Встанови username у налаштуваннях Telegram';
     if (!regGroup.trim()) errs.group = 'Вкажи академічну групу';
 
     const fee = selectedEvent.feeAmount ? Number(selectedEvent.feeAmount) : 0;
@@ -2380,7 +2379,7 @@ function MiniAppContent() {
                     label="Telegram"
                     placeholder="@username"
                     value={regTelegram}
-                    onChange={(e) => setRegTelegram(e.target.value)}
+                    readOnly
                     error={regErrors.telegram}
                     required
                   />

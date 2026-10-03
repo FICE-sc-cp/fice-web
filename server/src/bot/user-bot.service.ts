@@ -11,6 +11,11 @@ import * as QRCode from 'qrcode';
 import { PrismaService } from '../database/prisma.service';
 import { escapeHtml } from '../common/html';
 import { PollingStatus, PollingSupervisor } from './polling';
+import {
+  confirmingAccountMatches,
+  normalizeTelegramUsername,
+  telegramTagOf,
+} from '../modules/event/registration-identity';
 import { errorMessage } from '../common/log-safe';
 import { UPLOAD_DIR } from '../upload/upload.constants';
 
@@ -142,15 +147,15 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
               .replace(/^@+/, '');
 
             // Cross-account spoofing prevention: verify current Telegram user matches the tag in the form
-            if (!fromUsername || fromUsername !== pendingTag) {
+            if (!confirmingAccountMatches(pending.telegramTag, from.username)) {
               await ctx.reply(
                 `⚠️ Помилка авторизації реєстрації.\n\nУ формі на сайті було вказано Telegram-тег @${pendingTag}, але ви відкрили бота з облікового запису ${fromUsername ? '@' + fromUsername : 'без username'}.\n\nБудь ласка, відкрийте посилання з акаунту @${pendingTag} або заповніть форму заново зі своїм дійсним тегом.`,
               );
               return;
             }
 
-            const cleanTag = fromUsername;
-            const normalizedTag = `@${cleanTag}`;
+            const cleanTag = normalizeTelegramUsername(from.username)!;
+            const normalizedTag = telegramTagOf(cleanTag);
 
             // Check if already registered
             const existingReg = await this.prisma.eventRegistration.findFirst({

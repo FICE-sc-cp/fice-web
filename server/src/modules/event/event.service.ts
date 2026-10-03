@@ -20,6 +20,10 @@ import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { paginated, skipFor } from '../../common/pagination';
 import { parseKpiGroup } from '../../common/kpi-groups';
 import { escapeHtml } from '../../common/html';
+import {
+  normalizeTelegramUsername,
+  telegramTagOf,
+} from './registration-identity';
 import { AddEventPartnerDto } from './dto/add-event-partner.dto';
 import { CreateEventDto } from './dto/create-event.dto';
 import { CreateEventRegistrationDto } from './dto/create-event-registration.dto';
@@ -308,12 +312,12 @@ export class EventService {
     const answerMap = new Map(
       answers.map((a) => [a.questionId, (a.value ?? '').trim()]),
     );
-    const cleanTag = dto.telegramTag.trim().replace(/^@+/, '');
-    const normalizedTag = `@${cleanTag.toLowerCase()}`;
+    const registrant = this.resolveRegistrant(dto, initData);
+    const telegramTag = telegramTagOf(registrant.username);
 
     // 1. Check if user is blocked
     const blocked = await this.prisma.blockedUser.findUnique({
-      where: { telegramTag: normalizedTag },
+      where: { telegramTag },
     });
     if (blocked && blocked.isBlocked) {
       throw new ForbiddenException(
@@ -336,39 +340,6 @@ export class EventService {
       }
     }
 
-    // 2.1 Resolve authenticated Telegram user if initData is supplied
-    let telegramUserId: bigint | undefined;
-    if (initData) {
-      try {
-        const resolved = resolveValidatedTelegramUser(
-          this.configService,
-          initData,
-        );
-        telegramUserId = resolved.telegramId;
-      } catch {
-        // Untrusted initData; fallback to standard web registration
-      }
-    } else if (
-      dto.telegramUserId &&
-      this.configService.get<string>('AUTH_DISABLED') === 'true'
-    ) {
-      telegramUserId = BigInt(dto.telegramUserId);
-    }
-
-    // 2.5 Check if user is already registered for this event
-    const existingRegistration = await this.prisma.eventRegistration.findFirst({
-      where: {
-        eventId,
-        OR: [
-          { telegramTag: { equals: normalizedTag, mode: 'insensitive' } },
-          ...(telegramUserId ? [{ telegramUserId }] : []),
-        ],
-      },
-    });
-    if (existingRegistration) {
-      throw new BadRequestException('Ви вже зареєстровані на цей захід');
-    }
-
     for (const q of event.questions) {
       if (q.required && !answerMap.get(q.id)) {
         throw new BadRequestException(
@@ -377,99 +348,71 @@ export class EventService {
       }
     }
 
+    if (registrant.telegramUserId === undefined) {
+      return this.createPendingWebRegistration(eventId, dto, telegramTag);
+    }
+    const telegramUserId = registrant.telegramUserId;
+
+    const existingRegistration = await this.prisma.eventRegistration.findFirst({
+      where: {
+        eventId,
+        OR: [
+          { telegramTag: { equals: telegramTag, mode: 'insensitive' } },
+          { telegramUserId },
+        ],
+      },
+    });
+    if (existingRegistration) {
+      throw new BadRequestException('Ви вже зареєстровані на цей захід');
+    }
+
     const validIds = new Set(event.questions.map((q) => q.id));
     const answerData = answers
       .filter((a) => validIds.has(a.questionId) && (a.value ?? '').length > 0)
       .map((a) => ({ questionId: a.questionId, value: a.value }));
 
-    let botUserId: string | undefined;
-
-    if (telegramUserId) {
-      const user = await this.prisma.botUser.upsert({
-        where: { telegramId: telegramUserId },
-        create: {
-          telegramId: telegramUserId,
-          chatId: telegramUserId,
-          username: cleanTag || null,
-          fullName: dto.saveProfile ? dto.fullName : null,
-          group: dto.saveProfile ? dto.group : null,
-          birthDate: dto.saveProfile && dto.birthDate ? dto.birthDate : null,
-          phoneNumber:
-            dto.saveProfile && dto.phoneNumber ? dto.phoneNumber : null,
-          isBlocked: false,
-        },
-        update: {
-          username: cleanTag || undefined,
-          ...(dto.saveProfile
-            ? {
-                fullName: dto.fullName,
-                group: dto.group,
-                birthDate: dto.birthDate ?? undefined,
-                phoneNumber: dto.phoneNumber ?? undefined,
-              }
-            : {}),
-        },
-      });
-      botUserId = user.id;
-    } else {
-      // 3. Registration from website: check if user has started the bot
-      const botUser = await this.prisma.botUser.findFirst({
-        where: {
-          username: { equals: cleanTag, mode: 'insensitive' },
-        },
-      });
-
-      if (!botUser) {
-        const botUsername = this.userBotService.getUsername();
-        if (!botUsername) {
-          throw new ServiceUnavailableException(
-            'Реєстрація через сайт тимчасово недоступна: бот не налаштований.',
-          );
-        }
-        const token = randomUUID().replace(/-/g, '');
-        const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
-
-        await this.prisma.pendingWebRegistration.create({
-          data: {
-            token,
-            eventId,
-            payload: dto as any,
-            telegramTag: normalizedTag,
-            expiresAt,
-          },
-        });
-
-        return {
-          requiresBotStart: true,
-          token,
-          botUrl: `https://t.me/${botUsername}?start=reg_${token}`,
-          message: 'Для завершення реєстрації активуйте бота @' + botUsername,
-        };
-      }
-
-      botUserId = botUser.id;
-      telegramUserId = botUser.telegramId;
-    }
+    const user = await this.prisma.botUser.upsert({
+      where: { telegramId: telegramUserId },
+      create: {
+        telegramId: telegramUserId,
+        chatId: telegramUserId,
+        username: registrant.username,
+        fullName: dto.saveProfile ? dto.fullName : null,
+        group: dto.saveProfile ? dto.group : null,
+        birthDate: dto.saveProfile && dto.birthDate ? dto.birthDate : null,
+        phoneNumber:
+          dto.saveProfile && dto.phoneNumber ? dto.phoneNumber : null,
+        isBlocked: false,
+      },
+      update: {
+        username: registrant.username,
+        ...(dto.saveProfile
+          ? {
+              fullName: dto.fullName,
+              group: dto.group,
+              birthDate: dto.birthDate ?? undefined,
+              phoneNumber: dto.phoneNumber ?? undefined,
+            }
+          : {}),
+      },
+    });
 
     const payment = dto.payment ?? RegistrationPayment.NONE;
     const paymentStatus =
       payment === RegistrationPayment.DONATED
         ? PaymentStatus.PENDING
         : PaymentStatus.NOT_REQUIRED;
-    const source =
-      dto.source ??
-      (dto.telegramUserId ? RegistrationSource.BOT : RegistrationSource.WEB);
 
     const reg = await this.prisma.eventRegistration.create({
       data: {
         event: { connect: { id: eventId } },
-        botUser: botUserId ? { connect: { id: botUserId } } : undefined,
+        botUser: { connect: { id: user.id } },
         telegramUserId,
         fullName: dto.fullName,
-        telegramTag: normalizedTag,
+        telegramTag,
         group: dto.group,
         birthDate: dto.birthDate ?? null,
-        source,
+        source: dto.source ?? RegistrationSource.BOT,
         payment,
         paymentStatus,
         receiptUrl: dto.receiptUrl ?? null,
@@ -478,134 +421,88 @@ export class EventService {
       include: { answers: true },
     });
 
-    if (telegramUserId) {
-      if (paymentStatus === PaymentStatus.NOT_REQUIRED) {
-        this.userBotService
-          .sendTicketToUser(telegramUserId, reg, event)
-          .catch(() => {});
-      } else if (paymentStatus === PaymentStatus.PENDING) {
-        this.userBotService
-          .sendMessageToUser(
-            telegramUserId,
-            `🧾 <b>Дякуємо за реєстрацію на захід «${escapeHtml(event.name)}»!</b>\n\nТвій платіж надіслано на перевірку адміністраторам. Щойно оплату підтвердять — бот надішле тобі постійний QR-квиток для входу 🎫`,
-            {
-              text: 'Мої реєстрації 📱',
-              url: `${this.userBotService.getMiniAppUrl()}?tab=my-events`,
-            },
-          )
-          .catch(() => {});
-      }
+    if (paymentStatus === PaymentStatus.NOT_REQUIRED) {
+      this.userBotService
+        .sendTicketToUser(telegramUserId, reg, event)
+        .catch(() => {});
+    } else {
+      this.userBotService
+        .sendMessageToUser(
+          telegramUserId,
+          `🧾 <b>Дякуємо за реєстрацію на захід «${escapeHtml(event.name)}»!</b>\n\nТвій платіж надіслано на перевірку адміністраторам. Щойно оплату підтвердять — бот надішле тобі постійний QR-квиток для входу 🎫`,
+          {
+            text: 'Мої реєстрації 📱',
+            url: `${this.userBotService.getMiniAppUrl()}?tab=my-events`,
+          },
+        )
+        .catch(() => {});
     }
 
-    return {
-      ...reg,
-      telegramUserId: reg.telegramUserId ? reg.telegramUserId.toString() : null,
-    };
+    return { id: reg.id, paymentStatus: reg.paymentStatus };
   }
 
-  async completePendingRegistration(
-    token: string,
-    telegramUserId: bigint,
-    username?: string,
-    firstName?: string,
-    lastName?: string,
-  ) {
-    const pending = await this.prisma.pendingWebRegistration.findUnique({
-      where: { token },
-      include: { event: true },
-    });
-
-    if (!pending) throw new NotFoundException('Реєстраційна сесія не знайдена');
-    if (pending.completed)
-      return { alreadyCompleted: true, event: pending.event };
-    if (pending.expiresAt < new Date()) {
-      throw new BadRequestException('Термін дії посилання реєстрації минув');
-    }
-
-    const payload = pending.payload as any;
-    const cleanTag = (username || pending.telegramTag).replace(/^@+/, '');
-    const normalizedTag = `@${cleanTag.toLowerCase()}`;
-
-    // Upsert BotUser
-    const botUser = await this.prisma.botUser.upsert({
-      where: { telegramId: telegramUserId },
-      create: {
-        telegramId: telegramUserId,
-        chatId: telegramUserId,
-        username: cleanTag || null,
-        firstName: firstName || null,
-        lastName: lastName || null,
-        fullName: payload.fullName || null,
-        group: payload.group || null,
-        birthDate: payload.birthDate ? new Date(payload.birthDate) : null,
-        phoneNumber: payload.phoneNumber || null,
-        isBlocked: false,
-      },
-      update: {
-        chatId: telegramUserId,
-        username: cleanTag || undefined,
-        firstName: firstName || undefined,
-        lastName: lastName || undefined,
-      },
-    });
-
-    const existing = await this.prisma.eventRegistration.findFirst({
-      where: {
-        eventId: pending.eventId,
-        OR: [
-          { telegramUserId },
-          { telegramTag: { equals: normalizedTag, mode: 'insensitive' } },
-        ],
-      },
-    });
-
-    let reg = existing;
-    if (!reg) {
-      const questions = await this.prisma.eventQuestion.findMany({
-        where: { eventId: pending.eventId },
-      });
-      const validIds = new Set(questions.map((q) => q.id));
-      const answerData = ((payload.answers as any[]) ?? [])
-        .filter((a) => validIds.has(a.questionId) && (a.value ?? '').length > 0)
-        .map((a) => ({ questionId: a.questionId, value: a.value }));
-
-      const payment = payload.payment ?? RegistrationPayment.NONE;
-      const paymentStatus =
-        payment === RegistrationPayment.DONATED
-          ? PaymentStatus.PENDING
-          : PaymentStatus.NOT_REQUIRED;
-
-      reg = await this.prisma.eventRegistration.create({
-        data: {
-          eventId: pending.eventId,
-          botUserId: botUser.id,
-          telegramUserId,
-          fullName: payload.fullName,
-          telegramTag: normalizedTag,
-          group: payload.group,
-          birthDate: payload.birthDate ? new Date(payload.birthDate) : null,
-          source: RegistrationSource.WEB,
-          payment,
-          paymentStatus,
-          receiptUrl: payload.receiptUrl ?? null,
-          answers: answerData.length ? { create: answerData } : undefined,
-        },
-        include: { answers: true },
-      });
-
-      if (paymentStatus === PaymentStatus.NOT_REQUIRED) {
-        this.userBotService
-          .sendTicketToUser(telegramUserId, reg, pending.event)
-          .catch(() => {});
+  private resolveRegistrant(
+    dto: CreateEventRegistrationDto,
+    initData?: string,
+  ): { username: string; telegramUserId?: bigint } {
+    if (initData) {
+      const resolved = resolveValidatedTelegramUser(
+        this.configService,
+        initData,
+      );
+      const username = normalizeTelegramUsername(resolved.username);
+      if (!username) {
+        throw new BadRequestException(
+          'Щоб зареєструватися, встанови username у налаштуваннях Telegram.',
+        );
       }
+      return { username, telegramUserId: resolved.telegramId };
     }
 
-    await this.prisma.pendingWebRegistration.update({
-      where: { token },
-      data: { completed: true },
+    const username = normalizeTelegramUsername(dto.telegramTag);
+    if (!username) {
+      throw new BadRequestException(
+        'Вкажи коректний Telegram username: латинські літери, цифри та _, від 4 до 32 символів.',
+      );
+    }
+    if (
+      dto.telegramUserId &&
+      this.configService.get<string>('AUTH_DISABLED') === 'true'
+    ) {
+      return { username, telegramUserId: BigInt(dto.telegramUserId) };
+    }
+    return { username };
+  }
+
+  private async createPendingWebRegistration(
+    eventId: string,
+    dto: CreateEventRegistrationDto,
+    telegramTag: string,
+  ) {
+    const botUsername = this.userBotService.getUsername();
+    if (!botUsername) {
+      throw new ServiceUnavailableException(
+        'Реєстрація через сайт тимчасово недоступна: бот не налаштований.',
+      );
+    }
+    const token = randomUUID().replace(/-/g, '');
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+
+    await this.prisma.pendingWebRegistration.create({
+      data: {
+        token,
+        eventId,
+        payload: dto as any,
+        telegramTag,
+        expiresAt,
+      },
     });
 
-    return { completed: true, registration: reg, event: pending.event };
+    return {
+      requiresBotStart: true as const,
+      token,
+      botUrl: `https://t.me/${botUsername}?start=reg_${token}`,
+    };
   }
 
   async getRegistrationSession(token: string) {

@@ -274,14 +274,8 @@ export interface EventRegistrationResult {
   requiresBotStart?: boolean;
   token?: string;
   botUrl?: string;
-  message?: string;
   id?: string;
-  fullName?: string;
-  telegramTag?: string;
-  group?: string;
-  birthDate?: string | null;
-  payment?: RegistrationPayment;
-  createdAt?: string;
+  paymentStatus?: string;
 }
 
 // Public "Люди проєктного" entry — name + avatar, harvested by the bot from the
