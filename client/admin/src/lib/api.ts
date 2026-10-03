@@ -547,6 +547,8 @@ export const api = {
 
   partners: (page = 1, limit = 50) =>
     request<Paginated<Partner>>(`/partner?page=${page}&limit=${limit}`),
+  allPartners: (page = 1, limit = 100) =>
+    request<Paginated<Partner>>(`/partner/all?page=${page}&limit=${limit}`),
   createPartner: (body: PartnerInput) =>
     request<Partner>('/partner', { method: 'POST', ...json(body) }),
   updatePartner: (id: string, body: Partial<PartnerInput>) =>

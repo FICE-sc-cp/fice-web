@@ -14,8 +14,8 @@ export default function EditPartnerPage() {
   const qc = useQueryClient();
 
   const { data, isLoading } = useQuery({
-    queryKey: ['partners'],
-    queryFn: () => api.partners(),
+    queryKey: ['partners', 'all'],
+    queryFn: () => api.allPartners(),
     select: (res) => res.items.find((p) => p.id === id) ?? null,
   });
 
