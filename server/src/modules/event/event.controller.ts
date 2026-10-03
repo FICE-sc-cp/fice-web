@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -41,7 +42,7 @@ import {
 import { RejectPaymentDto } from './dto/reject-payment.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { EventEntity } from './entities/event.entity';
-import { EventService } from './event.service';
+import { EventService, SESSION_TOKEN_PATTERN } from './event.service';
 
 @ApiTags('events')
 @Controller('event')
@@ -84,7 +85,10 @@ export class EventController {
 
   @Get('registration-session/:token')
   @ApiOperation({ summary: 'Check status of pending web registration session' })
-  getRegistrationSession(@Param('token', ParseUUIDPipe) token: string) {
+  getRegistrationSession(@Param('token') token: string) {
+    if (!SESSION_TOKEN_PATTERN.test(token)) {
+      throw new BadRequestException('Invalid session token');
+    }
     return this.eventService.getRegistrationSession(token);
   }
 

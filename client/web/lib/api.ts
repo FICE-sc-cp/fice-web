@@ -193,6 +193,15 @@ export interface News {
   registrationLink: string | null;
 }
 
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${apiBase()}${path}`, { cache: 'no-store', ...init });
   if (!res.ok) {
@@ -203,7 +212,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
         msg = Array.isArray(data.message) ? data.message.join(', ') : data.message;
       }
     } catch {}
-    throw new Error(msg);
+    throw new ApiError(msg, res.status);
   }
   return res.json() as Promise<T>;
 }
@@ -316,7 +325,7 @@ export const fice = {
       body: JSON.stringify(body),
     }),
   getRegistrationSession: (token: string) =>
-    request<{ completed: boolean; token: string; expiresAt: string }>(
+    request<{ completed: boolean; expiresAt: string }>(
       `/event/registration-session/${token}`,
     ),
   uploadReceipt: async (file: File): Promise<{ url: string }> => {

@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ForbiddenException,
+  GoneException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -31,6 +32,8 @@ const PAYMENT_LABEL: Record<RegistrationPayment, string> = {
   DONATED: 'Задонатив',
   AT_EVENT: 'На заході',
 };
+
+export const SESSION_TOKEN_PATTERN = /^[0-9a-f]{32}$/;
 
 const normalizeTags = (tags?: string[]) =>
   (tags ?? [])
@@ -605,27 +608,13 @@ export class EventService {
   async getRegistrationSession(token: string) {
     const pending = await this.prisma.pendingWebRegistration.findUnique({
       where: { token },
-      include: { event: true },
+      select: { completed: true, expiresAt: true },
     });
     if (!pending) throw new NotFoundException('Session not found');
-
-    let registration: any = null;
-    if (pending.completed) {
-      registration = await this.prisma.eventRegistration.findFirst({
-        where: {
-          eventId: pending.eventId,
-          telegramTag: { equals: pending.telegramTag, mode: 'insensitive' },
-        },
-      });
+    if (!pending.completed && pending.expiresAt < new Date()) {
+      throw new GoneException('Session expired');
     }
-
-    return {
-      token: pending.token,
-      completed: pending.completed,
-      expiresAt: pending.expiresAt,
-      event: { id: pending.event.id, name: pending.event.name },
-      registration,
-    };
+    return { completed: pending.completed, expiresAt: pending.expiresAt };
   }
 
   async listRegistrations(
