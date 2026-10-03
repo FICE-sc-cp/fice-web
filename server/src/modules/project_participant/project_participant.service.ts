@@ -232,7 +232,7 @@ export class ProjectParticipantService {
   findPublic(departmentId?: string) {
     return this.prisma.projectParticipant.findMany({
       where: { hidden: false, ...(departmentId ? { departmentId } : {}) },
-      select: { fullName: true, telegramTag: true, photo: true },
+      select: { fullName: true, photo: true },
       orderBy: { fullName: 'asc' },
     });
   }

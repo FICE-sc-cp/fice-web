@@ -286,7 +286,6 @@ export interface EventRegistrationResult {
 // project chat (or added manually in the admin).
 export interface ProjectParticipant {
   fullName: string;
-  telegramTag: string | null;
   photo: string | null;
 }
 
