@@ -465,7 +465,7 @@ export const api = {
     request<unknown>(`/facts/overrides/${key}`, { method: 'DELETE' }),
 
   news: (page = 1, limit = 20) =>
-    request<Paginated<News>>(`/news?page=${page}&limit=${limit}`),
+    request<Paginated<News>>(`/news?page=${page}&limit=${limit}&draft=true`),
   newsById: (id: string) => request<News>(`/news/${id}`),
   createNews: (body: NewsInput) => request<News>('/news', { method: 'POST', ...json(body) }),
   updateNews: (id: string, body: Partial<NewsInput>) =>
@@ -473,7 +473,7 @@ export const api = {
   deleteNews: (id: string) => request<News>(`/news/${id}`, { method: 'DELETE' }),
 
   events: (page = 1, limit = 20) =>
-    request<Paginated<EventItem>>(`/event?page=${page}&limit=${limit}`),
+    request<Paginated<EventItem>>(`/event?page=${page}&limit=${limit}&draft=true`),
   event: (id: string) => request<EventItem>(`/event/${id}`),
   createEvent: (body: EventInput) => request<EventItem>('/event', { method: 'POST', ...json(body) }),
   updateEvent: (id: string, body: Partial<EventInput>) =>
@@ -537,7 +537,7 @@ export const api = {
   deletePartner: (id: string) => request<Partner>(`/partner/${id}`, { method: 'DELETE' }),
 
   fundraisers: (page = 1, limit = 50) =>
-    request<Paginated<Fundraiser>>(`/fundraiser?page=${page}&limit=${limit}`),
+    request<Paginated<Fundraiser>>(`/fundraiser?page=${page}&limit=${limit}&draft=true`),
   fundraiser: (id: string) => request<Fundraiser>(`/fundraiser/${id}`),
   createFundraiser: (body: FundraiserInput) =>
     request<Fundraiser>('/fundraiser', { method: 'POST', ...json(body) }),

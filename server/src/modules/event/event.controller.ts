@@ -5,6 +5,7 @@ import {
   Delete,
   Get,
   Headers,
+  NotFoundException,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -24,6 +25,7 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import { REGISTER_LIMIT_PER_IP, THROTTLE_TTL } from '../../common/throttle';
 import { Admin } from '../../auth/admin.decorator';
+import { AdminAccessService } from '../../auth/admin-access.service';
 import {
   extractTelegramUser,
   resolveValidatedTelegramUser,
@@ -50,6 +52,7 @@ export class EventController {
   constructor(
     private readonly eventService: EventService,
     private readonly configService: ConfigService,
+    private readonly adminAccess: AdminAccessService,
   ) {}
 
   private resolveTelegramUser(
@@ -74,12 +77,15 @@ export class EventController {
   @Get()
   @ApiOperation({ summary: 'List events with details and partners' })
   @ApiPaginatedResponse(EventEntity)
-  findAll(@Query() query: EventQueryDto) {
+  async findAll(
+    @Query() query: EventQueryDto,
+    @Headers('x-telegram-init-data') initData?: string,
+  ) {
     return this.eventService.findAll(
       query,
       query.past,
       query.abitfest,
-      query.draft,
+      await this.adminAccess.draftsAllowed(query.draft, initData),
     );
   }
 
@@ -110,8 +116,15 @@ export class EventController {
   @Get(':id')
   @ApiOperation({ summary: 'Get an event by id' })
   @ApiOkResponse({ type: EventEntity })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.eventService.findOne(id);
+  async findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Headers('x-telegram-init-data') initData?: string,
+  ) {
+    const event = await this.eventService.findOne(id);
+    if (event.isDraft && !(await this.adminAccess.isAdmin(initData))) {
+      throw new NotFoundException(`Event ${id} not found`);
+    }
+    return event;
   }
 
   @Get(':id/checkin/access')
