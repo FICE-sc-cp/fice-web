@@ -9,9 +9,9 @@ import { MoreNews } from "@/components/sections/MoreNews";
 import { fice, safe, type News, type Paginated } from "@/lib/api";
 
 export const metadata: Metadata = {
-  title: "Новини ФІОТ — Студентська рада",
+  title: "Новини",
   description:
-    "Події, досягнення, партнерства та все, чим живе факультет. Стеж за оновленнями ФІОТ.",
+    "Новини Студентської ради ФІОТ КПІ: події, досягнення, освіта, партнерства та все, чим живе факультет. Стеж за оновленнями ФІОТ.",
 };
 
 const EMPTY: Paginated<News> = {

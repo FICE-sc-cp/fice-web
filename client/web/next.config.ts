@@ -3,6 +3,7 @@ import type { NextConfig } from 'next';
 const backendUrl = process.env.BACKEND_URL ?? process.env.INTERNAL_API_URL ?? 'http://server:3001';
 
 const nextConfig: NextConfig = {
+  htmlLimitedBots: /.*/,
   images: {
     remotePatterns: [
       {

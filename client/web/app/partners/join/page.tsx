@@ -10,7 +10,7 @@ import { PartnerFormSection } from "@/components/sections/PartnerFormSection";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "Партнерство зі Студрадою ФІОТ",
+  title: { absolute: "Партнерство зі Студрадою ФІОТ" },
   description:
     "Станьте партнером Студентської ради ФІОТ — розкажіть про свою компанію та формат співпраці, який Ви пропонуєте.",
 };

@@ -15,10 +15,15 @@ import { EventsSection } from "@/components/sections/EventsSection";
 import { FaqSection } from "@/components/sections/FaqSection";
 //import { JoinSection } from '@/components/sections/JoinSection';
 import { GallerySection } from "@/components/sections/GallerySection";
+import { SITE_JSON_LD, serializeJsonLd } from "@/lib/seo";
 
 export default function HomePage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(SITE_JSON_LD) }}
+      />
       <IconDefs />
       <Header />
       <main id="top" className="overflow-x-clip">

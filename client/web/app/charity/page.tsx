@@ -11,8 +11,9 @@ import { ClosedFundraisers } from '@/components/charity/ClosedFundraisers';
 import { fice, safe, type Fundraiser } from '@/lib/api';
 
 export const metadata: Metadata = {
-  title: 'Благодійність — Студрада ФІОТ',
-  description: 'Актуальні та завершені збори Студентської ради ФІОТ.',
+  title: 'Благодійність',
+  description:
+    'Благодійні збори Студентської ради ФІОТ КПІ: актуальні збори та їхній прогрес, а також завершені збори. Кожен донат — це конкретна допомога.',
 };
 
 const EMPTY = { items: [] as Fundraiser[], total: 0, page: 1, limit: 60, totalPages: 0 };

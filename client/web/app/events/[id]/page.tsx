@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -6,6 +7,7 @@ import { Glow } from "@/components/ui/Glow";
 import { EventRegistrationForm } from "@/components/sections/EventRegistrationForm";
 import { fice, mediaUrl, safe } from "@/lib/api";
 import { renderRichInline } from "@/lib/richText";
+import { NOINDEX, openGraph, plainText } from "@/lib/seo";
 import { cn, eventRegistrationOpen, isEventPast } from "@/lib/utils";
 
 const TZ = "Europe/Kyiv";
@@ -63,6 +65,29 @@ function Fact({
       {note && <span className="text-sm text-gray-400">{note}</span>}
     </div>
   );
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const event = await safe(fice.event(id), null);
+  if (!event) return { title: "Захід не знайдено", robots: NOINDEX };
+  const facts = [fmtDate(new Date(event.date)), event.location?.trim()]
+    .filter(Boolean)
+    .join(", ")
+    .replace(/\.$/, "");
+  return {
+    title: event.name,
+    description: plainText(
+      `${facts}. ${event.description ?? "Захід Студентської ради ФІОТ."}`,
+    ),
+    alternates: { canonical: `/events/${event.id}` },
+    openGraph: openGraph(`/events/${event.id}`, mediaUrl(event.photoUrl)),
+    ...(event.isDraft && { robots: NOINDEX }),
+  };
 }
 
 export default async function EventDetailPage({

@@ -11,8 +11,9 @@ import { PastEvents } from "@/components/sections/PastEvents";
 import { fice, safe, type EventItem } from "@/lib/api";
 
 export const metadata: Metadata = {
-  title: "Заходи — Студрада ФІОТ",
-  description: "Майбутні та минулі заходи Студентської ради ФІОТ.",
+  title: "Заходи",
+  description:
+    "Заходи Студентської ради ФІОТ КПІ ім. Ігоря Сікорського: анонси майбутніх подій факультету, реєстрація та минулі заходи — від нетворкінгу до благодійних ініціатив.",
 };
 
 const EMPTY = {

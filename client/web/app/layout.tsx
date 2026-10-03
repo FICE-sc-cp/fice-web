@@ -1,5 +1,13 @@
 import type { Metadata, Viewport } from 'next';
 import { Mulish } from 'next/font/google';
+import {
+  OPEN_GRAPH,
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  SITE_SHORT_NAME,
+  SITE_TITLE,
+  SITE_URL,
+} from '@/lib/seo';
 import './globals.css';
 
 const mulish = Mulish({
@@ -9,9 +17,16 @@ const mulish = Mulish({
 });
 
 export const metadata: Metadata = {
-  title: 'Студентська рада ФІОТ',
-  description:
-    'Сайт студентської ради ФІОТ — діяльність, заходи, збори, партнерство та вступ до команди.',
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: SITE_TITLE,
+    template: `%s — ${SITE_SHORT_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  alternates: { canonical: './' },
+  openGraph: OPEN_GRAPH,
+  twitter: { card: 'summary_large_image' },
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: 'any' },

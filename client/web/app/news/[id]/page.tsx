@@ -9,6 +9,7 @@ import { Glow } from "@/components/ui/Glow";
 import { fice, mediaUrl, safe, type News, type Paginated } from "@/lib/api";
 import { renderRichInline } from "@/lib/richText";
 import { cn } from "@/lib/utils";
+import { NOINDEX, openGraph, plainText } from "@/lib/seo";
 import {
   bodyParagraphs,
   categoryLabel,
@@ -32,8 +33,16 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { id } = await params;
   const item = await safe<News | null>(fice.newsItem(id), null);
-  if (!item) return { title: "Новина — ФІОТ" };
-  return { title: `${item.title} — Новини ФІОТ` };
+  if (!item) return { title: "Новину не знайдено", robots: NOINDEX };
+  return {
+    title: item.title,
+    description:
+      plainText(item.details) ||
+      `Новина Студентської ради ФІОТ від ${formatNewsDate(item.publishDate)}.`,
+    alternates: { canonical: `/news/${item.id}` },
+    openGraph: openGraph(`/news/${item.id}`, mediaUrl(item.image)),
+    ...(item.isDraft && { robots: NOINDEX }),
+  };
 }
 
 export default async function NewsArticlePage({

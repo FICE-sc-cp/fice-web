@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
+import { NOINDEX } from '@/lib/seo';
 
 export const metadata: Metadata = {
-  title: 'FICE Events — Mini App',
+  title: { absolute: 'FICE Events — Mini App' },
   description: 'Реєстрація на заходи FICE та голосування в Telegram',
+  robots: NOINDEX,
 };
 
 export const viewport: Viewport = {

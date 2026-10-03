@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -6,7 +7,30 @@ import { Glow } from "@/components/ui/Glow";
 import { DonateCard } from "@/components/charity/DonateCard";
 import { fice, mediaUrl, safe } from "@/lib/api";
 import { renderRichInline } from "@/lib/richText";
+import { NOINDEX, openGraph, plainText } from "@/lib/seo";
 import { cn, fundraiserTheme } from "@/lib/utils";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const fundraiser = await safe(fice.fundraiser(id), null);
+  if (!fundraiser) return { title: "Збір не знайдено", robots: NOINDEX };
+  return {
+    title: fundraiser.name,
+    description:
+      plainText(fundraiser.description) ||
+      "Благодійний збір Студентської ради ФІОТ.",
+    alternates: { canonical: `/charity/${fundraiser.id}` },
+    openGraph: openGraph(
+      `/charity/${fundraiser.id}`,
+      mediaUrl(fundraiser.imageUrl),
+    ),
+    ...(fundraiser.status === "DRAFT" && { robots: NOINDEX }),
+  };
+}
 
 export default async function CharityDetailsPage({
   params,

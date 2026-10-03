@@ -10,7 +10,7 @@ import { ApplicationFormSection } from "@/components/sections/ApplicationFormSec
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "Вступ до Студради ФІОТ",
+  title: { absolute: "Вступ до Студради ФІОТ" },
   description:
     "Заповни заявку, щоб приєднатися до Студентської ради ФІОТ — обери департамент і розкажи про себе.",
 };

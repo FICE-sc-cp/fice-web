@@ -152,7 +152,7 @@ export interface EventItem {
   questions?: EventQuestion[];
 }
 
-export type FundraiserStatus = 'ACTIVE' | 'CLOSED';
+export type FundraiserStatus = 'ACTIVE' | 'CLOSED' | 'DRAFT';
 
 export interface Fundraiser {
   id: string;
@@ -188,6 +188,7 @@ export interface News {
   eventDate: string | null;
   eventLocation: string | null;
   registrationLink: string | null;
+  isDraft?: boolean;
 }
 
 export class ApiError extends Error {

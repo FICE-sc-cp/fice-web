@@ -13,6 +13,7 @@ const base = process.env.NEXT_PUBLIC_BASE_PATH ?? '';
 
 export const metadata: Metadata = {
   title: 'FICE — Адмінка',
+  robots: { index: false, follow: false },
   icons: {
     icon: [
       { url: `${base}/favicon.ico`, sizes: 'any' },

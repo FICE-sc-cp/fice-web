@@ -526,3 +526,7 @@ export const APPLICANTS_DEPARTMENT = dept({
 export const APPLICANTS_DB_NAME = "Департамент по роботі з абітурієнтами";
 
 export const departmentSlugs = Object.keys(DEPARTMENTS);
+
+export function findDepartment(slug: string): DepartmentData | undefined {
+  return Object.hasOwn(DEPARTMENTS, slug) ? DEPARTMENTS[slug] : undefined;
+}

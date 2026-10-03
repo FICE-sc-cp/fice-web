@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { TeamSection } from "@/components/sections/TeamSection";
 import { Container } from "@/components/ui/Container";
 import { Header } from "@/components/layout/Header";
@@ -5,6 +6,12 @@ import { Footer } from "@/components/layout/Footer";
 import { GradientText } from "@/components/ui/GradientText";
 import { Marquee } from "@/components/sections/Marquee";
 import { Glow } from "@/components/ui/Glow";
+
+export const metadata: Metadata = {
+  title: "Команда",
+  description:
+    "Знайомся з командою Студради ФІОТ КПІ: президія та голови департаментів — лідери, які створюють майбутнє факультету вже сьогодні.",
+};
 
 export default function TeamPage() {
   return (

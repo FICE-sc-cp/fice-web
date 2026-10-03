@@ -13,7 +13,8 @@ import {
 } from "@/components/sections/DepartmentTop";
 import { AccentCard, accentGradient } from "@/components/ui/AccentCard";
 import { IconDefs } from "@/components/ui/icons";
-import { DEPARTMENTS, departmentSlugs } from "@/lib/departments";
+import { departmentSlugs, findDepartment } from "@/lib/departments";
+import { openGraph, plainText } from "@/lib/seo";
 
 export function generateStaticParams() {
   return departmentSlugs.map((id) => ({ id }));
@@ -25,11 +26,14 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const dept = DEPARTMENTS[id];
-  if (!dept) return { title: "Департамент — Студрада ФІОТ" };
+  const dept = findDepartment(id);
+  if (!dept) return { title: "Департамент" };
   return {
-    title: `${dept.name} — Студрада ФІОТ`,
-    description: dept.slogan?.replace(/\s*\n\s*/g, " ") ?? undefined,
+    title: dept.name,
+    description: plainText(dept.about?.[0] ?? dept.slogan),
+    ...(dept.cover && {
+      openGraph: openGraph(`/departments/${dept.slug}`, dept.cover),
+    }),
   };
 }
 
@@ -39,7 +43,7 @@ export default async function DepartmentPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const d = DEPARTMENTS[id];
+  const d = findDepartment(id);
   if (!d) notFound();
 
   const iconGrad = accentGradient[d.accent];
