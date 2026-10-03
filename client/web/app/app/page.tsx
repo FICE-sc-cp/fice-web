@@ -2338,6 +2338,10 @@ function MiniAppContent() {
               <div className="rounded-2xl border border-border bg-surface p-4 text-center text-xs text-muted">
                 Вхід вільний, попередня реєстрація не потрібна.
               </div>
+            ) : selectedEvent.registrationOpen === false ? (
+              <div className="rounded-2xl border border-border bg-surface p-4 text-center text-xs text-muted">
+                Реєстрацію на цей захід закрито.
+              </div>
             ) : (
               <form
                 onSubmit={handleRegisterSubmit}

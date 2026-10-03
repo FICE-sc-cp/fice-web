@@ -15,7 +15,10 @@ const resolveUser = resolveValidatedTelegramUser as jest.MockedFunction<
 const EVENT = {
   id: 'e1',
   name: 'Event',
-  date: new Date('2026-11-01T18:00:00Z'),
+  date: new Date('2099-11-01T18:00:00Z'),
+  hasTime: true,
+  isDraft: false,
+  noRegistration: false,
   location: null,
   registrationCloseDate: null,
   maxRegistrations: null,
@@ -73,7 +76,9 @@ describe('EventService.register identity', () => {
         upsert: jest.fn().mockResolvedValue({ id: 'b1' }),
       },
       pendingWebRegistration: { create: jest.fn().mockResolvedValue({}) },
+      $queryRaw: jest.fn().mockResolvedValue([]),
     };
+    prisma.$transaction = jest.fn((fn: (tx: unknown) => unknown) => fn(prisma));
     userBot = {
       getUsername: () => 'fice_student_bot',
       getMiniAppUrl: () => 'https://fice-sc.kpi.ua/app',
@@ -177,7 +182,7 @@ describe('EventService.register identity', () => {
       expect(prisma.eventRegistration.findFirst).toHaveBeenCalledWith({
         where: {
           eventId: 'e1',
-          OR: [{ telegramTag: '@attacker' }, { telegramUserId: 42n }],
+          OR: [{ telegramUserId: 42n }, { telegramTag: '@attacker' }],
         },
       });
     });

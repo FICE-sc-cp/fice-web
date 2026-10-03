@@ -1,10 +1,16 @@
 import {
+  HttpException,
   Injectable,
   Logger,
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import {
+  PaymentStatus,
+  RegistrationPayment,
+  RegistrationSource,
+} from '@prisma/client';
 import { Bot, GrammyError, InputFile } from 'grammy';
 import { basename, resolve } from 'node:path';
 import * as QRCode from 'qrcode';
@@ -17,6 +23,10 @@ import {
   telegramTagOf,
 } from '../modules/event/registration-identity';
 import { findActiveBlock } from '../modules/blocked-users/blocklist';
+import {
+  createRegistrationGuarded,
+  RegistrationWriteResult,
+} from '../modules/event/registration-writer';
 import { errorMessage } from '../common/log-safe';
 import { UPLOAD_DIR } from '../upload/upload.constants';
 
@@ -165,40 +175,6 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
               return;
             }
 
-            // Check if already registered
-            const existingReg = await this.prisma.eventRegistration.findFirst({
-              where: {
-                eventId: pending.eventId,
-                OR: [
-                  { telegramUserId: telegramId },
-                  { telegramTag: normalizedTag },
-                ],
-              },
-            });
-
-            if (existingReg) {
-              await this.prisma.pendingWebRegistration.update({
-                where: { token },
-                data: { completed: true },
-              });
-              await ctx.reply(
-                `ℹ️ Ви вже зареєстровані на захід «${pending.event.name}»!\n\nСторінка на сайті вже оновилася.`,
-                {
-                  reply_markup: {
-                    inline_keyboard: [
-                      [
-                        {
-                          text: 'Мої реєстрації в боті',
-                          web_app: { url: `${baseAppUrl}?tab=my-events` },
-                        },
-                      ],
-                    ],
-                  },
-                },
-              );
-              return;
-            }
-
             const questions = await this.prisma.eventQuestion.findMany({
               where: { eventId: pending.eventId },
             });
@@ -233,28 +209,64 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
               },
             });
 
-            const payment = payload.payment ?? 'NONE';
+            const payment: RegistrationPayment =
+              payload.payment ?? RegistrationPayment.NONE;
             const paymentStatus =
-              payment === 'DONATED' ? 'PENDING' : 'NOT_REQUIRED';
+              payment === RegistrationPayment.DONATED
+                ? PaymentStatus.PENDING
+                : PaymentStatus.NOT_REQUIRED;
 
-            const createdReg = await this.prisma.eventRegistration.create({
-              data: {
+            let result: RegistrationWriteResult;
+            try {
+              result = await createRegistrationGuarded(this.prisma, {
                 eventId: pending.eventId,
                 botUserId: botUser.id,
                 telegramUserId: telegramId,
-                fullName: payload.fullName,
                 telegramTag: normalizedTag,
+                fullName: payload.fullName,
                 group: payload.group,
                 birthDate: payload.birthDate
                   ? new Date(payload.birthDate)
                   : null,
-                source: 'WEB',
+                source: RegistrationSource.WEB,
                 payment,
                 paymentStatus,
                 receiptUrl: payload.receiptUrl ?? null,
-                answers: answerData.length ? { create: answerData } : undefined,
-              },
-            });
+                answers: answerData,
+              });
+            } catch (err) {
+              if (err instanceof HttpException) {
+                await ctx.reply(
+                  `⚠️ Не вдалося завершити реєстрацію на захід «${pending.event.name}».\n\n${err.message}`,
+                );
+                return;
+              }
+              throw err;
+            }
+
+            if (result.existing) {
+              await this.prisma.pendingWebRegistration.update({
+                where: { token },
+                data: { completed: true },
+              });
+              await ctx.reply(
+                `ℹ️ Ви вже зареєстровані на захід «${pending.event.name}»!\n\nСторінка на сайті вже оновилася.`,
+                {
+                  reply_markup: {
+                    inline_keyboard: [
+                      [
+                        {
+                          text: 'Мої реєстрації в боті',
+                          web_app: { url: `${baseAppUrl}?tab=my-events` },
+                        },
+                      ],
+                    ],
+                  },
+                },
+              );
+              return;
+            }
+            const createdReg = result.created;
 
             await this.prisma.pendingWebRegistration.update({
               where: { token },

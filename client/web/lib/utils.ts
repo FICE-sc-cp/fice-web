@@ -11,9 +11,11 @@ export function eventRegistrationOpen(
     registrationCloseDate: string | null;
     noRegistration?: boolean;
     maxRegistrations?: number | null;
+    registrationOpen?: boolean;
   },
   currentCount?: number,
 ): boolean {
+  if (typeof event.registrationOpen === 'boolean') return event.registrationOpen;
   if (event.noRegistration) return false;
   if (
     event.maxRegistrations &&
@@ -28,8 +30,9 @@ export function eventRegistrationOpen(
   return Date.now() < closeTs;
 }
 
-export function isEventPast(dateStr: string): boolean {
-  return new Date(dateStr).getTime() < Date.now();
+export function isEventPast(event: { date: string; isPast?: boolean }): boolean {
+  if (typeof event.isPast === 'boolean') return event.isPast;
+  return new Date(event.date).getTime() < Date.now();
 }
 
 /** Money formatted the Ukrainian way: thin-grouped thousands, no decimals. */

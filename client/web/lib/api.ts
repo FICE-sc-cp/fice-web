@@ -134,6 +134,9 @@ export interface EventItem {
   timeNote: string | null;
   registrationCloseDate: string | null;
   maxRegistrations?: number | null;
+  registrationOpen?: boolean;
+  registrationClosesAt?: string | null;
+  isPast?: boolean;
   photoAlbumUrl: string | null;
   feeAmount: string | null;
   feeAtEventAmount: string | null;

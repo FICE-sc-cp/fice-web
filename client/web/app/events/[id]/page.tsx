@@ -125,7 +125,7 @@ export default async function EventDetailPage({
 
   const date = new Date(event.date);
   const registrationOpen = eventRegistrationOpen(event);
-  const past = isEventPast(event.date);
+  const past = isEventPast(event);
   const statusActive = event.noRegistration ? !past : registrationOpen;
   const statusLabel = event.noRegistration
     ? past

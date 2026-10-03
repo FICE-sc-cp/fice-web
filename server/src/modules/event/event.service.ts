@@ -25,6 +25,14 @@ import {
   telegramTagOf,
 } from './registration-identity';
 import { findActiveBlock } from '../blocked-users/blocklist';
+import {
+  pastEventsWhere,
+  registrationClosedMessage,
+  registrationClosedReason,
+  upcomingEventsWhere,
+  withRegistrationState,
+} from './event-timing';
+import { createRegistrationGuarded } from './registration-writer';
 import { AddEventPartnerDto } from './dto/add-event-partner.dto';
 import { CreateEventDto } from './dto/create-event.dto';
 import { CreateEventRegistrationDto } from './dto/create-event-registration.dto';
@@ -74,9 +82,10 @@ export class EventService {
     },
     program: { orderBy: { order: 'asc' } },
     questions: { orderBy: { order: 'asc' } },
+    _count: { select: { registrations: true } },
   };
 
-  create(dto: CreateEventDto) {
+  async create(dto: CreateEventDto) {
     const {
       detailsId,
       program,
@@ -85,7 +94,7 @@ export class EventService {
       checkInStaffTags,
       ...rest
     } = dto;
-    return this.prisma.event.create({
+    const event = await this.prisma.event.create({
       data: {
         ...rest,
         checkInStaffTags: checkInStaffTags
@@ -124,6 +133,7 @@ export class EventService {
       },
       include: this.include,
     });
+    return withRegistrationState(event);
   }
 
   async findAll(
@@ -138,7 +148,7 @@ export class EventService {
       where.isDraft = false;
     }
     if (past !== undefined) {
-      where.date = past ? { lt: now } : { gte: now };
+      where.AND = [past ? pastEventsWhere(now) : upcomingEventsWhere(now)];
     }
     if (abitfest !== undefined) {
       where.isAbitfest = abitfest;
@@ -153,7 +163,12 @@ export class EventService {
       }),
       this.prisma.event.count({ where }),
     ]);
-    return paginated(items, total, page, limit);
+    return paginated(
+      items.map((e) => withRegistrationState(e, now)),
+      total,
+      page,
+      limit,
+    );
   }
 
   async findOne(id: string) {
@@ -164,7 +179,7 @@ export class EventService {
     if (!event) {
       throw new NotFoundException(`Event ${id} not found`);
     }
-    return event;
+    return withRegistrationState(event);
   }
 
   async update(id: string, dto: UpdateEventDto) {
@@ -246,7 +261,11 @@ export class EventService {
         }
       }
 
-      return tx.event.findUnique({ where: { id }, include: this.include });
+      const updated = await tx.event.findUniqueOrThrow({
+        where: { id },
+        include: this.include,
+      });
+      return withRegistrationState(updated);
     });
   }
 
@@ -291,22 +310,12 @@ export class EventService {
     if (!event) {
       throw new NotFoundException(`Event ${eventId} not found`);
     }
-    if (
-      event.registrationCloseDate &&
-      event.registrationCloseDate.getTime() < Date.now()
-    ) {
-      throw new BadRequestException('Реєстрацію на цей захід закрито');
-    }
-
-    if (event.maxRegistrations && event.maxRegistrations > 0) {
-      const regCount = await this.prisma.eventRegistration.count({
-        where: { eventId },
-      });
-      if (regCount >= event.maxRegistrations) {
-        throw new BadRequestException(
-          `Реєстрацію закрито: досягнуто ліміт у ${event.maxRegistrations} учасників`,
-        );
-      }
+    const registeredCount = await this.prisma.eventRegistration.count({
+      where: { eventId },
+    });
+    const closed = registrationClosedReason(event, registeredCount, new Date());
+    if (closed) {
+      throw new BadRequestException(registrationClosedMessage(closed, event));
     }
 
     const answers = dto.answers ?? [];
@@ -356,16 +365,6 @@ export class EventService {
     }
     const telegramUserId = registrant.telegramUserId;
 
-    const existingRegistration = await this.prisma.eventRegistration.findFirst({
-      where: {
-        eventId,
-        OR: [{ telegramTag }, { telegramUserId }],
-      },
-    });
-    if (existingRegistration) {
-      throw new BadRequestException('Ви вже зареєстровані на цей захід');
-    }
-
     const validIds = new Set(event.questions.map((q) => q.id));
     const answerData = answers
       .filter((a) => validIds.has(a.questionId) && (a.value ?? '').length > 0)
@@ -403,23 +402,24 @@ export class EventService {
         ? PaymentStatus.PENDING
         : PaymentStatus.NOT_REQUIRED;
 
-    const reg = await this.prisma.eventRegistration.create({
-      data: {
-        event: { connect: { id: eventId } },
-        botUser: { connect: { id: user.id } },
-        telegramUserId,
-        fullName: dto.fullName,
-        telegramTag,
-        group: dto.group,
-        birthDate: dto.birthDate ?? null,
-        source: dto.source ?? RegistrationSource.BOT,
-        payment,
-        paymentStatus,
-        receiptUrl: dto.receiptUrl ?? null,
-        answers: answerData.length ? { create: answerData } : undefined,
-      },
-      include: { answers: true },
+    const result = await createRegistrationGuarded(this.prisma, {
+      eventId,
+      botUserId: user.id,
+      telegramUserId,
+      telegramTag,
+      fullName: dto.fullName,
+      group: dto.group,
+      birthDate: dto.birthDate ? new Date(dto.birthDate) : null,
+      source: dto.source ?? RegistrationSource.BOT,
+      payment,
+      paymentStatus,
+      receiptUrl: dto.receiptUrl ?? null,
+      answers: answerData,
     });
+    if (!result.created) {
+      throw new BadRequestException('Ви вже зареєстровані на цей захід');
+    }
+    const reg = result.created;
 
     if (paymentStatus === PaymentStatus.NOT_REQUIRED) {
       this.userBotService
@@ -560,15 +560,9 @@ export class EventService {
       }),
     ]);
 
-    const isClosedByDate = Boolean(
-      event.registrationCloseDate &&
-      event.registrationCloseDate.getTime() < Date.now(),
-    );
-    const isClosedByLimit = Boolean(
-      event.maxRegistrations &&
-      event.maxRegistrations > 0 &&
-      total >= event.maxRegistrations,
-    );
+    const closedReason = registrationClosedReason(event, total, new Date());
+    const isClosedByDate = closedReason === 'deadline';
+    const isClosedByLimit = closedReason === 'capacity';
 
     return {
       ...paginated(items, total, page, limit),
@@ -581,8 +575,7 @@ export class EventService {
         confirmedPaymentCount,
         rejectedPaymentCount,
         maxRegistrations: event.maxRegistrations ?? null,
-        isRegistrationOpen:
-          !event.noRegistration && !isClosedByDate && !isClosedByLimit,
+        isRegistrationOpen: closedReason === null,
         isClosedByDate,
         isClosedByLimit,
       },

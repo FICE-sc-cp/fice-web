@@ -61,7 +61,20 @@ describe('UserBotService /start reg_ confirmation', () => {
         }),
       },
       eventQuestion: { findMany: jest.fn().mockResolvedValue([]) },
+      event: {
+        findUnique: jest.fn().mockResolvedValue({
+          date: new Date('2099-01-01T12:00:00Z'),
+          hasTime: true,
+          registrationCloseDate: null,
+          noRegistration: false,
+          isDraft: false,
+          maxRegistrations: null,
+        }),
+      },
+      $queryRaw: jest.fn().mockResolvedValue([]),
     };
+    prisma.eventRegistration.count = jest.fn().mockResolvedValue(0);
+    prisma.$transaction = jest.fn((fn: (tx: unknown) => unknown) => fn(prisma));
 
     const env: Record<string, string> = {
       TELEGRAM_BOT_TOKEN: '111:admin',
@@ -138,6 +151,24 @@ describe('UserBotService /start reg_ confirmation', () => {
     expect(prisma.eventRegistration.create).not.toHaveBeenCalled();
     expect(ctx.reply).toHaveBeenCalledWith(
       expect.stringContaining('заблоковано'),
+    );
+  });
+
+  it('refuses to complete a website registration after the deadline', async () => {
+    prisma.event.findUnique.mockResolvedValue({
+      date: new Date('2000-01-01T12:00:00Z'),
+      hasTime: true,
+      registrationCloseDate: null,
+      noRegistration: false,
+      isDraft: false,
+      maxRegistrations: null,
+    });
+    const ctx = ctxFrom({ username: 'Victim' });
+    await startHandler(ctx);
+
+    expect(prisma.eventRegistration.create).not.toHaveBeenCalled();
+    expect(ctx.reply).toHaveBeenCalledWith(
+      expect.stringContaining('Реєстрацію на цей захід закрито'),
     );
   });
 
