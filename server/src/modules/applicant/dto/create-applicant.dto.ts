@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   ArrayMinSize,
   IsArray,
   IsNotEmpty,
@@ -21,6 +22,7 @@ export class ApplicantDepartmentSelectionDto {
   })
   @IsOptional()
   @IsString()
+  @MaxLength(2000)
   question?: string;
 }
 
@@ -64,11 +66,13 @@ export class CreateApplicantDto {
   @ApiPropertyOptional({ description: 'Why they want to join' })
   @IsOptional()
   @IsString()
+  @MaxLength(3000)
   motivation?: string;
 
   @ApiPropertyOptional({ description: 'Relevant experience' })
   @IsOptional()
   @IsString()
+  @MaxLength(3000)
   experience?: string;
 
   @ApiProperty({
@@ -77,6 +81,7 @@ export class CreateApplicantDto {
   })
   @IsArray()
   @ArrayMinSize(1)
+  @ArrayMaxSize(10)
   @ValidateNested({ each: true })
   @Type(() => ApplicantDepartmentSelectionDto)
   departments: ApplicantDepartmentSelectionDto[];

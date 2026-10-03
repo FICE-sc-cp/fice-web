@@ -286,6 +286,7 @@ model EventRegistration {
   telegramTag            String              @db.VarChar(50)
   group                  String              @db.VarChar(10)
   birthDate              DateTime?
+  phoneNumber            String?             @db.VarChar(20)
   source                 RegistrationSource  @default(WEB)
   payment                RegistrationPayment @default(NONE)
   paymentStatus          PaymentStatus       @default(NOT_REQUIRED)

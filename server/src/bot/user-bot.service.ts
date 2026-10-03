@@ -232,6 +232,7 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
                 payment,
                 paymentStatus,
                 receiptUrl: payload.receiptUrl ?? null,
+                phoneNumber: payload.phoneNumber || null,
                 answers: answerData,
               });
             } catch (err) {

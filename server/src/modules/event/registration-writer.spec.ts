@@ -27,6 +27,7 @@ const DATA: NewRegistration = {
   payment: 'NONE',
   paymentStatus: 'NOT_REQUIRED',
   receiptUrl: null,
+  phoneNumber: null,
   answers: [],
 };
 

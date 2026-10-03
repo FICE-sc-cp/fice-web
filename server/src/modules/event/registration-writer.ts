@@ -25,6 +25,7 @@ export interface NewRegistration {
   payment: RegistrationPayment;
   paymentStatus: PaymentStatus;
   receiptUrl: string | null;
+  phoneNumber: string | null;
   answers: { questionId: string; value: string }[];
 }
 
@@ -85,6 +86,7 @@ export async function createRegistrationGuarded(
         payment: data.payment,
         paymentStatus: data.paymentStatus,
         receiptUrl: data.receiptUrl,
+        phoneNumber: data.phoneNumber,
         answers: data.answers.length ? { create: data.answers } : undefined,
       },
     });

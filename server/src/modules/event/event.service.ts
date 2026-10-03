@@ -34,6 +34,7 @@ import {
 } from './event-timing';
 import { createRegistrationGuarded } from './registration-writer';
 import { paymentRuleViolation } from './payment-rules';
+import { validateAnswers } from './registration-answers';
 import { ownUploadExists } from '../../upload/own-upload';
 import { AddEventPartnerDto } from './dto/add-event-partner.dto';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -320,10 +321,6 @@ export class EventService {
       throw new BadRequestException(registrationClosedMessage(closed, event));
     }
 
-    const answers = dto.answers ?? [];
-    const answerMap = new Map(
-      answers.map((a) => [a.questionId, (a.value ?? '').trim()]),
-    );
     const registrant = this.resolveRegistrant(dto, initData);
     const telegramTag = telegramTagOf(registrant.username);
 
@@ -354,13 +351,7 @@ export class EventService {
       }
     }
 
-    for (const q of event.questions) {
-      if (q.required && !answerMap.get(q.id)) {
-        throw new BadRequestException(
-          `Обовʼязкове питання без відповіді: ${q.label}`,
-        );
-      }
-    }
+    const answerData = validateAnswers(event.questions, dto.answers ?? []);
 
     const payment = dto.payment ?? RegistrationPayment.NONE;
     const paymentProblem = paymentRuleViolation(
@@ -375,16 +366,16 @@ export class EventService {
     if (registrant.telegramUserId === undefined) {
       return this.createPendingWebRegistration(
         eventId,
-        { ...dto, payment, receiptUrl: receiptUrl ?? undefined },
+        {
+          ...dto,
+          payment,
+          receiptUrl: receiptUrl ?? undefined,
+          answers: answerData,
+        },
         telegramTag,
       );
     }
     const telegramUserId = registrant.telegramUserId;
-
-    const validIds = new Set(event.questions.map((q) => q.id));
-    const answerData = answers
-      .filter((a) => validIds.has(a.questionId) && (a.value ?? '').length > 0)
-      .map((a) => ({ questionId: a.questionId, value: a.value }));
 
     const user = await this.prisma.botUser.upsert({
       where: { telegramId: telegramUserId },
@@ -429,6 +420,7 @@ export class EventService {
       payment,
       paymentStatus,
       receiptUrl,
+      phoneNumber: dto.phoneNumber?.trim() || null,
       answers: answerData,
     });
     if (!result.created) {
@@ -620,6 +612,7 @@ export class EventService {
       'Telegram',
       'Група',
       'Дата народження',
+      'Телефон',
       'Джерело',
       'Оплата',
       'Статус оплати',
@@ -648,6 +641,7 @@ export class EventService {
         reg.telegramTag,
         reg.group,
         reg.birthDate ? reg.birthDate.toISOString().slice(0, 10) : '',
+        reg.phoneNumber ?? '',
         reg.source === 'BOT' ? 'Telegram-бот' : 'Сайт',
         PAYMENT_LABEL[reg.payment],
         reg.paymentStatus === 'CONFIRMED'
