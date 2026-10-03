@@ -27,6 +27,8 @@ services:
       # `postgres` is the service name on the compose network.
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in the root .env}@postgres:5432/fice?schema=public
       PORT: 3001
+      APP_ENV: ${APP_ENV:-development}
+      CORS_ORIGIN: ${CORS_ORIGIN:-}
       TZ: Europe/Kyiv
       # Optional Telegram admin config — taken from your shell or a root .env if set.
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
