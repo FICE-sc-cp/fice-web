@@ -180,6 +180,27 @@ describe('VotingService', () => {
     });
   });
 
+  describe('getPublicVoting', () => {
+    it('treats everyone as registered at an event without registration', async () => {
+      prisma.eventVoting.findUnique.mockResolvedValue({
+        id: 'v1',
+        eventId: 'e1',
+        status: VotingStatus.ACTIVE,
+        onlyRegistered: true,
+        event: { id: 'e1', name: 'Event', noRegistration: true },
+        candidates: [],
+        _count: { votes: 0 },
+      });
+      prisma.vote.findUnique.mockResolvedValue(null);
+      prisma.eventRegistration.findFirst.mockResolvedValue(null);
+      prisma.votingCandidate.findFirst.mockResolvedValue(null);
+
+      const view: any = await service.getPublicVoting('v1', BigInt(5));
+
+      expect(view.isRegistered).toBe(true);
+    });
+  });
+
   describe('submitCandidate & moderation', () => {
     const votingId = 'vote-uuid';
     const telegramId = BigInt(999888);

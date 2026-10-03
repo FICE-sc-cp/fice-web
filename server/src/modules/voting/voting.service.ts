@@ -244,7 +244,7 @@ export class VotingService {
           telegramUserId: telegramId,
         },
       });
-      isRegistered = !!reg;
+      isRegistered = isRegistered || !!reg;
 
       const userSub = await this.prisma.votingCandidate.findFirst({
         where: {
