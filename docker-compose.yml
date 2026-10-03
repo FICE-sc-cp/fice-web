@@ -1,7 +1,14 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "5"
+
 services:
   postgres:
     image: postgres:15
     container_name: fice-postgres
+    logging: *default-logging
     restart: always
     environment:
       POSTGRES_DB: fice
@@ -22,6 +29,7 @@ services:
       context: ./server
       dockerfile: Dockerfile
     container_name: fice-server
+    logging: *default-logging
     restart: always
     environment:
       # `postgres` is the service name on the compose network.
@@ -77,6 +85,7 @@ services:
       args:
         BACKEND_URL: http://server:3001
     container_name: fice-admin
+    logging: *default-logging
     restart: always
     ports:
       - "127.0.0.1:3000:3000"
@@ -97,6 +106,7 @@ services:
         BACKEND_URL: http://server:3001
         NEXT_PUBLIC_USER_BOT_USERNAME: ${USER_BOT_USERNAME:-}
     container_name: fice-web
+    logging: *default-logging
     restart: always
     ports:
       - "127.0.0.1:3002:3000"
@@ -111,6 +121,7 @@ services:
   caddy:
     image: caddy:2-alpine
     container_name: fice-caddy
+    logging: *default-logging
     profiles: ["prod"]
     restart: always
     ports:
