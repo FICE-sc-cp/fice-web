@@ -4,6 +4,7 @@ import {
   Controller,
   Delete,
   Get,
+  ForbiddenException,
   Headers,
   NotFoundException,
   Param,
@@ -44,7 +45,11 @@ import {
 import { RejectPaymentDto } from './dto/reject-payment.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { EventEntity } from './entities/event.entity';
-import { EventService, SESSION_TOKEN_PATTERN } from './event.service';
+import {
+  EventService,
+  SESSION_TOKEN_PATTERN,
+  toPublicEvent,
+} from './event.service';
 
 @ApiTags('events')
 @Controller('event')
@@ -81,12 +86,19 @@ export class EventController {
     @Query() query: EventQueryDto,
     @Headers('x-telegram-init-data') initData?: string,
   ) {
-    return this.eventService.findAll(
+    const isAdmin = await this.adminAccess.isAdmin(initData);
+    if (query.draft && !isAdmin) {
+      throw new ForbiddenException('Чернетки доступні лише адміністраторам');
+    }
+    const result = await this.eventService.findAll(
       query,
       query.past,
       query.abitfest,
-      await this.adminAccess.draftsAllowed(query.draft, initData),
+      !!query.draft,
     );
+    return isAdmin
+      ? result
+      : { ...result, items: result.items.map(toPublicEvent) };
   }
 
   @Get('registration-session/:token')
@@ -121,10 +133,13 @@ export class EventController {
     @Headers('x-telegram-init-data') initData?: string,
   ) {
     const event = await this.eventService.findOne(id);
-    if (event.isDraft && !(await this.adminAccess.isAdmin(initData))) {
+    const isAdmin = await this.adminAccess.isAdmin(initData);
+    if (event.isDraft && !isAdmin) {
       throw new NotFoundException(`Event ${id} not found`);
     }
-    return event;
+    return isAdmin
+      ? this.eventService.withStaffStatus(event)
+      : toPublicEvent(event);
   }
 
   @Get(':id/checkin/access')

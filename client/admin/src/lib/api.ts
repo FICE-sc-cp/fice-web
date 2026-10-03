@@ -144,6 +144,7 @@ export interface EventItem {
   time?: string | null;
   allowedFaculties?: string[];
   checkInStaffTags?: string[];
+  checkInStaffUnresolved?: string[];
   baseQuestionsConfig?: any;
   detailsId: string | null;
   details?: EventDetails | null;

@@ -21,14 +21,20 @@ export class EventDetailsService {
 
   findAll() {
     return this.prisma.eventDetails.findMany({
-      include: { department: true, event: true },
+      include: {
+        department: true,
+        event: { omit: { checkInStaffTags: true, checkInStaffIds: true } },
+      },
     });
   }
 
   async findOne(id: string) {
     const details = await this.prisma.eventDetails.findUnique({
       where: { id },
-      include: { department: true, event: true },
+      include: {
+        department: true,
+        event: { omit: { checkInStaffTags: true, checkInStaffIds: true } },
+      },
     });
     if (!details) {
       throw new NotFoundException(`Event details ${id} not found`);

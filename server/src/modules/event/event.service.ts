@@ -35,6 +35,13 @@ import {
 import { createRegistrationGuarded } from './registration-writer';
 import { paymentRuleViolation } from './payment-rules';
 import { validateAnswers } from './registration-answers';
+import { ageOf } from './age';
+import {
+  isCheckInStaff,
+  normalizeStaffTags,
+  resolveStaffTags,
+  unresolvedStaffTags,
+} from './check-in-staff';
 import { ownUploadExists } from '../../upload/own-upload';
 import { AddEventPartnerDto } from './dto/add-event-partner.dto';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -53,11 +60,12 @@ const PAYMENT_LABEL: Record<RegistrationPayment, string> = {
 
 export const SESSION_TOKEN_PATTERN = /^[0-9a-f]{32}$/;
 
-const normalizeTags = (tags?: string[]) =>
-  (tags ?? [])
-    .map((t) => t.trim().toLowerCase())
-    .filter(Boolean)
-    .map((t) => (t.startsWith('@') ? t : `@${t}`));
+export function toPublicEvent<
+  T extends { checkInStaffTags?: unknown; checkInStaffIds?: unknown },
+>(event: T): Omit<T, 'checkInStaffTags' | 'checkInStaffIds'> {
+  const { checkInStaffTags, checkInStaffIds, ...rest } = event;
+  return rest;
+}
 
 @Injectable()
 export class EventService {
@@ -97,12 +105,13 @@ export class EventService {
       checkInStaffTags,
       ...rest
     } = dto;
+    const staffTags = normalizeStaffTags(checkInStaffTags);
+    const staff = await resolveStaffTags(this.prisma, staffTags);
     const event = await this.prisma.event.create({
       data: {
         ...rest,
-        checkInStaffTags: checkInStaffTags
-          ? normalizeTags(checkInStaffTags)
-          : [],
+        checkInStaffTags: staffTags,
+        checkInStaffIds: [...staff.values()],
         details: detailsId ? { connect: { id: detailsId } } : undefined,
         eventPartners: partners?.length
           ? {
@@ -136,7 +145,24 @@ export class EventService {
       },
       include: this.include,
     });
-    return withRegistrationState(event);
+    return this.withStaffStatus(withRegistrationState(event));
+  }
+
+  async withStaffStatus<
+    T extends { checkInStaffTags: string[]; checkInStaffIds: bigint[] },
+  >(event: T) {
+    const resolved = await resolveStaffTags(
+      this.prisma,
+      event.checkInStaffTags,
+    );
+    return {
+      ...event,
+      checkInStaffUnresolved: unresolvedStaffTags(
+        event.checkInStaffTags,
+        resolved,
+        event.checkInStaffIds,
+      ),
+    };
   }
 
   async findAll(
@@ -195,14 +221,24 @@ export class EventService {
       checkInStaffTags,
       ...rest
     } = dto;
+    const staffTags =
+      checkInStaffTags !== undefined
+        ? normalizeStaffTags(checkInStaffTags)
+        : undefined;
+    const staff = staffTags
+      ? await resolveStaffTags(this.prisma, staffTags)
+      : undefined;
 
-    return this.prisma.$transaction(async (tx) => {
+    const updated = await this.prisma.$transaction(async (tx) => {
       await tx.event.update({
         where: { id },
         data: {
           ...rest,
-          ...(checkInStaffTags !== undefined
-            ? { checkInStaffTags: normalizeTags(checkInStaffTags) }
+          ...(staffTags && staff
+            ? {
+                checkInStaffTags: staffTags,
+                checkInStaffIds: [...staff.values()],
+              }
             : {}),
           ...(detailsId !== undefined
             ? { details: { connect: { id: detailsId } } }
@@ -264,12 +300,12 @@ export class EventService {
         }
       }
 
-      const updated = await tx.event.findUniqueOrThrow({
+      return tx.event.findUniqueOrThrow({
         where: { id },
         include: this.include,
       });
-      return withRegistrationState(updated);
     });
+    return this.withStaffStatus(withRegistrationState(updated));
   }
 
   async remove(id: string) {
@@ -674,7 +710,7 @@ export class EventService {
   ) {
     const event = await this.prisma.event.findUnique({
       where: { id: eventId },
-      select: { id: true, name: true, checkInStaffTags: true },
+      select: { id: true, name: true, checkInStaffIds: true },
     });
     if (!event) throw new NotFoundException(`Event ${eventId} not found`);
 
@@ -692,13 +728,7 @@ export class EventService {
       isAdmin = true;
     }
 
-    let isStaff = false;
-    if (username) {
-      const cleanTag = '@' + username.trim().toLowerCase().replace(/^@+/, '');
-      isStaff = (event.checkInStaffTags || []).some(
-        (tag) => tag.trim().toLowerCase() === cleanTag,
-      );
-    }
+    const isStaff = isCheckInStaff(event.checkInStaffIds, telegramId);
 
     const canCheckIn = isAdmin || isStaff;
     return { canCheckIn, isAdmin, isStaff, event };
@@ -719,7 +749,7 @@ export class EventService {
     telegramId?: bigint,
     username?: string,
   ) {
-    const { canCheckIn, event } = await this.verifyCheckInAccess(
+    const { canCheckIn, isAdmin, event } = await this.verifyCheckInAccess(
       eventId,
       telegramId,
       username,
@@ -757,27 +787,71 @@ export class EventService {
         unattendedCount,
         percentage: total > 0 ? Math.round((attendedCount / total) * 100) : 0,
       },
-      items: registrations.map((r) => ({
-        id: r.id,
-        fullName: r.fullName,
-        telegramTag: r.telegramTag,
-        group: r.group,
-        birthDate: r.birthDate,
-        source: r.source,
-        payment: r.payment,
-        paymentStatus: r.paymentStatus,
-        paymentRejectionReason: r.paymentRejectionReason,
-        ticketCode: r.ticketCode,
-        receiptUrl: r.receiptUrl,
-        attended: r.attended,
-        attendedAt: r.attendedAt,
-        attendedBy: r.attendedBy,
-        createdAt: r.createdAt,
-        answers: r.answers.map((a) => ({
-          id: a.id,
-          question: a.question.label,
-          value: a.value,
-        })),
+      items: registrations.map((r) =>
+        isAdmin ? this.fullCheckInItem(r) : this.volunteerCheckInItem(r),
+      ),
+    };
+  }
+
+  private volunteerCheckInItem(r: {
+    id: string;
+    fullName: string;
+    telegramTag: string;
+    group: string;
+    birthDate: Date | null;
+    payment: RegistrationPayment;
+    paymentStatus: PaymentStatus;
+    attended: boolean;
+    attendedAt: Date | null;
+    attendedBy: string | null;
+    createdAt: Date;
+  }) {
+    const { age, isAdult } = ageOf(r.birthDate);
+    return {
+      id: r.id,
+      fullName: r.fullName,
+      telegramTag: r.telegramTag,
+      group: r.group,
+      payment: r.payment,
+      paymentStatus: r.paymentStatus,
+      receiptUrl: null,
+      attended: r.attended,
+      attendedAt: r.attendedAt,
+      attendedBy: r.attendedBy,
+      createdAt: r.createdAt,
+      age,
+      isAdult,
+      answers: [],
+    };
+  }
+
+  private fullCheckInItem(
+    r: Prisma.EventRegistrationGetPayload<{
+      include: {
+        answers: { include: { question: { select: { label: true } } } };
+      };
+    }>,
+  ) {
+    return {
+      id: r.id,
+      fullName: r.fullName,
+      telegramTag: r.telegramTag,
+      group: r.group,
+      birthDate: r.birthDate,
+      source: r.source,
+      payment: r.payment,
+      paymentStatus: r.paymentStatus,
+      paymentRejectionReason: r.paymentRejectionReason,
+      ticketCode: r.ticketCode,
+      receiptUrl: r.receiptUrl,
+      attended: r.attended,
+      attendedAt: r.attendedAt,
+      attendedBy: r.attendedBy,
+      createdAt: r.createdAt,
+      answers: r.answers.map((a) => ({
+        id: a.id,
+        question: a.question.label,
+        value: a.value,
       })),
     };
   }
@@ -789,7 +863,7 @@ export class EventService {
     username?: string,
     staffName?: string,
   ) {
-    const { canCheckIn } = await this.verifyCheckInAccess(
+    const { canCheckIn, isAdmin } = await this.verifyCheckInAccess(
       eventId,
       telegramId,
       username,
@@ -799,6 +873,8 @@ export class EventService {
         'У вас немає доступу до відмітки учасників на цьому заході',
       );
     }
+    const visibleBirthDate = (birthDate: Date | null) =>
+      isAdmin ? birthDate : undefined;
 
     let cleanCode = (rawCode || '').trim();
     if (cleanCode.startsWith('FICE-TICKET:')) {
@@ -863,7 +939,7 @@ export class EventService {
           fullName: reg.fullName,
           group: reg.group,
           telegramTag: reg.telegramTag,
-          birthDate: reg.birthDate,
+          birthDate: visibleBirthDate(reg.birthDate),
           source: reg.source,
           payment: reg.payment,
           paymentStatus: reg.paymentStatus,
@@ -905,7 +981,7 @@ export class EventService {
         fullName: updated.fullName,
         group: updated.group,
         telegramTag: updated.telegramTag,
-        birthDate: updated.birthDate,
+        birthDate: visibleBirthDate(updated.birthDate),
         source: updated.source,
         payment: updated.payment,
         paymentStatus: updated.paymentStatus,
@@ -1110,31 +1186,12 @@ export class EventService {
       isAdmin = true;
     }
 
-    if (isAdmin) {
-      const events = await this.prisma.event.findMany({
-        where: { isDraft: false },
-        orderBy: { date: 'desc' },
-        take: 30,
-        select: {
-          id: true,
-          name: true,
-          date: true,
-          location: true,
-          photoUrl: true,
-          checkInStaffTags: true,
-          _count: { select: { registrations: true } },
-        },
-      });
-      return events.map((e) => ({ ...e, isAdmin: true }));
-    }
-
-    if (!username) return [];
-    const cleanTag = '@' + username.trim().toLowerCase().replace(/^@+/, '');
+    if (!isAdmin && telegramId === undefined) return [];
 
     const events = await this.prisma.event.findMany({
       where: {
         isDraft: false,
-        checkInStaffTags: { has: cleanTag },
+        ...(isAdmin ? {} : { checkInStaffIds: { has: telegramId } }),
       },
       orderBy: { date: 'desc' },
       take: 30,
@@ -1142,12 +1199,12 @@ export class EventService {
         id: true,
         name: true,
         date: true,
+        hasTime: true,
         location: true,
         photoUrl: true,
-        checkInStaffTags: true,
         _count: { select: { registrations: true } },
       },
     });
-    return events.map((e) => ({ ...e, isAdmin: false }));
+    return events.map((e) => ({ ...e, isAdmin }));
   }
 }

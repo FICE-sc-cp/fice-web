@@ -187,6 +187,7 @@ model Event {
   time                  String?   @db.VarChar(10)
   allowedFaculties      String[]  @default([])
   checkInStaffTags      String[]  @default([])
+  checkInStaffIds       BigInt[]  @default([])
   baseQuestionsConfig   Json?
 
   detailsId String?       @unique @db.Uuid

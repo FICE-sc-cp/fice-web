@@ -35,8 +35,13 @@ export default function NewEventPage() {
         noRegistration: v.noRegistration ?? false,
       });
     },
-    onSuccess: () => {
+    onSuccess: (created) => {
       qc.invalidateQueries({ queryKey: ['events'] });
+      if (created.checkInStaffUnresolved?.length) {
+        hapticNotify('warning');
+        router.push(`/events/${created.id}`);
+        return;
+      }
       hapticNotify('success');
       router.push('/events');
     },
