@@ -38,3 +38,5 @@ out/
 # Executables
 *.exe
 cloudflared.exe
+
+!.env.example
