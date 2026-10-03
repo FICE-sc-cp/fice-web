@@ -5,6 +5,7 @@ import {
   BadRequestException,
   Controller,
   Post,
+  Req,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
@@ -12,6 +13,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { PUBLIC_UPLOAD_LIMIT_PER_IP, THROTTLE_TTL } from '../common/throttle';
+import type { Request } from 'express';
 import { diskStorage } from 'multer';
 import { Admin } from '../auth/admin.decorator';
 import {
@@ -19,6 +21,11 @@ import {
   UPLOAD_DIR,
   UPLOAD_URL_PREFIX,
 } from './upload.constants';
+import {
+  clientIpHash,
+  PublicUploadQuotaInterceptor,
+} from './public-upload-quota.interceptor';
+import { PublicUploadService } from './public-upload.service';
 
 const ALLOWED_MIME_EXTENSIONS: Record<string, string[]> = {
   'image/jpeg': ['.jpg', '.jpeg'],
@@ -89,7 +96,7 @@ const imageOrPdfUpload = FileInterceptor('file', {
       cb(null, `${randomUUID()}${safeExt}`);
     },
   }),
-  limits: { fileSize: MAX_UPLOAD_BYTES },
+  limits: { fileSize: MAX_UPLOAD_BYTES, files: 1, fields: 2, parts: 3 },
   fileFilter: (_req, file, cb) => {
     const safeExt = getSafeExtension(file.mimetype, file.originalname);
     if (!safeExt) {
@@ -134,6 +141,8 @@ const fileBody = {
 @ApiTags('upload')
 @Controller('upload')
 export class UploadController {
+  constructor(private readonly publicUploads: PublicUploadService) {}
+
   @Post()
   @Admin()
   @ApiConsumes('multipart/form-data')
@@ -153,8 +162,17 @@ export class UploadController {
     summary: 'Upload an image publicly (e.g. a payment receipt)',
   })
   @ApiBody(fileBody)
-  @UseInterceptors(imageOrPdfUpload)
-  uploadPublic(@UploadedFile() file?: Express.Multer.File) {
-    return toResult(file);
+  @UseInterceptors(PublicUploadQuotaInterceptor, imageOrPdfUpload)
+  async uploadPublic(
+    @Req() req: Request,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    const result = toResult(file);
+    await this.publicUploads.record(
+      result.filename,
+      file!.size,
+      clientIpHash(req),
+    );
+    return result;
   }
 }
