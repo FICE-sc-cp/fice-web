@@ -10,6 +10,7 @@ import { basename, resolve } from 'node:path';
 import * as QRCode from 'qrcode';
 import { PrismaService } from '../database/prisma.service';
 import { escapeHtml } from '../common/html';
+import { PollingStatus, PollingSupervisor } from './polling';
 import { UPLOAD_DIR } from '../upload/upload.constants';
 
 export interface BroadcastPayload {
@@ -26,6 +27,7 @@ export interface BroadcastPayload {
 export class UserBotService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(UserBotService.name);
   private bot?: Bot;
+  private polling?: PollingSupervisor;
 
   constructor(
     private readonly configService: ConfigService,
@@ -320,41 +322,47 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
       }
     });
 
-    this.bot
-      .start({
-        allowed_updates: ['message', 'my_chat_member'],
-        onStart: async (botInfo) => {
-          this.logger.log(
-            `User Bot started successfully as @${botInfo.username}`,
-          );
-          const configured = this.getUsername();
-          if (
-            configured &&
-            configured.toLowerCase() !== botInfo.username.toLowerCase()
-          ) {
-            this.logger.warn(
-              `USER_BOT_USERNAME is @${configured}, but USER_BOT_TOKEN belongs to @${botInfo.username}`,
-            );
-          }
+    this.bot.catch((err) => {
+      this.logger.error(
+        'Failed to handle Telegram update: ' +
+          (err.error instanceof Error ? err.error.message : String(err.error)),
+      );
+    });
 
-          try {
-            await this.bot?.api.setChatMenuButton({
-              menu_button: {
-                type: 'web_app',
-                text: 'Заходи FICE',
-                web_app: { url: this.getMiniAppUrl() },
-              },
-            });
-          } catch (e) {
-            this.logger.warn(
-              'Failed to set chat menu button for user bot: ' + e,
-            );
-          }
-        },
-      })
-      .catch((err) => {
-        this.logger.error('Error during User Bot long polling', err);
-      });
+    this.polling = new PollingSupervisor(this.bot, this.logger, {
+      allowed_updates: ['message', 'my_chat_member'],
+      onStart: async (botInfo) => {
+        this.logger.log(
+          `User Bot started successfully as @${botInfo.username}`,
+        );
+        const configured = this.getUsername();
+        if (
+          configured &&
+          configured.toLowerCase() !== botInfo.username.toLowerCase()
+        ) {
+          this.logger.warn(
+            `USER_BOT_USERNAME is @${configured}, but USER_BOT_TOKEN belongs to @${botInfo.username}`,
+          );
+        }
+
+        try {
+          await this.bot?.api.setChatMenuButton({
+            menu_button: {
+              type: 'web_app',
+              text: 'Заходи FICE',
+              web_app: { url: this.getMiniAppUrl() },
+            },
+          });
+        } catch (e) {
+          this.logger.warn('Failed to set chat menu button for user bot: ' + e);
+        }
+      },
+    });
+    this.polling.start();
+  }
+
+  pollingStatus(): PollingStatus {
+    return this.polling?.getStatus() ?? 'disabled';
   }
 
   async sendBroadcast(
@@ -634,9 +642,9 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy() {
-    if (this.bot) {
+    if (this.polling) {
       this.logger.log('Stopping User Telegram Bot...');
-      await this.bot.stop();
+      await this.polling.stop();
     }
   }
 }

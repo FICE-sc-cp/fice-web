@@ -20,6 +20,7 @@ import {
   matchDepartments,
   messageTopicId,
 } from './department-chats';
+import { PollingStatus, PollingSupervisor } from './polling';
 
 const DEPARTMENT_CHATS_TTL_MS = 60_000;
 
@@ -51,6 +52,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(BotService.name);
   private syncInitialTimeout?: NodeJS.Timeout;
   private syncInterval?: NodeJS.Timeout;
+  private polling?: PollingSupervisor;
 
   constructor(
     private readonly configService: ConfigService,
@@ -109,24 +111,21 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       );
     });
 
-    this.bot
-      .start({
-        // Opt into member join/leave updates so we can harvest new members of
-        // the project chat, not only those who send a message. `chat_member`
-        // is only delivered when the bot is an administrator of the chat.
-        allowed_updates: [
-          'message',
-          'edited_message',
-          'chat_member',
-          'my_chat_member',
-        ],
-        onStart: (botInfo) => {
-          this.logger.log(`Bot started successfully as @${botInfo.username}`);
-        },
-      })
-      .catch((err) => {
-        this.logger.error('Error during bot long polling', err);
-      });
+    this.polling = new PollingSupervisor(this.bot, this.logger, {
+      // Opt into member join/leave updates so we can harvest new members of
+      // the project chat, not only those who send a message. `chat_member`
+      // is only delivered when the bot is an administrator of the chat.
+      allowed_updates: [
+        'message',
+        'edited_message',
+        'chat_member',
+        'my_chat_member',
+      ],
+      onStart: (botInfo) => {
+        this.logger.log(`Bot started successfully as @${botInfo.username}`);
+      },
+    });
+    this.polling.start();
 
     // Schedule initial and recurring membership sync (clean up members who left/were kicked)
     this.syncInitialTimeout = setTimeout(() => {
@@ -659,11 +658,15 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     if (this.syncInitialTimeout) clearTimeout(this.syncInitialTimeout);
     if (this.syncInterval) clearInterval(this.syncInterval);
 
-    if (!this.bot) {
+    if (!this.polling) {
       return;
     }
 
     this.logger.log('Stopping Telegram Bot...');
-    await this.bot.stop();
+    await this.polling.stop();
+  }
+
+  pollingStatus(): PollingStatus {
+    return this.polling?.getStatus() ?? 'disabled';
   }
 }
