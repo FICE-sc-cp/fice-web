@@ -441,6 +441,7 @@ model VotingCandidate {
   voting      EventVoting @relation(fields: [votingId], references: [id], onDelete: Cascade)
   votes       Vote[]
 
+  @@unique([votingId, submittedByTelegramId])
   @@index([votingId])
   @@index([submittedByTelegramId])
 }

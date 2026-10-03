@@ -4,7 +4,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { VotingStatus } from '@prisma/client';
+import { ownUploadExists } from '../../upload/own-upload';
 import { VotingService } from './voting.service';
+
+jest.mock('../../upload/own-upload', () => ({
+  ...jest.requireActual('../../upload/own-upload'),
+  ownUploadExists: jest.fn(() => true),
+}));
 
 describe('VotingService', () => {
   let service: VotingService;
@@ -190,6 +196,43 @@ describe('VotingService', () => {
           photoUrl: '/uploads/batman.jpg',
         }),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    const openVoting = {
+      id: votingId,
+      eventId: 'event-uuid',
+      allowSubmissions: true,
+      submissionsOpen: true,
+      onlyRegistered: false,
+    };
+
+    it('refuses a photo that is not our own upload', async () => {
+      prisma.eventVoting.findUnique.mockResolvedValue(openVoting);
+      (ownUploadExists as jest.Mock).mockReturnValueOnce(false);
+
+      await expect(
+        service.submitCandidate(votingId, telegramId, {
+          name: 'Batman',
+          photoUrl: 'https://tracker.example/pixel.jpg',
+        }),
+      ).rejects.toThrow('Фото потрібно завантажити');
+    });
+
+    it('refuses to reopen an already approved entry', async () => {
+      prisma.eventVoting.findUnique.mockResolvedValue(openVoting);
+      prisma.votingCandidate.findFirst.mockResolvedValue({
+        id: 'cand-1',
+        status: 'APPROVED',
+      });
+      prisma.votingCandidate.update = jest.fn();
+
+      await expect(
+        service.submitCandidate(votingId, telegramId, {
+          name: 'Batman 2',
+          photoUrl: '/uploads/0e352379-dbd8-407f-98a5-38d60ab53528.jpg',
+        }),
+      ).rejects.toThrow('вже схвалено');
+      expect(prisma.votingCandidate.update).not.toHaveBeenCalled();
     });
 
     it('creates candidate with PENDING status on valid submission', async () => {

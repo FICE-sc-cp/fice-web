@@ -10,6 +10,7 @@ import * as ExcelJS from 'exceljs';
 import { UserBotService } from '../../bot/user-bot.service';
 import { PrismaService } from '../../database/prisma.service';
 import { escapeHtml } from '../../common/html';
+import { OWN_IMAGE_URL, ownUploadExists } from '../../upload/own-upload';
 import { CastVoteDto } from './dto/cast-vote.dto';
 import { CreateCandidateDto } from './dto/create-candidate.dto';
 import { UpdateCandidateDto } from './dto/update-candidate.dto';
@@ -389,9 +390,21 @@ export class VotingService {
       }
     }
 
+    if (!ownUploadExists(dto.photoUrl, OWN_IMAGE_URL)) {
+      throw new BadRequestException(
+        'Фото потрібно завантажити через форму заявки',
+      );
+    }
+
     const existing = await this.prisma.votingCandidate.findFirst({
       where: { votingId, submittedByTelegramId: telegramId },
     });
+
+    if (existing?.status === CandidateStatus.APPROVED) {
+      throw new BadRequestException(
+        'Вашу заявку вже схвалено — змінити її неможливо. Зверніться до організаторів.',
+      );
+    }
 
     if (existing) {
       return this.prisma.votingCandidate.update({
