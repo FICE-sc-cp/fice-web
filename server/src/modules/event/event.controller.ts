@@ -21,6 +21,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import { REGISTER_LIMIT_PER_IP, THROTTLE_TTL } from '../../common/throttle';
 import { Admin } from '../../auth/admin.decorator';
 import {
   extractTelegramUser,
@@ -265,7 +266,7 @@ export class EventController {
   }
 
   @Post(':id/register')
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle({ default: { limit: REGISTER_LIMIT_PER_IP, ttl: THROTTLE_TTL } })
   @ApiOperation({ summary: 'Register for an event (public)' })
   register(
     @Param('id', ParseUUIDPipe) id: string,

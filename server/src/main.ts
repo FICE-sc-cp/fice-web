@@ -8,6 +8,7 @@ import { apiReference } from '@scalar/nestjs-api-reference';
 import { AppModule } from './app.module';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
 import { UPLOAD_DIR, UPLOAD_URL_PREFIX } from './upload/upload.constants';
+import { TRUST_PROXY } from './common/throttle';
 
 // Polyfill BigInt JSON serialization globally
 (BigInt.prototype as any).toJSON = function () {
@@ -18,6 +19,7 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   app.getHttpAdapter().getInstance().disable('x-powered-by');
+  app.set('trust proxy', TRUST_PROXY);
 
   app.use((_req: any, res: any, next: any) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');

@@ -25,11 +25,12 @@ import { BotUserModule } from './modules/bot-user/bot-user.module';
 import { VotingModule } from './modules/voting/voting.module';
 import { BroadcastModule } from './modules/broadcast/broadcast.module';
 import { BlockedUsersModule } from './modules/blocked-users/blocked-users.module';
+import { throttlerOptions } from './common/throttle';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
-    ThrottlerModule.forRoot([{ ttl: 60000, limit: 100 }]),
+    ThrottlerModule.forRoot(throttlerOptions()),
     PrismaModule,
     AuthModule,
     BotModule,
