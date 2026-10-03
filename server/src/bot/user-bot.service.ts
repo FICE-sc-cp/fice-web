@@ -9,6 +9,7 @@ import { Bot, GrammyError, InputFile } from 'grammy';
 import { basename, resolve } from 'node:path';
 import * as QRCode from 'qrcode';
 import { PrismaService } from '../database/prisma.service';
+import { escapeHtml } from '../common/html';
 import { UPLOAD_DIR } from '../upload/upload.constants';
 
 export interface BroadcastPayload {
@@ -589,14 +590,16 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
 
       const caption =
         `🎫 <b>ТВІЙ КВИТОК НА ЗАХІД</b>\n\n` +
-        `🎃 <b>${event.name}</b>\n` +
-        `📅 <b>Коли:</b> ${eventDateStr}\n` +
-        (event.location ? `📍 <b>Де:</b> ${event.location}\n` : '') +
+        `🎃 <b>${escapeHtml(event.name)}</b>\n` +
+        `📅 <b>Коли:</b> ${escapeHtml(eventDateStr)}\n` +
+        (event.location
+          ? `📍 <b>Де:</b> ${escapeHtml(event.location)}\n`
+          : '') +
         `\n` +
-        `👤 <b>Гість:</b> ${reg.fullName}\n` +
-        `👥 <b>Група:</b> ${reg.group}\n` +
+        `👤 <b>Гість:</b> ${escapeHtml(reg.fullName)}\n` +
+        `👥 <b>Група:</b> ${escapeHtml(reg.group)}\n` +
         ageInfo +
-        `🎟 <b>Код квитка:</b> <code>${reg.ticketCode.slice(0, 8)}</code>\n` +
+        `🎟 <b>Код квитка:</b> <code>${escapeHtml(reg.ticketCode.slice(0, 8))}</code>\n` +
         `✅ <b>Оплату/реєстрацію підтверджено</b>\n\n` +
         `⚠️ <b>Збережи це фото в галерею смартфона</b>, щоб показати QR-код волонтеру на вході навіть без інтернету! 🔆 Зроби яскравість екрана вищою.`;
 

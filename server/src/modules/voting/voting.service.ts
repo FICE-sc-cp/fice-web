@@ -9,6 +9,7 @@ import { CandidateStatus, VotingStatus } from '@prisma/client';
 import * as ExcelJS from 'exceljs';
 import { UserBotService } from '../../bot/user-bot.service';
 import { PrismaService } from '../../database/prisma.service';
+import { escapeHtml } from '../../common/html';
 import { CastVoteDto } from './dto/cast-vote.dto';
 import { CreateCandidateDto } from './dto/create-candidate.dto';
 import { UpdateCandidateDto } from './dto/update-candidate.dto';
@@ -461,11 +462,11 @@ export class VotingService {
     });
 
     if (candidate.submittedByTelegramId) {
-      const eventName = candidate.voting?.event?.name || 'захід';
-      const votingTitle = candidate.voting?.title || 'Конкурс';
+      const eventName = escapeHtml(candidate.voting?.event?.name || 'захід');
+      const votingTitle = escapeHtml(candidate.voting?.title || 'Конкурс');
       const msg =
         `🎉 <b>Вашу заявку схвалено!</b>\n\n` +
-        `Адміністратор підтвердив вашу участь у конкурсі <b>«${votingTitle}»</b> (захід <b>${eventName}</b>) із образом <b>«${candidate.name}»</b>.\n\n` +
+        `Адміністратор підтвердив вашу участь у конкурсі <b>«${votingTitle}»</b> (захід <b>${eventName}</b>) із образом <b>«${escapeHtml(candidate.name)}»</b>.\n\n` +
         `Тепер ваш образ бере участь у голосуванні! Бажаємо успіху та перемоги! 🏆`;
 
       const miniAppUrl = this.userBot.getMiniAppUrl();
@@ -506,12 +507,14 @@ export class VotingService {
     });
 
     if (candidate.submittedByTelegramId) {
-      const eventName = candidate.voting?.event?.name || 'захід';
-      const votingTitle = candidate.voting?.title || 'Конкурс';
-      const reasonPart = reason ? `\n\n<b>Причина:</b> ${reason}` : '';
+      const eventName = escapeHtml(candidate.voting?.event?.name || 'захід');
+      const votingTitle = escapeHtml(candidate.voting?.title || 'Конкурс');
+      const reasonPart = reason
+        ? `\n\n<b>Причина:</b> ${escapeHtml(reason)}`
+        : '';
       const msg =
         `ℹ️ <b>Оновлення щодо заявки на конкурс</b>\n\n` +
-        `Вашу заявку із образом <b>«${candidate.name}»</b> у конкурсі <b>«${votingTitle}»</b> (захід <b>${eventName}</b>) було відхилено адміністратором.${reasonPart}\n\n` +
+        `Вашу заявку із образом <b>«${escapeHtml(candidate.name)}»</b> у конкурсі <b>«${votingTitle}»</b> (захід <b>${eventName}</b>) було відхилено адміністратором.${reasonPart}\n\n` +
         `Ви можете за потреби відредагувати заявку та завантажити інше фото у додатку.`;
 
       const miniAppUrl = this.userBot.getMiniAppUrl();
@@ -864,9 +867,9 @@ export class VotingService {
 
     const text =
       `<b>Розпочалося голосування!</b>\n\n` +
-      `На заході <b>«${voting.event.name}»</b> відкрито голосування в номінації:\n` +
-      `<b>«${voting.title}»</b>\n\n` +
-      (voting.description ? `${voting.description}\n\n` : '') +
+      `На заході <b>«${escapeHtml(voting.event.name)}»</b> відкрито голосування в номінації:\n` +
+      `<b>«${escapeHtml(voting.title)}»</b>\n\n` +
+      (voting.description ? `${escapeHtml(voting.description)}\n\n` : '') +
       `Переходь за кнопкою нижче та віддай свій голос:`;
 
     const result = await this.userBot.sendBroadcast(

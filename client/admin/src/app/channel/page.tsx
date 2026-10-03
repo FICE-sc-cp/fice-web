@@ -11,6 +11,7 @@ import { ImageUpload } from '@/components/ImageUpload';
 import { RichTextArea } from '@/components/RichTextArea';
 import { Spinner } from '@/components/ui/Spinner';
 import { hapticNotify } from '@/lib/telegram';
+import { escapeHtml } from '@/lib/utils';
 
 const fmtDate = (iso: string, hasTimeFlag?: boolean, timeStr?: string | null) => {
   try {
@@ -40,10 +41,10 @@ const fmtDate = (iso: string, hasTimeFlag?: boolean, timeStr?: string | null) =>
 
 function buildCaption(e: EventItem): string {
   return [
-    `📢 ${e.name}`,
+    `📢 ${escapeHtml(e.name)}`,
     '',
     `🗓 ${fmtDate(e.date, e.hasTime, e.time)}`,
-    e.location?.trim() ? `📍 ${e.location.trim()}` : '📍 Локація: буде повідомлено згодом',
+    e.location?.trim() ? `📍 ${escapeHtml(e.location.trim())}` : '📍 Локація: буде повідомлено згодом',
     '',
     e.description ?? '',
   ]

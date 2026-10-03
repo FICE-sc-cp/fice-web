@@ -19,6 +19,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { paginated, skipFor } from '../../common/pagination';
 import { parseKpiGroup } from '../../common/kpi-groups';
+import { escapeHtml } from '../../common/html';
 import { AddEventPartnerDto } from './dto/add-event-partner.dto';
 import { CreateEventDto } from './dto/create-event.dto';
 import { CreateEventRegistrationDto } from './dto/create-event-registration.dto';
@@ -486,7 +487,7 @@ export class EventService {
         this.userBotService
           .sendMessageToUser(
             telegramUserId,
-            `🧾 <b>Дякуємо за реєстрацію на захід «${event.name}»!</b>\n\nТвій платіж надіслано на перевірку адміністраторам. Щойно оплату підтвердять — бот надішле тобі постійний QR-квиток для входу 🎫`,
+            `🧾 <b>Дякуємо за реєстрацію на захід «${escapeHtml(event.name)}»!</b>\n\nТвій платіж надіслано на перевірку адміністраторам. Щойно оплату підтвердять — бот надішле тобі постійний QR-квиток для входу 🎫`,
             {
               text: 'Мої реєстрації 📱',
               url: `${this.userBotService.getMiniAppUrl()}?tab=my-events`,
@@ -1094,8 +1095,8 @@ export class EventService {
 
     if (updated.telegramUserId) {
       const msg =
-        `⚠️ <b>Оплату на захід «${updated.event.name}» було відхилено.</b>\n\n` +
-        (reason ? `Причина: <i>${reason}</i>\n\n` : '') +
+        `⚠️ <b>Оплату на захід «${escapeHtml(updated.event.name)}» було відхилено.</b>\n\n` +
+        (reason ? `Причина: <i>${escapeHtml(reason)}</i>\n\n` : '') +
         `Будь ласка, зверніться до організаторів або надішліть новий чек у додатку.`;
 
       await this.userBotService.sendMessageToUser(updated.telegramUserId, msg, {
@@ -1125,12 +1126,12 @@ export class EventService {
     if (reg.telegramUserId) {
       const eventName = reg.event?.name || 'захід';
       const reasonText = reason?.trim()
-        ? `\n\n<b>Причина:</b> ${reason.trim()}`
+        ? `\n\n<b>Причина:</b> ${escapeHtml(reason.trim())}`
         : '';
       this.userBotService
         .sendMessageToUser(
           reg.telegramUserId,
-          `ℹ️ Вашу реєстрацію на захід "<b>${eventName}</b>" було скасовано адміністратором.${reasonText}\n\nЯкщо у вас виникли запитання, будь ласка, зверніться до організаторів.`,
+          `ℹ️ Вашу реєстрацію на захід "<b>${escapeHtml(eventName)}</b>" було скасовано адміністратором.${reasonText}\n\nЯкщо у вас виникли запитання, будь ласка, зверніться до організаторів.`,
         )
         .catch(() => {});
     }
