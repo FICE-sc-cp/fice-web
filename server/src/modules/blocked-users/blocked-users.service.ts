@@ -3,6 +3,7 @@ import { PrismaService } from '../../database/prisma.service';
 import { CreateBlockedUserDto } from './dto/create-blocked-user.dto';
 import { UpdateBlockedUserDto } from './dto/update-blocked-user.dto';
 import { parseKpiGroup } from '../../common/kpi-groups';
+import { resolveTelegramUserId } from './blocklist';
 
 function normalizeTag(tag: string): string {
   const clean = tag.trim().replace(/^@+/, '');
@@ -48,16 +49,23 @@ export class BlockedUsersService {
       }
     }
 
+    const telegramUserId = await resolveTelegramUserId(
+      this.prisma,
+      normalizedTag.slice(1),
+    );
+
     return this.prisma.blockedUser.upsert({
       where: { telegramTag: normalizedTag },
       create: {
         telegramTag: normalizedTag,
+        telegramUserId,
         group: dto.group?.trim(),
         faculty,
         reason: dto.reason?.trim() || 'Заблоковано адміністратором',
         isBlocked: dto.isBlocked !== undefined ? dto.isBlocked : true,
       },
       update: {
+        ...(telegramUserId !== undefined ? { telegramUserId } : {}),
         group: dto.group?.trim(),
         faculty,
         reason: dto.reason?.trim() || 'Заблоковано адміністратором',

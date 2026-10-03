@@ -15,6 +15,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import { APPLICANT_LIMIT_PER_IP, THROTTLE_TTL } from '../../common/throttle';
 import { Admin } from '../../auth/admin.decorator';
 import { ApiPaginatedResponse } from '../../common/dto/paginated.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
@@ -28,7 +29,7 @@ export class ApplicantController {
   constructor(private readonly applicantService: ApplicantService) {}
 
   @Post()
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle({ default: { limit: APPLICANT_LIMIT_PER_IP, ttl: THROTTLE_TTL } })
   @ApiOperation({ summary: 'Submit a join application (public)' })
   @ApiCreatedResponse({ type: ApplicantEntity })
   create(@Body() dto: CreateApplicantDto) {

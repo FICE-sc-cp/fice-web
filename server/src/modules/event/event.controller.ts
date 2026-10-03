@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -21,6 +22,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import { REGISTER_LIMIT_PER_IP, THROTTLE_TTL } from '../../common/throttle';
 import { Admin } from '../../auth/admin.decorator';
 import {
   extractTelegramUser,
@@ -40,7 +42,7 @@ import {
 import { RejectPaymentDto } from './dto/reject-payment.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { EventEntity } from './entities/event.entity';
-import { EventService } from './event.service';
+import { EventService, SESSION_TOKEN_PATTERN } from './event.service';
 
 @ApiTags('events')
 @Controller('event')
@@ -83,7 +85,10 @@ export class EventController {
 
   @Get('registration-session/:token')
   @ApiOperation({ summary: 'Check status of pending web registration session' })
-  getRegistrationSession(@Param('token', ParseUUIDPipe) token: string) {
+  getRegistrationSession(@Param('token') token: string) {
+    if (!SESSION_TOKEN_PATTERN.test(token)) {
+      throw new BadRequestException('Invalid session token');
+    }
     return this.eventService.getRegistrationSession(token);
   }
 
@@ -265,7 +270,7 @@ export class EventController {
   }
 
   @Post(':id/register')
-  @Throttle({ default: { limit: 5, ttl: 60000 } })
+  @Throttle({ default: { limit: REGISTER_LIMIT_PER_IP, ttl: THROTTLE_TTL } })
   @ApiOperation({ summary: 'Register for an event (public)' })
   register(
     @Param('id', ParseUUIDPipe) id: string,

@@ -9,6 +9,15 @@ import { Bot, GrammyError, InputFile } from 'grammy';
 import { basename, resolve } from 'node:path';
 import * as QRCode from 'qrcode';
 import { PrismaService } from '../database/prisma.service';
+import { escapeHtml } from '../common/html';
+import { PollingStatus, PollingSupervisor } from './polling';
+import {
+  confirmingAccountMatches,
+  normalizeTelegramUsername,
+  telegramTagOf,
+} from '../modules/event/registration-identity';
+import { findActiveBlock } from '../modules/blocked-users/blocklist';
+import { errorMessage } from '../common/log-safe';
 import { UPLOAD_DIR } from '../upload/upload.constants';
 
 export interface BroadcastPayload {
@@ -25,7 +34,7 @@ export interface BroadcastPayload {
 export class UserBotService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(UserBotService.name);
   private bot?: Bot;
-  private botUsername?: string;
+  private polling?: PollingSupervisor;
 
   constructor(
     private readonly configService: ConfigService,
@@ -40,17 +49,16 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
   }
 
   getUsername(): string | undefined {
-    return (
-      this.configService.get<string>('USER_BOT_USERNAME') || this.botUsername
-    );
+    const name = this.configService
+      .get<string>('USER_BOT_USERNAME')
+      ?.trim()
+      .replace(/^@/, '');
+    return name || undefined;
   }
 
   getMiniAppUrl(): string {
     const userUrl = this.configService.get<string>('USER_MINI_APP_URL');
     if (userUrl) return userUrl.replace(/\/$/, '');
-
-    const miniAppUrl = this.configService.get<string>('MINI_APP_URL');
-    if (miniAppUrl) return `${miniAppUrl.replace(/\/$/, '')}/app`;
 
     const webUrl = this.configService.get<string>('PUBLIC_WEB_URL');
     if (webUrl) return `${webUrl.replace(/\/$/, '')}/app`;
@@ -105,7 +113,9 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
           },
         });
       } catch (err) {
-        this.logger.error('Failed to upsert BotUser on /start', err);
+        this.logger.error(
+          'Failed to upsert BotUser on /start: ' + errorMessage(err),
+        );
       }
 
       const match = ctx.match?.trim() ?? '';
@@ -138,15 +148,22 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
               .replace(/^@+/, '');
 
             // Cross-account spoofing prevention: verify current Telegram user matches the tag in the form
-            if (!fromUsername || fromUsername !== pendingTag) {
+            if (!confirmingAccountMatches(pending.telegramTag, from.username)) {
               await ctx.reply(
                 `⚠️ Помилка авторизації реєстрації.\n\nУ формі на сайті було вказано Telegram-тег @${pendingTag}, але ви відкрили бота з облікового запису ${fromUsername ? '@' + fromUsername : 'без username'}.\n\nБудь ласка, відкрийте посилання з акаунту @${pendingTag} або заповніть форму заново зі своїм дійсним тегом.`,
               );
               return;
             }
 
-            const cleanTag = fromUsername;
-            const normalizedTag = `@${cleanTag}`;
+            const cleanTag = normalizeTelegramUsername(from.username)!;
+            const normalizedTag = telegramTagOf(cleanTag);
+
+            if (await findActiveBlock(this.prisma, normalizedTag, telegramId)) {
+              await ctx.reply(
+                'Ваш обліковий запис Telegram заблоковано для реєстрації на заходи. Зверніться до підтримки: @fice_robot',
+              );
+              return;
+            }
 
             // Check if already registered
             const existingReg = await this.prisma.eventRegistration.findFirst({
@@ -154,9 +171,7 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
                 eventId: pending.eventId,
                 OR: [
                   { telegramUserId: telegramId },
-                  {
-                    telegramTag: { equals: normalizedTag, mode: 'insensitive' },
-                  },
+                  { telegramTag: normalizedTag },
                 ],
               },
             });
@@ -273,8 +288,8 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
           }
         } catch (regErr) {
           this.logger.error(
-            'Failed to complete pending web registration on /start',
-            regErr,
+            'Failed to complete pending web registration on /start: ' +
+              errorMessage(regErr),
           );
         }
       } else if (match.startsWith('event_')) {
@@ -299,10 +314,7 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
           },
         });
       } catch (err) {
-        this.logger.warn(
-          'Failed to send /start reply: ' +
-            (err instanceof Error ? err.message : String(err)),
-        );
+        this.logger.warn('Failed to send /start reply: ' + errorMessage(err));
       }
     });
 
@@ -317,37 +329,54 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
           data: { isBlocked },
         });
       } catch (err) {
-        this.logger.warn('Failed to update bot user block status', err);
+        this.logger.warn(
+          'Failed to update bot user block status: ' + errorMessage(err),
+        );
       }
     });
 
-    this.bot
-      .start({
-        allowed_updates: ['message', 'my_chat_member'],
-        onStart: async (botInfo) => {
-          this.botUsername = botInfo.username;
-          this.logger.log(
-            `User Bot started successfully as @${botInfo.username}`,
-          );
+    this.bot.catch((err) => {
+      this.logger.error(
+        'Failed to handle Telegram update: ' + errorMessage(err.error),
+      );
+    });
 
-          try {
-            await this.bot?.api.setChatMenuButton({
-              menu_button: {
-                type: 'web_app',
-                text: 'Заходи FICE',
-                web_app: { url: this.getMiniAppUrl() },
-              },
-            });
-          } catch (e) {
-            this.logger.warn(
-              'Failed to set chat menu button for user bot: ' + e,
-            );
-          }
-        },
-      })
-      .catch((err) => {
-        this.logger.error('Error during User Bot long polling', err);
-      });
+    this.polling = new PollingSupervisor(this.bot, this.logger, {
+      allowed_updates: ['message', 'my_chat_member'],
+      onStart: async (botInfo) => {
+        this.logger.log(
+          `User Bot started successfully as @${botInfo.username}`,
+        );
+        const configured = this.getUsername();
+        if (
+          configured &&
+          configured.toLowerCase() !== botInfo.username.toLowerCase()
+        ) {
+          this.logger.warn(
+            `USER_BOT_USERNAME is @${configured}, but USER_BOT_TOKEN belongs to @${botInfo.username}`,
+          );
+        }
+
+        try {
+          await this.bot?.api.setChatMenuButton({
+            menu_button: {
+              type: 'web_app',
+              text: 'Заходи FICE',
+              web_app: { url: this.getMiniAppUrl() },
+            },
+          });
+        } catch (e) {
+          this.logger.warn(
+            'Failed to set chat menu button for user bot: ' + errorMessage(e),
+          );
+        }
+      },
+    });
+    this.polling.start();
+  }
+
+  pollingStatus(): PollingStatus {
+    return this.polling?.getStatus() ?? 'disabled';
   }
 
   async sendBroadcast(
@@ -469,7 +498,9 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
               .catch(() => {});
           }
         }
-        this.logger.warn(`Failed to send broadcast to ${chatIdNumber}: ${err}`);
+        this.logger.warn(
+          `Failed to send broadcast to ${chatIdNumber}: ${errorMessage(err)}`,
+        );
       }
 
       await new Promise((r) => setTimeout(r, 40));
@@ -520,7 +551,7 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
       return true;
     } catch (err) {
       this.logger.warn(
-        `Failed to send direct message to user ${chatIdNum}: ${err}`,
+        `Failed to send direct message to user ${chatIdNum}: ${errorMessage(err)}`,
       );
       return false;
     }
@@ -583,14 +614,16 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
 
       const caption =
         `🎫 <b>ТВІЙ КВИТОК НА ЗАХІД</b>\n\n` +
-        `🎃 <b>${event.name}</b>\n` +
-        `📅 <b>Коли:</b> ${eventDateStr}\n` +
-        (event.location ? `📍 <b>Де:</b> ${event.location}\n` : '') +
+        `🎃 <b>${escapeHtml(event.name)}</b>\n` +
+        `📅 <b>Коли:</b> ${escapeHtml(eventDateStr)}\n` +
+        (event.location
+          ? `📍 <b>Де:</b> ${escapeHtml(event.location)}\n`
+          : '') +
         `\n` +
-        `👤 <b>Гість:</b> ${reg.fullName}\n` +
-        `👥 <b>Група:</b> ${reg.group}\n` +
+        `👤 <b>Гість:</b> ${escapeHtml(reg.fullName)}\n` +
+        `👥 <b>Група:</b> ${escapeHtml(reg.group)}\n` +
         ageInfo +
-        `🎟 <b>Код квитка:</b> <code>${reg.ticketCode.slice(0, 8)}</code>\n` +
+        `🎟 <b>Код квитка:</b> <code>${escapeHtml(reg.ticketCode.slice(0, 8))}</code>\n` +
         `✅ <b>Оплату/реєстрацію підтверджено</b>\n\n` +
         `⚠️ <b>Збережи це фото в галерею смартфона</b>, щоб показати QR-код волонтеру на вході навіть без інтернету! 🔆 Зроби яскравість екрана вищою.`;
 
@@ -618,16 +651,16 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
       return true;
     } catch (err) {
       this.logger.error(
-        `Failed to send ticket to user ${telegramUserId}: ${err}`,
+        `Failed to send ticket to user ${telegramUserId}: ${errorMessage(err)}`,
       );
       return false;
     }
   }
 
   async onModuleDestroy() {
-    if (this.bot) {
+    if (this.polling) {
       this.logger.log('Stopping User Telegram Bot...');
-      await this.bot.stop();
+      await this.polling.stop();
     }
   }
 }

@@ -20,6 +20,8 @@ import {
   matchDepartments,
   messageTopicId,
 } from './department-chats';
+import { PollingStatus, PollingSupervisor } from './polling';
+import { errorMessage } from '../common/log-safe';
 
 const DEPARTMENT_CHATS_TTL_MS = 60_000;
 
@@ -51,6 +53,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(BotService.name);
   private syncInitialTimeout?: NodeJS.Timeout;
   private syncInterval?: NodeJS.Timeout;
+  private polling?: PollingSupervisor;
 
   constructor(
     private readonly configService: ConfigService,
@@ -95,45 +98,37 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
             : undefined,
         );
       } catch (err) {
-        this.logger.warn(
-          'Failed to reply to /start: ' +
-            (err instanceof Error ? err.message : String(err)),
-        );
+        this.logger.warn('Failed to reply to /start: ' + errorMessage(err));
       }
     });
 
     this.bot.catch((err) => {
       this.logger.error(
-        'Failed to handle Telegram update: ' +
-          (err.error instanceof Error ? err.error.message : String(err.error)),
+        'Failed to handle Telegram update: ' + errorMessage(err.error),
       );
     });
 
-    this.bot
-      .start({
-        // Opt into member join/leave updates so we can harvest new members of
-        // the project chat, not only those who send a message. `chat_member`
-        // is only delivered when the bot is an administrator of the chat.
-        allowed_updates: [
-          'message',
-          'edited_message',
-          'chat_member',
-          'my_chat_member',
-        ],
-        onStart: (botInfo) => {
-          this.logger.log(`Bot started successfully as @${botInfo.username}`);
-        },
-      })
-      .catch((err) => {
-        this.logger.error('Error during bot long polling', err);
-      });
+    this.polling = new PollingSupervisor(this.bot, this.logger, {
+      // Opt into member join/leave updates so we can harvest new members of
+      // the project chat, not only those who send a message. `chat_member`
+      // is only delivered when the bot is an administrator of the chat.
+      allowed_updates: [
+        'message',
+        'edited_message',
+        'chat_member',
+        'my_chat_member',
+      ],
+      onStart: (botInfo) => {
+        this.logger.log(`Bot started successfully as @${botInfo.username}`);
+      },
+    });
+    this.polling.start();
 
     // Schedule initial and recurring membership sync (clean up members who left/were kicked)
     this.syncInitialTimeout = setTimeout(() => {
       this.syncDepartmentChatMembers().catch((err) =>
         this.logger.warn(
-          'Initial chat members sync failed: ' +
-            (err instanceof Error ? err.message : String(err)),
+          'Initial chat members sync failed: ' + errorMessage(err),
         ),
       );
     }, 60_000);
@@ -143,8 +138,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       () => {
         this.syncDepartmentChatMembers().catch((err) =>
           this.logger.warn(
-            'Scheduled chat members sync failed: ' +
-              (err instanceof Error ? err.message : String(err)),
+            'Scheduled chat members sync failed: ' + errorMessage(err),
           ),
         );
       },
@@ -227,7 +221,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     } catch (err) {
       this.logger.warn(
         'Failed to update department chats after a group upgrade: ' +
-          (err instanceof Error ? err.message : String(err)),
+          errorMessage(err),
       );
     }
   }
@@ -355,8 +349,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       }
     } catch (err) {
       this.logger.warn(
-        'Failed to harvest project participant: ' +
-          (err instanceof Error ? err.message : String(err)),
+        'Failed to harvest project participant: ' + errorMessage(err),
       );
     }
   }
@@ -389,8 +382,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       };
     } catch (err) {
       this.logger.warn(
-        'Failed to download Telegram avatar: ' +
-          (err instanceof Error ? err.message : String(err)),
+        'Failed to download Telegram avatar: ' + errorMessage(err),
       );
       return null;
     }
@@ -417,7 +409,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     } catch (err) {
       this.logger.warn(
         `Failed to handle departure of user ${userId} from department ${departmentId}: ` +
-          (err instanceof Error ? err.message : String(err)),
+          errorMessage(err),
       );
     }
   }
@@ -449,7 +441,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       }
       this.logger.warn(
         `Failed to check member status for user ${userId} in chat ${chatId}: ` +
-          (err instanceof Error ? err.message : String(err)),
+          errorMessage(err),
       );
       return 'error';
     }
@@ -521,8 +513,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       }
     } catch (err) {
       this.logger.error(
-        'Failed to sync department chat members: ' +
-          (err instanceof Error ? err.message : String(err)),
+        'Failed to sync department chat members: ' + errorMessage(err),
       );
     }
 
@@ -550,7 +541,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     } catch (err) {
       this.logger.warn(
         `Failed to check membership of user ${userId} in chat ${chatId}: ` +
-          (err instanceof Error ? err.message : String(err)),
+          errorMessage(err),
       );
       return false;
     }
@@ -588,8 +579,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       );
     } catch (err) {
       this.logger.warn(
-        `Failed to send message to chat ${chatId}: ` +
-          (err instanceof Error ? err.message : String(err)),
+        `Failed to send message to chat ${chatId}: ` + errorMessage(err),
       );
     }
   }
@@ -659,11 +649,15 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     if (this.syncInitialTimeout) clearTimeout(this.syncInitialTimeout);
     if (this.syncInterval) clearInterval(this.syncInterval);
 
-    if (!this.bot) {
+    if (!this.polling) {
       return;
     }
 
     this.logger.log('Stopping Telegram Bot...');
-    await this.bot.stop();
+    await this.polling.stop();
+  }
+
+  pollingStatus(): PollingStatus {
+    return this.polling?.getStatus() ?? 'disabled';
   }
 }

@@ -1,7 +1,7 @@
 import { getInitData } from './auth';
 import { ApiError, errorText } from './errors';
 
-const BASE = '/api-proxy';
+const BASE = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ''}/api-proxy`;
 
 export interface Paginated<T> {
   items: T[];
@@ -413,6 +413,9 @@ export interface ChannelStatus {
   channelIdSet: boolean;
   botTokenSet: boolean;
   webUrlSet: boolean;
+  publicWebUrl: string;
+  botUsername: string | null;
+  appName: string;
 }
 
 export interface ChannelPostInput {

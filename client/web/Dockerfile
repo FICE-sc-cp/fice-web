@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 
@@ -6,7 +6,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 
 # Install dependencies
-RUN npm install
+RUN npm ci
 
 # Copy source files
 COPY . .
@@ -14,6 +14,8 @@ COPY . .
 ARG BACKEND_URL=http://server:3001
 ENV BACKEND_URL=$BACKEND_URL
 ENV INTERNAL_API_URL=$BACKEND_URL
+ARG NEXT_PUBLIC_USER_BOT_USERNAME=
+ENV NEXT_PUBLIC_USER_BOT_USERNAME=$NEXT_PUBLIC_USER_BOT_USERNAME
 
 # Build Next.js
 RUN npm run build
@@ -22,4 +24,4 @@ RUN npm run build
 EXPOSE 3000
 
 # Start app
-CMD ["npm", "run", "start"]
+CMD ["node", "node_modules/next/dist/bin/next", "start"]

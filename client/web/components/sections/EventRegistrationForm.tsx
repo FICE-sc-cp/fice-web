@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
 import { cn, formatEventDateTime } from '@/lib/utils';
 import {
+  ApiError,
   fice,
   type EventItem,
   type EventRegistrationPayload,
@@ -261,8 +262,16 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
             payment: hasFee ? payment : 'NONE',
           });
         }
-      } catch {
-        // keep polling until timeout
+      } catch (err) {
+        const rejected =
+          err instanceof ApiError && err.status >= 400 && err.status < 500 && err.status !== 429;
+        if (rejected) {
+          clearInterval(interval);
+          setPendingBotSession(null);
+          setSubmitError(
+            'Сесія підтвердження недійсна або вже завершилась. Заповни форму ще раз.',
+          );
+        }
       }
     }, 2000);
 

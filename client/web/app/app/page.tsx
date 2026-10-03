@@ -21,6 +21,7 @@ import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Glow } from '@/components/ui/Glow';
 import { cn } from '@/lib/utils';
+import { USER_BOT_USERNAME } from '@/lib/bot';
 
 function getAgeInfo(birthDate?: string | null) {
   if (!birthDate) return null;
@@ -253,9 +254,7 @@ function MiniAppContent() {
       })
       .catch(() => {});
 
-    if (user?.username && !regTelegram) {
-      setRegTelegram(`@${user.username}`);
-    }
+    setRegTelegram(user?.username ? `@${user.username}` : '');
   }, [user, initData]);
 
   // Load selected event details
@@ -752,7 +751,8 @@ function MiniAppContent() {
 
     const errs: Record<string, string> = {};
     if (!regFullName.trim()) errs.fullName = 'Вкажи ПІБ';
-    if (!regTelegram.trim()) errs.telegram = 'Вкажи Telegram';
+    if (!regTelegram.trim())
+      errs.telegram = 'Встанови username у налаштуваннях Telegram';
     if (!regGroup.trim()) errs.group = 'Вкажи академічну групу';
 
     const fee = selectedEvent.feeAmount ? Number(selectedEvent.feeAmount) : 0;
@@ -938,12 +938,12 @@ function MiniAppContent() {
             Цей додаток працює виключно всередині месенджера Telegram. Відкрийте наш бот для перегляду заходів, реєстрацій та голосувань.
           </p>
           <a
-            href="https://t.me/fice_events_bot/app"
+            href={`https://t.me/${USER_BOT_USERNAME}/app`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-main py-3 text-xs font-bold text-black shadow-glow-cyan transition-opacity hover:opacity-95"
           >
-            Відкрити бота @fice_events_bot →
+            Відкрити бота @{USER_BOT_USERNAME} →
           </a>
         </div>
       </div>
@@ -2379,7 +2379,7 @@ function MiniAppContent() {
                     label="Telegram"
                     placeholder="@username"
                     value={regTelegram}
-                    onChange={(e) => setRegTelegram(e.target.value)}
+                    readOnly
                     error={regErrors.telegram}
                     required
                   />

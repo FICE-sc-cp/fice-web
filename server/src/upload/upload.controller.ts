@@ -11,6 +11,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import { PUBLIC_UPLOAD_LIMIT_PER_IP, THROTTLE_TTL } from '../common/throttle';
 import { diskStorage } from 'multer';
 import { Admin } from '../auth/admin.decorator';
 import {
@@ -144,7 +145,9 @@ export class UploadController {
   }
 
   @Post('public')
-  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @Throttle({
+    default: { limit: PUBLIC_UPLOAD_LIMIT_PER_IP, ttl: THROTTLE_TTL },
+  })
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
     summary: 'Upload an image publicly (e.g. a payment receipt)',

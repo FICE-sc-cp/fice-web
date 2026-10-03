@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 
@@ -14,4 +14,4 @@ RUN npm run build
 EXPOSE 3001
 
 # Apply any pending migrations, then start the API.
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist/main"]
+CMD ["sh", "-c", "npx prisma migrate deploy && exec node dist/main"]

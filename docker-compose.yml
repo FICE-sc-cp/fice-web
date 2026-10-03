@@ -1,14 +1,21 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "5"
+
 services:
   postgres:
     image: postgres:15
     container_name: fice-postgres
+    logging: *default-logging
     restart: always
     environment:
       POSTGRES_DB: fice
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in the root .env}
     ports:
-      - "5433:5432"
+      - "127.0.0.1:5433:5432"
     volumes:
       - fice_pg_data:/var/lib/postgresql/data
     healthcheck:
@@ -22,11 +29,14 @@ services:
       context: ./server
       dockerfile: Dockerfile
     container_name: fice-server
+    logging: *default-logging
     restart: always
     environment:
       # `postgres` is the service name on the compose network.
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/fice?schema=public
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in the root .env}@postgres:5432/fice?schema=public
       PORT: 3001
+      APP_ENV: ${APP_ENV:-development}
+      CORS_ORIGIN: ${CORS_ORIGIN:-}
       TZ: Europe/Kyiv
       # Optional Telegram admin config — taken from your shell or a root .env if set.
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
@@ -55,7 +65,7 @@ services:
       # Where uploaded images are stored inside the container (persisted via volume).
       UPLOAD_DIR: /app/uploads
     ports:
-      - "3001:3001"
+      - "127.0.0.1:3001:3001"
     volumes:
       - fice_uploads:/app/uploads
     depends_on:
@@ -75,13 +85,12 @@ services:
       args:
         BACKEND_URL: http://server:3001
     container_name: fice-admin
+    logging: *default-logging
     restart: always
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     environment:
       TZ: Europe/Kyiv
-      NEXT_PUBLIC_API_URL: http://localhost:3001
-      NEXT_PUBLIC_WEB_URL: ${PUBLIC_WEB_URL:-http://localhost:3002}
       # The /api-proxy rewrite runs inside this container, so it must reach the
       # backend via the compose service name — `localhost` would be the admin
       # container itself.
@@ -95,20 +104,40 @@ services:
       dockerfile: Dockerfile
       args:
         BACKEND_URL: http://server:3001
+        NEXT_PUBLIC_USER_BOT_USERNAME: ${USER_BOT_USERNAME:-}
     container_name: fice-web
+    logging: *default-logging
     restart: always
     ports:
-      - "3002:3000"
+      - "127.0.0.1:3002:3000"
     environment:
       TZ: Europe/Kyiv
-      # Public URL the browser uses (images, client-side calls).
-      NEXT_PUBLIC_API_URL: http://localhost:3001
       # Internal URL for server-side (SSR/RSC) data fetches on the compose network.
       INTERNAL_API_URL: http://server:3001
       BACKEND_URL: http://server:3001
     depends_on:
       - server
 
+  caddy:
+    image: caddy:2-alpine
+    container_name: fice-caddy
+    logging: *default-logging
+    profiles: ["prod"]
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - web
+      - admin
+
 volumes:
   fice_pg_data:
   fice_uploads:
+  caddy_data:
+  caddy_config:

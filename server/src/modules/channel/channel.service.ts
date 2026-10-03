@@ -23,10 +23,7 @@ export class ChannelService {
     const botTokenSet = !!this.config.get<string>('TELEGRAM_BOT_TOKEN');
     const webUrlSet = !!this.config.get<string>('PUBLIC_WEB_URL');
     const publicWebUrl = this.config.get<string>('PUBLIC_WEB_URL') || '';
-    const botUsername =
-      this.config.get<string>('USER_BOT_USERNAME') ||
-      this.userBot.getUsername() ||
-      'fice_event_bot';
+    const botUsername = this.userBot.getUsername() ?? null;
     const appName = this.config.get<string>('USER_MINI_APP_NAME') || 'app';
     return {
       configured: channelIdSet && botTokenSet,
@@ -61,9 +58,7 @@ export class ChannelService {
         url: dto.buttonUrl.trim(),
       };
     } else if (dto.eventId) {
-      const botUsername =
-        this.config.get<string>('USER_BOT_USERNAME') ||
-        this.userBot.getUsername();
+      const botUsername = this.userBot.getUsername();
       const appName = this.config.get<string>('USER_MINI_APP_NAME') || 'app';
 
       if (botUsername && appName) {

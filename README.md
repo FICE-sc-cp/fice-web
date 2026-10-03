@@ -25,6 +25,7 @@ admins through a **Telegram Mini App**, backed by a NestJS API.
   - [Public web client](#public-web-client)
   - [Admin Telegram Mini App](#admin-telegram-mini-app)
 - [Environment Variables](#environment-variables)
+- [Production Deploy](#production-deploy)
 - [API Overview](#api-overview)
 - [Database & Prisma](#database--prisma)
 - [Project Structure](#project-structure)
@@ -52,6 +53,11 @@ admins through a **Telegram Mini App**, backed by a NestJS API.
                           └────────────────────┘
 ```
 
+- **Ingress:** in production a Caddy container (compose profile `prod`) is the
+  only thing published to the internet (ports 80/443, automatic HTTPS). It
+  routes `/admin*` to the admin container (served under the Next.js basePath
+  `/admin`) and everything else to the public site. Postgres, the API and both
+  Next.js servers listen on `127.0.0.1` only.
 - **Reads are public**, so the website can render content without auth.
 - **Writes are admin-only**: the admin panel runs as a Telegram Mini App and
   sends the signed `initData` in the `x-telegram-init-data` header. The API
@@ -63,8 +69,16 @@ admins through a **Telegram Mini App**, backed by a NestJS API.
 
 ## Quick Start (Docker)
 
-Bring up the **entire stack** (database, API with migrations, both frontends)
-with one command:
+Create a root `.env` with at least the database password (see
+[`.env.example`](.env.example)). If you already have a local `fice_pg_data`
+volume from before this variable existed, its password is `postgres`:
+
+```bash
+echo POSTGRES_PASSWORD=postgres > .env
+```
+
+Then bring up the **entire stack** (database, API with migrations, both
+frontends) with one command:
 
 ```bash
 docker compose up --build
@@ -73,14 +87,15 @@ docker compose up --build
 | Service | URL |
 |---------|-----|
 | Public web | http://localhost:3002 |
-| Admin panel | http://localhost:3000 |
+| Admin panel | http://localhost:3000/admin |
 | API | http://localhost:3001 |
 | API docs (Scalar) | http://localhost:3001/api/docs |
 | PostgreSQL | localhost:5433 |
 
-The `server` container automatically runs `prisma migrate deploy` on startup, so
-the schema is always in sync. The Telegram bot is optional — without
-`TELEGRAM_BOT_TOKEN` it is simply skipped.
+All ports are bound to `127.0.0.1`. The `server` container automatically runs
+`prisma migrate deploy` on startup, so the schema is always in sync. The
+Telegram bots are optional locally: without their tokens they are skipped. Use
+separate dev bots; never run a laptop stack with the production tokens.
 
 > **Testing writes locally?** Admin endpoints require Telegram auth by default.
 > To open them up for development, start with `AUTH_DISABLED=true`:
@@ -135,28 +150,65 @@ tunnel in development.
 cd client/admin
 npm install
 ngrok http 3000           # in a separate terminal; copy the https URL
-npm run dev
+npm run dev               # http://localhost:3000/admin
 ```
 
-Then point the bot at the tunnel via `MINI_APP_URL` in `server/.env` and add the
-ngrok host to `client/admin/next.config.ts` (`allowedDevOrigins`). Send any
-message to your bot — it replies with a button that opens the admin panel.
+The admin is served under the basePath `/admin`, so point the bot at
+`https://<tunnel-host>/admin` via `MINI_APP_URL` (in `server/.env`, or the root
+`.env` when the server runs in Docker) and add the tunnel host to `NGROK_HOST`
+(read by `client/admin/next.config.ts` as `allowedDevOrigins`). Send `/start`
+to your bot — it replies with a button that opens the admin panel.
 
 ---
 
 ## Environment Variables
 
-Configured in `server/.env` (see [`server/.env.example`](server/.env.example)):
+With Docker, every variable comes from the root `.env`; the full annotated list
+is in [`.env.example`](.env.example). When the API runs on the host it reads
+`server/.env` instead (see [`server/.env.example`](server/.env.example)).
 
-| Variable | Required | Description |
+"Prod" means the server refuses to start without the variable when
+`APP_ENV=production`.
+
+| Variable | Required | Production value / description |
 |----------|----------|-------------|
-| `DATABASE_URL` | yes | PostgreSQL connection string |
-| `PORT` | no (3001) | API port |
-| `TELEGRAM_BOT_TOKEN` | no | Bot token from [@BotFather](https://t.me/BotFather). Required for the bot and for admin auth |
-| `MINI_APP_URL` | no | Public HTTPS URL of the admin Mini App |
-| `ADMIN_GROUP_CHAT_ID` | no | Telegram group whose members are admins. Add the bot to the group; if empty, any authenticated Telegram user is allowed |
-| `AUTH_DISABLED` | no (false) | `true` bypasses admin auth on write endpoints — **dev only** |
-| `UPLOAD_DIR` | no (./uploads) | Where uploaded images are stored (persisted via a Docker volume) |
+| `POSTGRES_PASSWORD` | always | Superuser password; compose builds `DATABASE_URL` from it. Applied only when the volume is first created |
+| `APP_ENV` | prod | `production`: startup checks, no `AUTH_DISABLED`, no `/api/docs`, seed blocked |
+| `COMPOSE_PROFILES` | prod | `prod` (adds the Caddy ingress) |
+| `TELEGRAM_BOT_TOKEN` | prod | Admin bot token from [@BotFather](https://t.me/BotFather) |
+| `USER_BOT_TOKEN` | prod | Student bot token; must differ from `TELEGRAM_BOT_TOKEN` |
+| `USER_BOT_USERNAME` | prod | Student bot username without `@`; also baked into the web image |
+| `ADMIN_GROUP_CHAT_ID` | prod | Numeric id of the admin group; the admin bot must be a member |
+| `MINI_APP_URL` | prod | `https://fice-sc.kpi.ua/admin` |
+| `USER_MINI_APP_URL` | prod | `https://fice-sc.kpi.ua/app` |
+| `PUBLIC_WEB_URL` | prod | `https://fice-sc.kpi.ua` |
+| `CORS_ORIGIN` | prod | `https://fice-sc.kpi.ua` |
+| `USER_MINI_APP_NAME` | no (`app`) | Short name of the student Mini App in @BotFather |
+| `TELEGRAM_CHANNEL_ID` | no | Channel for announcements (bot must be admin) |
+| `PARTNERSHIP_CHAT_ID` | no | Chat for partner applications (`chatId/threadId` for a topic) |
+| `PARTNERSHIP_HEAD_TG`, `COUNCIL_HEAD_TG` | no | Usernames pinged on partner applications |
+| `AUTH_DISABLED` | no (`false`) | `true` bypasses admin auth — **dev only**, refused in production |
+| `DATABASE_URL`, `PORT`, `UPLOAD_DIR` | host only | Set by compose in Docker; needed in `server/.env` on the host |
+| `ALLOW_DESTRUCTIVE_SEED` | no | `1` lets `npm run db:seed` wipe a dev database |
+
+## Production Deploy
+
+On the VM, fill the root `.env` with the production values above
+(`APP_ENV=production`, `COMPOSE_PROFILES=prod`, a strong `POSTGRES_PASSWORD`
+set before the very first `up`). Point the `fice-sc.kpi.ua` A record at the VM.
+Build images one at a time, then start the stack:
+
+```bash
+docker compose build server
+docker compose build web
+docker compose build admin
+docker compose up -d
+docker compose exec server npm run db:seed:departments
+```
+
+`db:seed:departments` only creates missing departments with the exact names the
+website expects; it never updates or deletes anything. `GET /health` on the API
+reports the polling state of both bots and returns 503 while one is restarting.
 
 ---
 
@@ -167,7 +219,7 @@ is public; `POST`/`PATCH`/`PUT`/`DELETE` require admin auth unless noted.
 
 | Resource | Base path | Notes |
 |----------|-----------|-------|
-| Health | `GET /health` | Liveness check |
+| Health | `GET /health` | Liveness check plus bot polling state; 503 while a bot is restarting |
 | Auth | `GET /auth/me` | Current Telegram user + `isAdmin` flag |
 | Facts & results | `/facts` | Computed activity stats + admin overrides |
 | News | `/news` | |
@@ -192,7 +244,7 @@ with `?page` and `?limit`, returning `{ items, total, page, limit, totalPages }`
 Public form submissions (`/applicant`, `/partner/apply`) are rate-limited.
 
 Full, interactive documentation — rendered with **Scalar** — is served at
-**`/api/docs`**.
+**`/api/docs`** (not in production).
 
 ---
 
@@ -207,7 +259,8 @@ and uses the `@prisma/adapter-pg` driver adapter. All commands run from `server/
 | `npx prisma migrate deploy` | Apply pending migrations (production / CI) |
 | `npx prisma generate` | Regenerate the TypeScript client |
 | `npx prisma studio` | Open the database GUI |
-| `npm run db:seed` | Populate the database with sample data |
+| `ALLOW_DESTRUCTIVE_SEED=1 npm run db:seed` | **Wipe** the database and fill it with sample data (dev only; refused when `APP_ENV=production`) |
+| `npm run db:seed:departments` | Create any missing departments; safe on production |
 
 Typical workflow: edit `schema.prisma` → `migrate dev` → use the generated client
 through `PrismaService` in your NestJS services.
@@ -229,7 +282,9 @@ fice-web
 │       ├── common/           # Prisma exception filter
 │       ├── database/         # Global PrismaModule / PrismaService
 │       └── modules/          # Feature modules (event, fundraiser, department, ...)
-└── docker-compose.yml        # Full stack: postgres + server + admin + web
+├── Caddyfile                 # TLS ingress config (compose profile `prod`)
+├── .env.example              # Every compose variable, with production values
+└── docker-compose.yml        # Full stack: postgres + server + admin + web (+ caddy)
 ```
 
 ---

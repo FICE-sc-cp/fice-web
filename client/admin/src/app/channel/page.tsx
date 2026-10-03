@@ -11,6 +11,7 @@ import { ImageUpload } from '@/components/ImageUpload';
 import { RichTextArea } from '@/components/RichTextArea';
 import { Spinner } from '@/components/ui/Spinner';
 import { hapticNotify } from '@/lib/telegram';
+import { escapeHtml } from '@/lib/utils';
 
 const fmtDate = (iso: string, hasTimeFlag?: boolean, timeStr?: string | null) => {
   try {
@@ -40,10 +41,10 @@ const fmtDate = (iso: string, hasTimeFlag?: boolean, timeStr?: string | null) =>
 
 function buildCaption(e: EventItem): string {
   return [
-    `📢 ${e.name}`,
+    `📢 ${escapeHtml(e.name)}`,
     '',
     `🗓 ${fmtDate(e.date, e.hasTime, e.time)}`,
-    e.location?.trim() ? `📍 ${e.location.trim()}` : '📍 Локація: буде повідомлено згодом',
+    e.location?.trim() ? `📍 ${escapeHtml(e.location.trim())}` : '📍 Локація: буде повідомлено згодом',
     '',
     e.description ?? '',
   ]
@@ -97,6 +98,14 @@ export default function ChannelPage() {
     onError: () => hapticNotify('error'),
   });
 
+  const botUsername = status?.botUsername ?? null;
+  const miniAppLink = (id: string) =>
+    botUsername
+      ? `https://t.me/${botUsername}/${status?.appName || 'app'}?startapp=event_${id}`
+      : '';
+  const botChatLink = (id: string) =>
+    botUsername ? `https://t.me/${botUsername}?start=event_${id}` : '';
+
   function onPickEvent(id: string) {
     setEventId(id);
     setResult(null);
@@ -106,7 +115,7 @@ export default function ChannelPage() {
       setImageUrl(ev.photoUrl ?? null);
       setWithButton(true);
       setButtonText('Зареєструватися');
-      setButtonUrl(`https://t.me/fice_event_bot/app?startapp=event_${id}`);
+      setButtonUrl(miniAppLink(id));
     }
   }
 
@@ -171,7 +180,7 @@ export default function ChannelPage() {
                 label="Посилання кнопки"
                 placeholder={
                   eventId
-                    ? `https://t.me/fice_event_bot/app?startapp=event_${eventId}`
+                    ? miniAppLink(eventId) || 'https://…'
                     : 'https://…'
                 }
                 value={buttonUrl}
@@ -183,9 +192,7 @@ export default function ChannelPage() {
                     <button
                       type="button"
                       onClick={() =>
-                        setButtonUrl(
-                          `https://t.me/fice_event_bot/app?startapp=event_${eventId}`,
-                        )
+                        setButtonUrl(miniAppLink(eventId))
                       }
                       className="text-[11px] rounded-lg border border-purple-500/40 bg-purple-500/10 px-2 py-1 text-purple-300 hover:bg-purple-500/20 transition-colors"
                     >
@@ -195,7 +202,7 @@ export default function ChannelPage() {
                       type="button"
                       onClick={() => {
                         const base =
-                          (status as any)?.publicWebUrl ||
+                          status?.publicWebUrl ||
                           (typeof window !== 'undefined'
                             ? `${window.location.protocol}//${window.location.hostname}:3002`
                             : '');
@@ -210,9 +217,7 @@ export default function ChannelPage() {
                     <button
                       type="button"
                       onClick={() =>
-                        setButtonUrl(
-                          `https://t.me/fice_event_bot?start=event_${eventId}`,
-                        )
+                        setButtonUrl(botChatLink(eventId))
                       }
                       className="text-[11px] rounded-lg border border-cyan-500/40 bg-cyan-500/10 px-2 py-1 text-cyan-300 hover:bg-cyan-500/20 transition-colors"
                     >
@@ -220,7 +225,7 @@ export default function ChannelPage() {
                     </button>
                   </div>
                   <p className="text-[11px] text-muted">
-                    Для відкриття Mini App в 1 клік потрібно зареєструвати додаток у @BotFather командою <code>/newapp</code> з коротким імʼям <code>app</code> для <b>@fice_event_bot</b>. Або оберіть «Сайт у Telegram» — він відкривається одразу без налаштувань!
+                    Для відкриття Mini App в 1 клік потрібно зареєструвати додаток у @BotFather командою <code>/newapp</code> з коротким імʼям <code>{status?.appName || 'app'}</code> для <b>@{botUsername ?? 'бота'}</b>. Або оберіть «Сайт у Telegram» — він відкривається одразу без налаштувань!
                   </p>
                 </div>
               )}

@@ -1,12 +1,9 @@
-// Public base URL — what the browser uses (e.g. building <img> src). Baked at build.
-const PUBLIC_API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
-
 // Base URL for data fetches. On the server (SSR/RSC) reach the backend via the
 // internal docker network name (`INTERNAL_API_URL`, e.g. http://server:3001);
-// in the browser fall back to the public URL.
+// in the browser go through the same-origin /api-proxy rewrite.
 function apiBase(): string {
   if (typeof window === 'undefined') {
-    return process.env.INTERNAL_API_URL ?? PUBLIC_API_URL;
+    return process.env.INTERNAL_API_URL ?? 'http://localhost:3001';
   }
   return '/api-proxy';
 }
@@ -193,6 +190,15 @@ export interface News {
   registrationLink: string | null;
 }
 
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${apiBase()}${path}`, { cache: 'no-store', ...init });
   if (!res.ok) {
@@ -203,7 +209,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
         msg = Array.isArray(data.message) ? data.message.join(', ') : data.message;
       }
     } catch {}
-    throw new Error(msg);
+    throw new ApiError(msg, res.status);
   }
   return res.json() as Promise<T>;
 }
@@ -268,14 +274,8 @@ export interface EventRegistrationResult {
   requiresBotStart?: boolean;
   token?: string;
   botUrl?: string;
-  message?: string;
   id?: string;
-  fullName?: string;
-  telegramTag?: string;
-  group?: string;
-  birthDate?: string | null;
-  payment?: RegistrationPayment;
-  createdAt?: string;
+  paymentStatus?: string;
 }
 
 // Public "Люди проєктного" entry — name + avatar, harvested by the bot from the
@@ -316,7 +316,7 @@ export const fice = {
       body: JSON.stringify(body),
     }),
   getRegistrationSession: (token: string) =>
-    request<{ completed: boolean; token: string; expiresAt: string }>(
+    request<{ completed: boolean; expiresAt: string }>(
       `/event/registration-session/${token}`,
     ),
   uploadReceipt: async (file: File): Promise<{ url: string }> => {

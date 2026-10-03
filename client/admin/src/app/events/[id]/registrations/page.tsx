@@ -1269,12 +1269,23 @@ export default function EventRegistrationsPage() {
             {/* Modal Preview Body */}
             <div className="flex-1 overflow-auto p-4 flex items-center justify-center bg-black/60 min-h-[300px]">
               {receiptModal.receiptIsPdf ? (
-                <iframe
-                  src={mediaUrl(receiptModal.receiptUrl)}
-                  title={`Квитанція - ${receiptModal.fullName}`}
-                  sandbox="allow-same-origin"
-                  className="w-full h-[65vh] rounded-2xl border border-border bg-white"
-                />
+                <div className="flex flex-col items-center gap-4 text-center">
+                  <span className="text-5xl" aria-hidden>
+                    📄
+                  </span>
+                  <p className="max-w-xs text-sm text-muted">
+                    Квитанція у форматі PDF. Відкрий її, щоб перевірити оплату.
+                  </p>
+                  <a
+                    href={mediaUrl(receiptModal.receiptUrl)}
+                    target="_blank"
+                    rel="noreferrer"
+                    download
+                    className="rounded-2xl bg-brand-cyan px-5 py-3 text-sm font-bold text-black transition-opacity hover:opacity-90"
+                  >
+                    Відкрити PDF
+                  </a>
+                </div>
               ) : (
                 <img
                   src={mediaUrl(receiptModal.receiptUrl)}

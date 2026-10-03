@@ -10,6 +10,7 @@ import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { paginated, skipFor } from '../../common/pagination';
 import { parseKpiGroup } from '../../common/kpi-groups';
 import { CreateApplicantDto } from './dto/create-applicant.dto';
+import { errorMessage } from '../../common/log-safe';
 
 @Injectable()
 export class ApplicantService {
@@ -126,7 +127,7 @@ export class ApplicantService {
     });
 
     void this.notifyHeads(applicant).catch((err) =>
-      this.logger.warn('Applicant notification failed: ' + String(err)),
+      this.logger.warn('Applicant notification failed: ' + errorMessage(err)),
     );
 
     return applicant;

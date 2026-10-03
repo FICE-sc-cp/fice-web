@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import { fice, mediaUrl, type VotingScreenData } from '@/lib/api';
 import { FrogMascot } from '@/components/ui/FrogMascot';
+import { USER_BOT_USERNAME } from '@/lib/bot';
 
 // Helpers
 function pluralVotes(v: number): string {
@@ -438,7 +439,7 @@ export default function LiveVotingScreenPage() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [viewMode, fireConfetti, stopConfetti, candidateCount, pageCount]);
 
-  const botUsername = process.env.NEXT_PUBLIC_USER_BOT_USERNAME || 'fice_event_bot';
+  const botUsername = USER_BOT_USERNAME;
   const qrTargetUrl = `https://t.me/${botUsername}?start=vote_${id}`;
   const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=700x700&margin=1&bgcolor=ffffff&color=000000&data=${encodeURIComponent(
     qrTargetUrl,

@@ -26,6 +26,7 @@ describe('BroadcastService', () => {
     };
     userBot = {
       sendBroadcast: jest.fn().mockResolvedValue({ sent: 3, failed: 0 }),
+      getUsername: jest.fn().mockReturnValue('fice_student_bot'),
     };
     const configService = { get: jest.fn().mockReturnValue(undefined) };
 

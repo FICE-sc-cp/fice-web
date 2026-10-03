@@ -38,8 +38,7 @@ export class BroadcastService {
       telegramId: id,
     }));
 
-    const botUsername =
-      this.configService.get<string>('USER_BOT_USERNAME') || 'fice_event_bot';
+    const botUsername = this.userBot.getUsername();
     const appName =
       this.configService.get<string>('USER_MINI_APP_NAME') || 'app';
     const publicWebUrl = this.configService.get<string>('PUBLIC_WEB_URL') || '';
@@ -47,8 +46,12 @@ export class BroadcastService {
       this.configService.get<string>('USER_MINI_APP_URL') ||
       (publicWebUrl
         ? `${publicWebUrl.replace(/\/$/, '')}/app`
-        : `https://t.me/${botUsername}/${appName}`);
-    const defaultUrl = `${userMiniAppUrl}?startapp=event_${eventId}`;
+        : botUsername
+          ? `https://t.me/${botUsername}/${appName}`
+          : '');
+    const defaultUrl = userMiniAppUrl
+      ? `${userMiniAppUrl}?startapp=event_${eventId}`
+      : undefined;
     const buttonUrl =
       dto.buttonUrl?.trim() ||
       (dto.buttonText?.trim() ? defaultUrl : undefined);
@@ -135,8 +138,7 @@ export class BroadcastService {
       },
     });
 
-    const botUsername =
-      this.configService.get<string>('USER_BOT_USERNAME') || 'fice_event_bot';
+    const botUsername = this.userBot.getUsername();
     const appName =
       this.configService.get<string>('USER_MINI_APP_NAME') || 'app';
     const publicWebUrl = this.configService.get<string>('PUBLIC_WEB_URL') || '';
@@ -144,7 +146,9 @@ export class BroadcastService {
       this.configService.get<string>('USER_MINI_APP_URL') ||
       (publicWebUrl
         ? `${publicWebUrl.replace(/\/$/, '')}/app`
-        : `https://t.me/${botUsername}/${appName}`);
+        : botUsername
+          ? `https://t.me/${botUsername}/${appName}`
+          : '');
 
     return {
       eventId,
