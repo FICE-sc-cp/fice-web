@@ -35,6 +35,8 @@ import {
 import { createRegistrationGuarded } from './registration-writer';
 import { paymentRuleViolation } from './payment-rules';
 import { validateAnswers } from './registration-answers';
+import { registrationListWhere } from './registration-filters';
+import { RegistrationListQueryDto } from './dto/registration-list-query.dto';
 import { ageOf } from './age';
 import {
   isCheckInStaff,
@@ -560,13 +562,13 @@ export class EventService {
     return { completed: pending.completed, expiresAt: pending.expiresAt };
   }
 
-  async listRegistrations(
-    eventId: string,
-    { page, limit }: PaginationQueryDto,
-  ) {
+  async listRegistrations(eventId: string, query: RegistrationListQueryDto) {
+    const { page, limit } = query;
     const event = await this.findOne(eventId);
+    const where = registrationListWhere(eventId, query);
     const [
       items,
+      matching,
       total,
       webCount,
       botCount,
@@ -576,12 +578,13 @@ export class EventService {
       rejectedPaymentCount,
     ] = await this.prisma.$transaction([
       this.prisma.eventRegistration.findMany({
-        where: { eventId },
+        where,
         include: { answers: true },
         orderBy: { createdAt: 'desc' },
         skip: skipFor(page, limit),
         take: limit,
       }),
+      this.prisma.eventRegistration.count({ where }),
       this.prisma.eventRegistration.count({ where: { eventId } }),
       this.prisma.eventRegistration.count({
         where: { eventId, source: 'WEB' },
@@ -608,7 +611,7 @@ export class EventService {
     const isClosedByLimit = closedReason === 'capacity';
 
     return {
-      ...paginated(items, total, page, limit),
+      ...paginated(items, matching, page, limit),
       analytics: {
         total,
         webCount,

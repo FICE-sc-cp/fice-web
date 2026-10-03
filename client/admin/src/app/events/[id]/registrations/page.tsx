@@ -2,7 +2,12 @@
 
 import { useParams } from 'next/navigation';
 import { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useQuery,
+  useMutation,
+  useQueryClient,
+} from '@tanstack/react-query';
 import {
   api,
   mediaUrl,
@@ -14,6 +19,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { Spinner } from '@/components/ui/Spinner';
 import { Button } from '@/components/ui/Button';
 import { hapticNotify } from '@/lib/telegram';
+import { useDebouncedValue } from '@/lib/useDebouncedValue';
 
 const PAYMENT_LABEL: Record<RegistrationPayment, string> = {
   NONE: 'Без оплати',
@@ -120,10 +126,35 @@ export default function EventRegistrationsPage() {
     });
   };
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ['event-registrations', id],
-    queryFn: () => api.eventRegistrations(id),
+  const debouncedSearch = useDebouncedValue(search, 300);
+  const filters = useMemo(
+    () => ({
+      payment: paymentFilter === 'ALL' ? undefined : paymentFilter,
+      source: sourceFilter === 'ALL' ? undefined : sourceFilter,
+      attended:
+        attendanceFilter === 'ALL' ? undefined : attendanceFilter === 'ATTENDED',
+      search: debouncedSearch.trim() || undefined,
+    }),
+    [paymentFilter, sourceFilter, attendanceFilter, debouncedSearch],
+  );
+  const registrations = useInfiniteQuery({
+    queryKey: ['event-registrations', id, filters],
+    queryFn: ({ pageParam }) => api.eventRegistrations(id, pageParam, 100, filters),
+    initialPageParam: 1,
+    getNextPageParam: (last) =>
+      last.page < last.totalPages ? last.page + 1 : undefined,
   });
+  const { isLoading, isError } = registrations;
+  const data = useMemo(
+    () =>
+      registrations.data
+        ? {
+            ...registrations.data.pages[0],
+            items: registrations.data.pages.flatMap((p) => p.items),
+          }
+        : undefined,
+    [registrations.data],
+  );
 
   const { data: event } = useQuery({
     queryKey: ['event', id],
@@ -218,49 +249,7 @@ export default function EventRegistrationsPage() {
     }
   };
 
-  const filteredItems = useMemo(() => {
-    if (!data?.items) return [];
-    return data.items.filter((item) => {
-      // Source filter
-      if (sourceFilter !== 'ALL' && (item.source || 'BOT') !== sourceFilter) {
-        return false;
-      }
-
-      // Payment filter
-      if (paymentFilter === 'PENDING') {
-        const isPending =
-          item.paymentStatus === 'PENDING' ||
-          (item.payment === 'DONATED' && !item.paymentStatus);
-        if (!isPending) return false;
-      } else if (paymentFilter === 'CONFIRMED') {
-        if (item.paymentStatus !== 'CONFIRMED') return false;
-      } else if (paymentFilter === 'REJECTED') {
-        if (item.paymentStatus !== 'REJECTED') return false;
-      } else if (paymentFilter === 'AT_EVENT') {
-        if (item.payment !== 'AT_EVENT') return false;
-      }
-
-      // Attendance filter
-      if (attendanceFilter === 'ATTENDED' && !item.attended) {
-        return false;
-      }
-      if (attendanceFilter === 'NOT_ATTENDED' && item.attended) {
-        return false;
-      }
-
-      // Search query
-      if (!search.trim()) return true;
-      const q = search.toLowerCase().trim();
-      const inName = item.fullName.toLowerCase().includes(q);
-      const inGroup = item.group.toLowerCase().includes(q);
-      const inTg = item.telegramTag.toLowerCase().includes(q);
-      const inTicket = (item.ticketCode || '').toLowerCase().includes(q);
-      const inAnswers = (item.answers ?? []).some((a) =>
-        a.value.toLowerCase().includes(q),
-      );
-      return inName || inGroup || inTg || inTicket || inAnswers;
-    });
-  }, [data?.items, search, paymentFilter, sourceFilter, attendanceFilter]);
+  const filteredItems = data?.items ?? [];
 
   const analytics = useMemo(() => {
     const items = data?.items ?? [];
@@ -1069,6 +1058,22 @@ export default function EventRegistrationsPage() {
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {data && data.total > filteredItems.length && (
+        <div className="mt-4 flex flex-col items-center gap-2">
+          <p className="text-xs text-muted">
+            Показано {filteredItems.length} з {data.total}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={registrations.isFetchingNextPage}
+            onClick={() => registrations.fetchNextPage()}
+          >
+            {registrations.isFetchingNextPage ? 'Завантаження…' : 'Показати ще'}
+          </Button>
         </div>
       )}
 

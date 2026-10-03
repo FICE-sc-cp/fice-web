@@ -161,6 +161,13 @@ export type PaymentStatus =
   | 'REJECTED';
 export type RegistrationSource = 'WEB' | 'BOT';
 
+export interface RegistrationFilters {
+  payment?: 'PENDING' | 'CONFIRMED' | 'AT_EVENT' | 'REJECTED';
+  source?: RegistrationSource;
+  attended?: boolean;
+  search?: string;
+}
+
 export interface RegistrationAnalytics {
   total: number;
   maxRegistrations: number | null;
@@ -486,10 +493,21 @@ export const api = {
   ) => request<unknown>(`/event/${id}/partners`, { method: 'POST', ...json(body) }),
   removeEventPartner: (id: string, eventPartnerId: string) =>
     request<unknown>(`/event/${id}/partners/${eventPartnerId}`, { method: 'DELETE' }),
-  eventRegistrations: (id: string, page = 1, limit = 100) =>
-    request<Paginated<EventRegistration> & { analytics?: RegistrationAnalytics }>(
-      `/event/${id}/registrations?page=${page}&limit=${limit}`,
-    ),
+  eventRegistrations: (
+    id: string,
+    page = 1,
+    limit = 100,
+    filters: RegistrationFilters = {},
+  ) => {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (filters.payment) params.set('payment', filters.payment);
+    if (filters.source) params.set('source', filters.source);
+    if (filters.attended !== undefined) params.set('attended', String(filters.attended));
+    if (filters.search) params.set('search', filters.search);
+    return request<Paginated<EventRegistration> & { analytics?: RegistrationAnalytics }>(
+      `/event/${id}/registrations?${params.toString()}`,
+    );
+  },
   confirmRegistrationPayment: (eventId: string, registrationId: string) =>
     request<{ success: boolean; registration: EventRegistration }>(
       `/event/${eventId}/registrations/${registrationId}/confirm-payment`,
@@ -581,8 +599,11 @@ export const api = {
   unassignMember: (id: string, departmentId: string) =>
     request<unknown>(`/department-member/${id}/assignments/${departmentId}`, { method: 'DELETE' }),
 
-  applicants: (page = 1, limit = 50) =>
-    request<Paginated<Applicant>>(`/applicant?page=${page}&limit=${limit}`),
+  applicants: (page = 1, limit = 50, search?: string) => {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (search) params.set('search', search);
+    return request<Paginated<Applicant>>(`/applicant?${params.toString()}`);
+  },
   applicant: (id: string) => request<Applicant>(`/applicant/${id}`),
   deleteApplicant: (id: string) => request<unknown>(`/applicant/${id}`, { method: 'DELETE' }),
 

@@ -36,6 +36,7 @@ import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { AddEventPartnerDto } from './dto/add-event-partner.dto';
 import { CreateEventDto } from './dto/create-event.dto';
 import { EventQueryDto } from './dto/event-query.dto';
+import { RegistrationListQueryDto } from './dto/registration-list-query.dto';
 import { CreateEventRegistrationDto } from './dto/create-event-registration.dto';
 import {
   CancelRegistrationDto,
@@ -313,9 +314,9 @@ export class EventController {
   @ApiOperation({ summary: 'List event registrations (admin)' })
   listRegistrations(
     @Param('id', ParseUUIDPipe) id: string,
-    @Query() pagination: PaginationQueryDto,
+    @Query() query: RegistrationListQueryDto,
   ) {
-    return this.eventService.listRegistrations(id, pagination);
+    return this.eventService.listRegistrations(id, query);
   }
 
   @Get(':id/registrations/export')
