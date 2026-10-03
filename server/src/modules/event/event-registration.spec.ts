@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { resolveValidatedTelegramUser } from '../../auth/init-data.util';
 import { CreateEventRegistrationDto } from './dto/create-event-registration.dto';
 import { EventService } from './event.service';
@@ -186,6 +186,21 @@ describe('EventService.register identity', () => {
       const result = await service.register('e1', dto(), 'init');
 
       expect(result).toEqual({ id: 'r1', paymentStatus: 'NOT_REQUIRED' });
+    });
+
+    it('refuses a blocked Telegram account even under a new tag', async () => {
+      prisma.blockedUser.findFirst.mockImplementation(({ where }: any) =>
+        Promise.resolve(
+          where.OR.some((c: any) => c.telegramUserId === 42n)
+            ? { id: 'blk', telegramTag: '@old_tag', telegramUserId: 42n }
+            : null,
+        ),
+      );
+
+      await expect(
+        service.register('e1', dto(), 'init'),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+      expect(prisma.eventRegistration.create).not.toHaveBeenCalled();
     });
 
     it('requires a Telegram username', async () => {

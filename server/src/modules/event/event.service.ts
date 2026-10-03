@@ -24,6 +24,7 @@ import {
   normalizeTelegramUsername,
   telegramTagOf,
 } from './registration-identity';
+import { findActiveBlock } from '../blocked-users/blocklist';
 import { AddEventPartnerDto } from './dto/add-event-partner.dto';
 import { CreateEventDto } from './dto/create-event.dto';
 import { CreateEventRegistrationDto } from './dto/create-event-registration.dto';
@@ -316,10 +317,12 @@ export class EventService {
     const telegramTag = telegramTagOf(registrant.username);
 
     // 1. Check if user is blocked
-    const blocked = await this.prisma.blockedUser.findUnique({
-      where: { telegramTag },
-    });
-    if (blocked && blocked.isBlocked) {
+    const blocked = await findActiveBlock(
+      this.prisma,
+      telegramTag,
+      registrant.telegramUserId,
+    );
+    if (blocked) {
       throw new ForbiddenException(
         'Ваш обліковий запис Telegram заблоковано для реєстрації на заходи. Зверніться до підтримки: @fice_robot',
       );

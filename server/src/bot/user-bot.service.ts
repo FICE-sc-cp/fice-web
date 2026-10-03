@@ -16,6 +16,7 @@ import {
   normalizeTelegramUsername,
   telegramTagOf,
 } from '../modules/event/registration-identity';
+import { findActiveBlock } from '../modules/blocked-users/blocklist';
 import { errorMessage } from '../common/log-safe';
 import { UPLOAD_DIR } from '../upload/upload.constants';
 
@@ -156,6 +157,13 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
 
             const cleanTag = normalizeTelegramUsername(from.username)!;
             const normalizedTag = telegramTagOf(cleanTag);
+
+            if (await findActiveBlock(this.prisma, normalizedTag, telegramId)) {
+              await ctx.reply(
+                'Ваш обліковий запис Telegram заблоковано для реєстрації на заходи. Зверніться до підтримки: @fice_robot',
+              );
+              return;
+            }
 
             // Check if already registered
             const existingReg = await this.prisma.eventRegistration.findFirst({

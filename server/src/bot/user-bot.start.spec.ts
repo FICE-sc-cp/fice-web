@@ -119,6 +119,28 @@ describe('UserBotService /start reg_ confirmation', () => {
     });
   });
 
+  it('refuses a confirming account that is blocked by Telegram id', async () => {
+    prisma.blockedUser.findFirst.mockResolvedValue({
+      id: 'blk',
+      telegramTag: '@old_tag',
+      telegramUserId: 4242n,
+      isBlocked: true,
+    });
+    const ctx = ctxFrom({ username: 'Victim' });
+    await startHandler(ctx);
+
+    expect(prisma.blockedUser.findFirst).toHaveBeenCalledWith({
+      where: {
+        isBlocked: true,
+        OR: [{ telegramTag: '@victim' }, { telegramUserId: 4242n }],
+      },
+    });
+    expect(prisma.eventRegistration.create).not.toHaveBeenCalled();
+    expect(ctx.reply).toHaveBeenCalledWith(
+      expect.stringContaining('заблоковано'),
+    );
+  });
+
   it('checks for an existing registration by exact tag, never with ILIKE', async () => {
     await startHandler(ctxFrom({ username: 'Victim' }));
 
