@@ -10,11 +10,40 @@ import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter'
 import { UPLOAD_DIR, UPLOAD_URL_PREFIX } from './upload/upload.constants';
 import { setUploadHeaders } from './upload/upload-headers';
 import { TRUST_PROXY } from './common/throttle';
+import { isProduction } from './config/env.validation';
 
 // Polyfill BigInt JSON serialization globally
 (BigInt.prototype as any).toJSON = function () {
   return this.toString();
 };
+
+function setupApiDocs(app: NestExpressApplication) {
+  const config = new DocumentBuilder()
+    .setTitle('Fice API')
+    .setDescription(
+      'Student council website API — public content for the site and ' +
+        'Telegram-authenticated endpoints for the admin panel.',
+    )
+    .setVersion('1.0')
+    .addApiKey(
+      { type: 'apiKey', name: 'x-telegram-init-data', in: 'header' },
+      'telegram',
+    )
+    .build();
+  const document = SwaggerModule.createDocument(app, config);
+
+  app.use(
+    '/api/docs',
+    apiReference({
+      content: document,
+      theme: 'alternate',
+      defaultHttpClient: {
+        targetKey: 'js',
+        clientKey: 'axios',
+      },
+    }),
+  );
+}
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -52,31 +81,7 @@ async function bootstrap() {
     setHeaders: setUploadHeaders,
   });
 
-  const config = new DocumentBuilder()
-    .setTitle('Fice API')
-    .setDescription(
-      'Student council website API — public content for the site and ' +
-        'Telegram-authenticated endpoints for the admin panel.',
-    )
-    .setVersion('1.0')
-    .addApiKey(
-      { type: 'apiKey', name: 'x-telegram-init-data', in: 'header' },
-      'telegram',
-    )
-    .build();
-  const document = SwaggerModule.createDocument(app, config);
-
-  app.use(
-    '/api/docs',
-    apiReference({
-      content: document,
-      theme: 'alternate',
-      defaultHttpClient: {
-        targetKey: 'js',
-        clientKey: 'axios',
-      },
-    }),
-  );
+  if (!isProduction()) setupApiDocs(app);
 
   const port = process.env.PORT ?? 3001;
   await app.listen(port);
