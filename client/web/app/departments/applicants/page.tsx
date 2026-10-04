@@ -17,27 +17,28 @@ const GRADIENT = APPLICANTS_DEPARTMENT.gradient;
 const GLOW = APPLICANTS_DEPARTMENT.glow;
 const ROLE_BORDER = accentBorder[APPLICANTS_DEPARTMENT.accent];
 
-const PERSON_OUTLINE =
-  "drop-shadow(3px 3px 0 #fff) drop-shadow(-3px -3px 0 #fff) drop-shadow(3px -3px 0 #fff) drop-shadow(-3px 3px 0 #fff)";
-
 const ROLES = [
   {
     name: "Хедорг",
+    image: "/applicants-headorg.png",
     description:
       "Лідер, який бере на себе відповідальність за весь напрямок. Координує команду, визначає загальний вектор заходу, відповідає за якість та фінальний результат.",
   },
   {
     name: "Організатор",
+    image: "/applicants-organizer.png",
     description:
       "Людина, яка бере на себе частину відповідальності за проєкт/подію. Це лідер команди або відповідальний за певний робочий блок (стек проєкту).",
   },
   {
     name: "Спікер",
+    image: "/applicants-speaker.png",
     description:
       "Обличчя та голос нашого факультету на заходах. Представник своєї спеціальності, який розповідає батькам та абітурієнтам про специфіку навчання та надихає вступити саме до нас.",
   },
   {
     name: "Волонтер",
+    image: "/applicants-volunteer.png",
     description:
       "Головний рушій і активний помічник нашої команди. Людина, яка ініціативно долучається до проєктів на всіх етапах організації та допомагає реалізувати ідеї на практиці.",
   },
@@ -114,17 +115,16 @@ export default async function ApplicantsPage() {
                 >
                   <div
                     className={cn(
-                      "group relative aspect-[3/4] overflow-hidden rounded-2xl border bg-surface/40",
+                      "group relative aspect-[413/584] overflow-hidden rounded-2xl border bg-surface/40",
                       ROLE_BORDER,
                     )}
                   >
                     <Image
-                      src="/placeholder-person.png"
+                      src={role.image}
                       alt={role.name}
                       fill
                       sizes="(min-width: 1024px) 18rem, 50vw"
-                      className="object-contain object-bottom"
-                      style={{ filter: PERSON_OUTLINE }}
+                      className="object-cover"
                     />
                     <div className="absolute inset-0 hidden items-center justify-center bg-black/80 p-4 opacity-0 backdrop-blur-sm transition-opacity duration-300 group-hover:opacity-100 sm:flex sm:p-5">
                       <p className="text-center text-sm leading-snug text-stone-200 sm:text-base">
