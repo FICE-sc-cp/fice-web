@@ -1,0 +1,24 @@
+{
+  "name": "people-wall-export",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Exports department chat members from Telegram for the people walls import",
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "test": "node --import tsx --test src/archive.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=20.12"
+  },
+  "dependencies": {
+    "fflate": "^0.8.3",
+    "telegram": "^2.26.22"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "tsx": "^4.23.0",
+    "typescript": "^5.7.0"
+  }
+}

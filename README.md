@@ -328,6 +328,8 @@ fice-web
 │       ├── common/           # Prisma exception filter
 │       ├── database/         # Global PrismaModule / PrismaService
 │       └── modules/          # Feature modules (event, fundraiser, department, ...)
+├── tools/
+│   └── people-wall-export/   # Local GramJS tool: exports chat members for the people walls
 ├── Caddyfile                 # TLS ingress config (compose profile `prod`)
 ├── .env.example              # Every compose variable, with production values
 └── docker-compose.yml        # Full stack: postgres + server + admin + web (+ caddy)

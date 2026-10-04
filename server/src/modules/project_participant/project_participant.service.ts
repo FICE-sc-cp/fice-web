@@ -1,6 +1,20 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { Prisma, ProjectParticipantSource } from '@prisma/client';
+import { randomUUID } from 'crypto';
+import { unlink, writeFile } from 'fs/promises';
+import { resolve } from 'path';
 import { PrismaService } from '../../database/prisma.service';
+import {
+  ADMIN_IMAGE_PROFILE,
+  reencodeImage,
+} from '../../upload/image-processing';
+import { UPLOAD_DIR, UPLOAD_URL_PREFIX } from '../../upload/upload.constants';
+import {
+  ArchivePerson,
+  CONFIG_FORMAT,
+  normalizePersonName,
+  PeopleArchive,
+} from './people-import';
 import { CreateProjectParticipantDto } from './dto/create-project-participant.dto';
 import { UpdateProjectParticipantDto } from './dto/update-project-participant.dto';
 
@@ -12,6 +26,17 @@ export interface TelegramUserLike {
   last_name?: string;
   username?: string;
 }
+
+export interface PeopleImportSummary {
+  added: number;
+  updated: number;
+  skipped: number;
+  skippedByTool: { bots: number; deleted: number };
+  unknownDepartments: number;
+  possibleDuplicates: { department: string; fullName: string }[];
+}
+
+type StoreAvatar = (avatar: Buffer) => Promise<string | null>;
 
 // Fields safe to return over HTTP. Excludes the BigInt `telegramId` (not
 // JSON-serializable and not needed by any client) and the internal `avatarFileId`.
@@ -192,6 +217,166 @@ export class ProjectParticipantService {
         hidden: true,
       },
     });
+  }
+
+  // ---- Bulk import from the export tool ----------------------------------
+
+  async exportConfig() {
+    const departments = await this.prisma.department.findMany({
+      where: { telegramChatId: { not: null } },
+      select: { id: true, name: true, telegramChatId: true },
+      orderBy: { name: 'asc' },
+    });
+    return {
+      format: CONFIG_FORMAT,
+      createdAt: new Date().toISOString(),
+      departments: departments.map((d) => ({
+        departmentId: d.id,
+        name: d.name,
+        chat: d.telegramChatId,
+      })),
+    };
+  }
+
+  async importPeople(
+    archive: PeopleArchive,
+    storeAvatar: StoreAvatar = (avatar) => this.storeAvatar(avatar),
+  ): Promise<PeopleImportSummary> {
+    const summary: PeopleImportSummary = {
+      added: 0,
+      updated: 0,
+      skipped: archive.invalid,
+      skippedByTool: archive.skippedByTool,
+      unknownDepartments: 0,
+      possibleDuplicates: [],
+    };
+    const known = await this.prisma.department.findMany({
+      where: { id: { in: archive.departments.map((d) => d.departmentId) } },
+      select: { id: true, name: true },
+    });
+    const names = new Map(known.map((d) => [d.id, d.name]));
+
+    for (const dept of archive.departments) {
+      const deptName = names.get(dept.departmentId);
+      if (!deptName) {
+        summary.unknownDepartments += 1;
+        summary.skipped += dept.people.length;
+        continue;
+      }
+      const manual = await this.prisma.projectParticipant.findMany({
+        where: { departmentId: dept.departmentId, telegramId: null },
+        select: { fullName: true },
+      });
+      const manualNames = new Set(
+        manual.map((m) => normalizePersonName(m.fullName)),
+      );
+      for (const person of dept.people) {
+        const outcome = await this.importPerson(
+          dept.departmentId,
+          person,
+          manualNames,
+          storeAvatar,
+        );
+        if (outcome === 'duplicate') {
+          summary.skipped += 1;
+          summary.possibleDuplicates.push({
+            department: deptName,
+            fullName: person.fullName,
+          });
+        } else {
+          summary[outcome] += 1;
+        }
+      }
+    }
+    return summary;
+  }
+
+  private async importPerson(
+    departmentId: string,
+    person: ArchivePerson,
+    manualNames: Set<string>,
+    storeAvatar: StoreAvatar,
+  ): Promise<'added' | 'updated' | 'duplicate'> {
+    const existing = await this.findImported(departmentId, person.telegramId);
+    if (existing) {
+      await this.refreshImported(existing, person, storeAvatar);
+      return 'updated';
+    }
+    if (manualNames.has(normalizePersonName(person.fullName))) {
+      return 'duplicate';
+    }
+
+    const twin = await this.prisma.projectParticipant.findFirst({
+      where: { telegramId: person.telegramId, photo: { not: null } },
+      select: { photo: true, avatarFileId: true },
+    });
+    const photo =
+      twin?.photo ?? (person.avatar ? await storeAvatar(person.avatar) : null);
+    try {
+      await this.prisma.projectParticipant.create({
+        data: {
+          telegramId: person.telegramId,
+          fullName: person.fullName,
+          departmentId,
+          photo,
+          avatarFileId: twin?.avatarFileId ?? null,
+          source: ProjectParticipantSource.HARVESTED,
+        },
+        select: { id: true },
+      });
+      return 'added';
+    } catch (err) {
+      const raced =
+        err instanceof Prisma.PrismaClientKnownRequestError &&
+        err.code === 'P2002'
+          ? await this.findImported(departmentId, person.telegramId)
+          : null;
+      if (!raced) throw err;
+      await this.refreshImported(raced, person, storeAvatar);
+      return 'updated';
+    }
+  }
+
+  private findImported(departmentId: string, telegramId: bigint) {
+    return this.prisma.projectParticipant.findUnique({
+      where: { departmentId_telegramId: { departmentId, telegramId } },
+      select: { id: true, source: true, photo: true },
+    });
+  }
+
+  private async refreshImported(
+    row: { id: string; source: ProjectParticipantSource; photo: string | null },
+    person: ArchivePerson,
+    storeAvatar: StoreAvatar,
+  ) {
+    const photo =
+      !row.photo && person.avatar ? await storeAvatar(person.avatar) : null;
+    await this.prisma.projectParticipant.update({
+      where: { id: row.id },
+      data: {
+        lastSeenAt: new Date(),
+        ...(row.source === ProjectParticipantSource.HARVESTED
+          ? { fullName: person.fullName }
+          : {}),
+        ...(photo ? { photo } : {}),
+      },
+    });
+  }
+
+  private async storeAvatar(avatar: Buffer): Promise<string | null> {
+    const filename = `${randomUUID()}.jpg`;
+    const path = resolve(UPLOAD_DIR, filename);
+    try {
+      await writeFile(path, avatar);
+      await reencodeImage(path, '.jpg', ADMIN_IMAGE_PROFILE);
+      return `${UPLOAD_URL_PREFIX}/${filename}`;
+    } catch (err) {
+      await unlink(path).catch(() => undefined);
+      this.logger.warn(
+        `Skipped an imported avatar: ${err instanceof Error ? err.message : String(err)}`,
+      );
+      return null;
+    }
   }
 
   // ---- Admin CRUD ---------------------------------------------------------
