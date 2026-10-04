@@ -47,7 +47,7 @@ export default async function DepartmentPage({
   if (!d) notFound();
 
   const iconGrad = accentGradient[d.accent];
-  const joinHref = `/join?dept=${encodeURIComponent(d.name)}`;
+  const joinHref = `/join?dept=${encodeURIComponent(d.slug)}`;
 
   return (
     <>

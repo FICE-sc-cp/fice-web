@@ -38,6 +38,8 @@ const FIELD_LABELS: Record<string, string> = {
   websiteLink: 'Вебсайт',
   telegramTag: 'Telegram-тег',
   telegramChatId: 'Telegram chat ID',
+  slug: 'Сторінка на сайті',
+  shortName: 'Коротка назва',
   firstName: 'Імʼя',
   lastName: 'Прізвище',
   middleName: 'По батькові',

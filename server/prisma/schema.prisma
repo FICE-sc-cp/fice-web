@@ -82,6 +82,8 @@ model DepartmentHead {
 model Department {
   id             String  @id @default(uuid()) @db.Uuid
   name           String  @db.VarChar(50)
+  slug           String? @unique @db.VarChar(32)
+  shortName      String? @db.VarChar(50)
   memberCount    Int?
   // Telegram chat the bot harvests this department's people wall from.
   // "chatId" or "chatId/threadId" for a forum topic. Set from the admin panel.

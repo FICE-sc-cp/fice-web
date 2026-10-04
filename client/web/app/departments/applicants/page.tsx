@@ -10,7 +10,7 @@ import { DepartmentTop } from "@/components/sections/DepartmentTop";
 import { accentBorder } from "@/components/ui/AccentCard";
 import { IconDefs } from "@/components/ui/icons";
 import { fice, safe, type EventItem } from "@/lib/api";
-import { APPLICANTS_DB_NAME, APPLICANTS_DEPARTMENT } from "@/lib/departments";
+import { APPLICANTS_DEPARTMENT } from "@/lib/departments";
 import { cn } from "@/lib/utils";
 
 const GRADIENT = APPLICANTS_DEPARTMENT.gradient;
@@ -95,7 +95,7 @@ export default async function ApplicantsPage() {
       <IconDefs />
       <Header />
       <main className="overflow-x-clip">
-        <DepartmentTop d={APPLICANTS_DEPARTMENT} dbName={APPLICANTS_DB_NAME} />
+        <DepartmentTop d={APPLICANTS_DEPARTMENT} />
 
         <section className="relative isolate py-16 lg:py-24">
           <Glow

@@ -41,6 +41,8 @@ export default function EditDepartmentPage() {
 
       return api.updateDepartment(id, {
         name: v.name,
+        shortName: v.shortName?.trim() || null,
+        slug: v.slug || null,
         memberCount: v.memberCount?.trim() ? Number(v.memberCount) : undefined,
         telegramChatId: v.telegramChatId?.trim() || null,
         headId,
@@ -63,6 +65,7 @@ export default function EditDepartmentPage() {
         </div>
       ) : (
         <DepartmentForm
+          departmentId={id}
           submitLabel="Зберегти"
           submitting={mutation.isPending}
           onSubmit={(v) => mutation.mutate(v)}
@@ -71,6 +74,8 @@ export default function EditDepartmentPage() {
             dep
               ? {
                   name: dep.name,
+                  shortName: dep.shortName ?? '',
+                  slug: dep.slug ?? '',
                   memberCount:
                     dep.memberCount != null ? String(dep.memberCount) : '',
                   telegramChatId: dep.telegramChatId ?? '',

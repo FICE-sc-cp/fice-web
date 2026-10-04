@@ -53,7 +53,7 @@ function headCard(d: Department): TeamCard | null {
   return {
     id: d.head.id,
     name: `${d.head.firstName} ${d.head.lastName}`.trim(),
-    role: `Голова департаменту «${d.name}»`,
+    role: `Голова департаменту «${d.shortName?.trim() || d.name}»`,
     detail: null,
     telegram: d.head.telegramTag,
     photo: d.head.photo,

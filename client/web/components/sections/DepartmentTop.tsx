@@ -136,15 +136,9 @@ export function DepartmentSectionHeading({
   );
 }
 
-export async function DepartmentTop({
-  d,
-  dbName,
-}: {
-  d: DepartmentData;
-  dbName?: string;
-}) {
+export async function DepartmentTop({ d }: { d: DepartmentData }) {
   const iconGrad = accentGradient[d.accent];
-  const joinHref = `/join?dept=${encodeURIComponent(d.name)}`;
+  const joinHref = `/join?dept=${encodeURIComponent(d.slug)}`;
   const teamMembers: Member[] = d.team ?? [];
   const teamLead = teamMembers.find((m) => m.lead) ?? null;
   const teamRest = teamMembers.filter((m) => !m.lead);
@@ -152,9 +146,8 @@ export async function DepartmentTop({
   const hasResp = !!d.responsibilities?.length;
   const hasCover = !!d.cover;
 
-  const lookupName = (dbName ?? d.name).trim();
   const dbDepartments = await safe(fice.departments(), [] as Department[]);
-  const dbDept = dbDepartments.find((x) => x.name.trim() === lookupName);
+  const dbDept = dbDepartments.find((x) => x.slug === d.slug);
   const dbHead = dbDept?.head ?? null;
   const memberCount = dbDept?.memberCount ?? d.memberCount;
   const projectPeople = dbDept

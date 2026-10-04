@@ -5,6 +5,7 @@ import {
   EventQuestionType,
   PrismaClient,
 } from '@prisma/client';
+import { DEPARTMENT_PAGES } from '../src/config/department-pages';
 import { destructiveSeedRefusal } from '../src/config/seed-guard';
 
 const refusal = destructiveSeedRefusal(process.env);
@@ -729,6 +730,8 @@ async function main() {
     const created = await prisma.department.create({
       data: {
         name: d.name,
+        slug: DEPARTMENT_PAGES.find((p) => p.name === d.name)?.slug,
+        shortName: DEPARTMENT_PAGES.find((p) => p.name === d.name)?.shortName,
         head: { create: d.head },
       },
     });

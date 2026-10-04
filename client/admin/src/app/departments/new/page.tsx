@@ -28,6 +28,8 @@ export default function NewDepartmentPage() {
       }
       return api.createDepartment({
         name: v.name,
+        shortName: v.shortName?.trim() || undefined,
+        slug: v.slug || undefined,
         memberCount: v.memberCount?.trim() ? Number(v.memberCount) : undefined,
         telegramChatId: v.telegramChatId?.trim() || undefined,
         headId,

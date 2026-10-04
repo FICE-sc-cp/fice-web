@@ -63,3 +63,32 @@ describe('UpdateDepartmentDto.telegramChatId', () => {
     expect(errors[0]).toMatch(/^telegramChatId Вкажи числовий ID групи/);
   });
 });
+
+describe('CreateDepartmentDto.slug and shortName', () => {
+  const build = (extra: Record<string, unknown>) =>
+    plainToInstance(CreateDepartmentDto, { name: 'Департамент', ...extra });
+  const messages = async (dto: object) =>
+    (await validate(dto)).flatMap((e) => Object.values(e.constraints ?? {}));
+
+  it('accepts a known page slug and a trimmed short name', async () => {
+    const dto = build({ slug: 'merch', shortName: '  Мерч ' });
+    expect(dto.shortName).toBe('Мерч');
+    await expect(messages(dto)).resolves.toEqual([]);
+  });
+
+  it('turns empty values into null so the admin can unlink a page', async () => {
+    const dto = build({ slug: '', shortName: '   ' });
+    expect(dto.slug).toBeNull();
+    expect(dto.shortName).toBeNull();
+    await expect(messages(dto)).resolves.toEqual([]);
+  });
+
+  it.each(['presidium', 'Департамент мерчу', 'unknown'])(
+    'rejects %s as a slug',
+    async (slug) => {
+      await expect(messages(build({ slug }))).resolves.toEqual([
+        'slug Обери сторінку зі списку',
+      ]);
+    },
+  );
+});

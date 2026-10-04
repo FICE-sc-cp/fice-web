@@ -48,6 +48,8 @@ export interface DepartmentHead {
 export interface Department {
   id: string;
   name: string;
+  slug: string | null;
+  shortName: string | null;
   memberCount: number | null;
   telegramChatId: string | null;
   headId: string | null;
@@ -398,6 +400,8 @@ export interface FundraiserInput {
 
 export interface DepartmentInput {
   name: string;
+  slug?: string | null;
+  shortName?: string | null;
   memberCount?: number;
   telegramChatId?: string | null;
   headId?: string;

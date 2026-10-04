@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
+  IsIn,
   IsInt,
   IsNotEmpty,
   IsOptional,
@@ -11,6 +12,10 @@ import {
   Min,
 } from 'class-validator';
 import { normalizeChatRef } from '../../../bot/department-chats';
+import { DEPARTMENT_SLUGS } from '../../../config/department-pages';
+
+const blankToNull = ({ value }: { value: unknown }) =>
+  typeof value === 'string' ? value.trim() || null : value;
 
 export class CreateDepartmentDto {
   @ApiProperty({ maxLength: 50 })
@@ -18,6 +23,29 @@ export class CreateDepartmentDto {
   @IsNotEmpty()
   @MaxLength(50)
   name: string;
+
+  @ApiPropertyOptional({
+    enum: DEPARTMENT_SLUGS,
+    nullable: true,
+    description: 'Сторінка департаменту на сайті (/departments/<slug>)',
+  })
+  @Transform(blankToNull)
+  @IsOptional()
+  @IsIn(DEPARTMENT_SLUGS, {
+    message: 'slug Обери сторінку зі списку',
+  })
+  slug?: string | null;
+
+  @ApiPropertyOptional({
+    maxLength: 50,
+    nullable: true,
+    description: 'Коротка назва, напр. «Мерч»',
+  })
+  @Transform(blankToNull)
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  shortName?: string | null;
 
   @ApiPropertyOptional({ description: 'Кількість учасників (для сторінки)' })
   @IsOptional()

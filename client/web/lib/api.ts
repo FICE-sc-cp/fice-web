@@ -52,6 +52,8 @@ export interface DepartmentHead {
 export interface Department {
   id: string;
   name: string;
+  slug: string | null;
+  shortName: string | null;
   memberCount: number | null;
   headId: string | null;
   head?: DepartmentHead | null;
