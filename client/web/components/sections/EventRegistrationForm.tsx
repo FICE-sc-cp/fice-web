@@ -15,6 +15,7 @@ import {
 import { normalizeKpiGroup, parseKpiGroup } from '@/lib/kpi-groups';
 import { baseQuestionsOf, choiceOptions } from '@/lib/registrationConfig';
 import { MAX_UPLOAD_MB, RECEIPT_ACCEPT, uploadProblem } from '@/lib/uploads';
+import { ANY_AMOUNT_TITLE, ANY_AMOUNT_VALUE, feeInfo } from '@/lib/fees';
 
 const isUrl = (s: string) => /^https?:\/\//i.test(s.trim());
 
@@ -33,10 +34,10 @@ function TelegramIcon({ className = 'size-5' }: { className?: string }) {
 
 export function EventRegistrationForm({ event }: { event: EventItem }) {
   const questions = event.questions ?? [];
-  const fee = event.feeAmount != null ? Number(event.feeAmount) : 0;
-  const feeAtEvent =
-    event.feeAtEventAmount != null ? Number(event.feeAtEventAmount) : 0;
-  const hasFee = fee > 0 || feeAtEvent > 0;
+  const fees = feeInfo(event);
+  const fee = fees.online;
+  const feeAtEvent = fees.atEvent;
+  const hasFee = fees.hasFee;
 
   const baseConfig = baseQuestionsOf(event);
 
@@ -560,17 +561,21 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
             {hasFee && (
               <div className="flex flex-col gap-2 rounded-2xl border border-border bg-surface/60 p-4">
                 <label className="text-sm font-semibold text-muted">
-                  Спосіб оплати внеску
+                  {fees.anyAmount
+                    ? `${ANY_AMOUNT_TITLE} (${ANY_AMOUNT_VALUE}): спосіб оплати`
+                    : 'Спосіб оплати внеску'}
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {fee > 0 && (
+                  {fees.onlineRequired && (
                     <button
                       type="button"
                       onClick={() => setPayment('DONATED')}
                       aria-pressed={payment === 'DONATED'}
                       className={chip(payment === 'DONATED')}
                     >
-                      Задонатив онлайн · {fee} грн
+                      {fees.anyAmount
+                        ? `Задонатив онлайн · ${ANY_AMOUNT_VALUE}`
+                        : `Задонатив онлайн · ${fee} грн`}
                     </button>
                   )}
                   {feeAtEvent > 0 && (

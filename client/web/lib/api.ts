@@ -153,6 +153,7 @@ export interface EventItem {
   photoAlbumUrl: string | null;
   feeAmount: string | null;
   feeAtEventAmount: string | null;
+  donationAnyAmount?: boolean;
   feeRequisites: string | null;
   isAbitfest: boolean;
   noRegistration: boolean;
@@ -713,6 +714,7 @@ export interface MyEventRegistration {
     timeNote: string | null;
     feeAmount: string | null;
     feeAtEventAmount: string | null;
+    donationAnyAmount?: boolean;
     feeRequisites: string | null;
     registrationCloseDate: string | null;
     maxRegistrations?: number | null;

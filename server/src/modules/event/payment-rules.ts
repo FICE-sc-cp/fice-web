@@ -5,6 +5,23 @@ type Amount = { toString(): string } | number | string | null | undefined;
 export interface FeeEvent {
   feeAmount: Amount;
   feeAtEventAmount: Amount;
+  donationAnyAmount?: boolean | null;
+}
+
+export function pendingPaymentSubject(event: {
+  donationAnyAmount?: boolean | null;
+}): string {
+  return event.donationAnyAmount
+    ? 'Твій благодійний внесок (довільна сума)'
+    : 'Твій платіж';
+}
+
+export function ticketDonationLine(event: {
+  donationAnyAmount?: boolean | null;
+}): string {
+  return event.donationAnyAmount
+    ? '💛 <b>Благодійний внесок:</b> довільна сума\n'
+    : '';
 }
 
 const isPositive = (value: Amount) =>
@@ -15,7 +32,7 @@ export function paymentRuleViolation(
   payment: RegistrationPayment,
   hasOwnReceipt: boolean,
 ): string | null {
-  const online = isPositive(event.feeAmount);
+  const online = !!event.donationAnyAmount || isPositive(event.feeAmount);
   const atEvent = isPositive(event.feeAtEventAmount);
 
   if (!online && !atEvent) {

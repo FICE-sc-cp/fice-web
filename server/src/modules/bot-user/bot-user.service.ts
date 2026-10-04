@@ -77,6 +77,7 @@ export class BotUserService {
             timeNote: true,
             feeAmount: true,
             feeAtEventAmount: true,
+            donationAnyAmount: true,
             feeRequisites: true,
             registrationCloseDate: true,
           },

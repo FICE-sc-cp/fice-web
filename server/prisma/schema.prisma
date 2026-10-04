@@ -190,6 +190,7 @@ model Event {
   photoAlbumUrl         String?
   feeAmount             Decimal?  @db.Decimal(10, 2)
   feeAtEventAmount      Decimal?  @db.Decimal(10, 2)
+  donationAnyAmount     Boolean   @default(false)
   feeRequisites         String?   @db.VarChar(255)
   isAbitfest            Boolean   @default(false)
   noRegistration        Boolean   @default(false)

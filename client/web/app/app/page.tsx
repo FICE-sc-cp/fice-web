@@ -24,6 +24,7 @@ import { Glow } from '@/components/ui/Glow';
 import { cn } from '@/lib/utils';
 import { USER_BOT_USERNAME } from '@/lib/bot';
 import { baseQuestionsOf, choiceOptions } from '@/lib/registrationConfig';
+import { ANY_AMOUNT_TITLE, ANY_AMOUNT_VALUE, feeInfo } from '@/lib/fees';
 import {
   MAX_UPLOAD_MB,
   PHOTO_ACCEPT,
@@ -817,9 +818,7 @@ function MiniAppContent() {
     if (askPhone && base.phone?.required && !regPhone.trim())
       errs.phone = 'Вкажи номер телефону';
 
-    const hasFee =
-      Number(selectedEvent.feeAmount ?? 0) > 0 ||
-      Number(selectedEvent.feeAtEventAmount ?? 0) > 0;
+    const hasFee = feeInfo(selectedEvent).hasFee;
     if (hasFee && !regPayment) errs.payment = 'Обери спосіб оплати';
     if (regPayment === 'DONATED' && !regReceiptUrl) {
       errs.receipt = 'Додай скриншот оплати';
@@ -2178,11 +2177,13 @@ function MiniAppContent() {
               )}
 
               {/* Fee info */}
-              {selectedEvent.feeAmount && Number(selectedEvent.feeAmount) > 0 && (
+              {feeInfo(selectedEvent).onlineRequired && (
                 <div className="rounded-2xl border border-brand-purple/30 bg-brand-purple/10 p-3.5 text-sm flex justify-between items-center">
-                  <span className="text-muted">Благодійний внесок:</span>
+                  <span className="text-muted">{ANY_AMOUNT_TITLE}:</span>
                   <span className="font-black text-brand-purple text-base">
-                    {Number(selectedEvent.feeAmount)} грн
+                    {selectedEvent.donationAnyAmount
+                      ? ANY_AMOUNT_VALUE
+                      : `${Number(selectedEvent.feeAmount)} грн`}
                   </span>
                 </div>
               )}
@@ -2569,14 +2570,13 @@ function MiniAppContent() {
                 ))}
 
                 {/* Fee payment choices */}
-                {(Number(selectedEvent.feeAmount ?? 0) > 0 ||
-                  Number(selectedEvent.feeAtEventAmount ?? 0) > 0) && (
+                {feeInfo(selectedEvent).hasFee && (
                   <div className="space-y-2 pt-2 border-t border-border">
                     <label className="text-sm font-semibold text-fg">
                       Оплата благодійного внеску
                     </label>
                     <div className="grid grid-cols-2 gap-2.5">
-                      {Number(selectedEvent.feeAmount ?? 0) > 0 && (
+                      {feeInfo(selectedEvent).onlineRequired && (
                       <button
                         type="button"
                         onClick={() => setRegPayment('DONATED')}
@@ -2586,7 +2586,9 @@ function MiniAppContent() {
                             : 'border-border bg-bg/50 text-muted'
                         }`}
                       >
-                        Онлайн зараз · {Number(selectedEvent.feeAmount)} грн
+                        {selectedEvent.donationAnyAmount
+                          ? `Онлайн зараз · ${ANY_AMOUNT_VALUE}`
+                          : `Онлайн зараз · ${Number(selectedEvent.feeAmount)} грн`}
                       </button>
                       )}
                       {Number(selectedEvent.feeAtEventAmount ?? 0) > 0 && (
@@ -2786,17 +2788,21 @@ function MiniAppContent() {
                             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                           />
                           <span className="absolute top-2 right-2 rounded-full border border-border/80 bg-black/80 px-2.5 py-1 text-xs font-bold text-brand-green backdrop-blur-md">
-                            {ev.feeAmount && Number(ev.feeAmount) > 0
-                              ? `${Number(ev.feeAmount)} грн`
-                              : 'Вільний'}
+                            {ev.donationAnyAmount
+                              ? 'Донат · довільна сума'
+                              : ev.feeAmount && Number(ev.feeAmount) > 0
+                                ? `${Number(ev.feeAmount)} грн`
+                                : 'Вільний'}
                           </span>
                         </div>
                       ) : (
                         <div className="relative mb-3 aspect-[4/3] w-full rounded-2xl border border-border/40 bg-surface/60 flex items-center justify-center text-muted">
                           <span className="absolute top-2 right-2 rounded-full border border-border/80 bg-black/80 px-2.5 py-1 text-xs font-bold text-brand-green backdrop-blur-md">
-                            {ev.feeAmount && Number(ev.feeAmount) > 0
-                              ? `${Number(ev.feeAmount)} грн`
-                              : 'Вільний'}
+                            {ev.donationAnyAmount
+                              ? 'Донат · довільна сума'
+                              : ev.feeAmount && Number(ev.feeAmount) > 0
+                                ? `${Number(ev.feeAmount)} грн`
+                                : 'Вільний'}
                           </span>
                         </div>
                       )}
