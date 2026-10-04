@@ -20,7 +20,6 @@ interface TeamCard {
   id: string;
   name: string;
   role: string;
-  description: string | null;
   telegram: string | null;
   photo: string | null;
   focus: PhotoFocus;
@@ -31,7 +30,6 @@ function memberCard(m: DepartmentMember): TeamCard {
     id: m.id,
     name: `${m.firstName} ${m.lastName}`.trim(),
     role: presidiumTitle(m),
-    description: m.description,
     telegram: m.telegramTag,
     photo: m.photo,
     focus: photoFocus(m),
@@ -44,7 +42,6 @@ function headCard(d: Department): TeamCard | null {
     id: d.head.id,
     name: `${d.head.firstName} ${d.head.lastName}`.trim(),
     role: `Голова департаменту «${d.shortName?.trim() || d.name}»`,
-    description: null,
     telegram: d.head.telegramTag,
     photo: d.head.photo,
     focus: photoFocus(d.head),
@@ -140,11 +137,6 @@ function TeamCardView({ card }: { card: TeamCard }) {
             </span>
             <span className="text-base">@{tg}</span>
           </a>
-        )}
-        {card.description && (
-          <p className="mt-1 text-sm leading-relaxed text-stone-400">
-            {card.description}
-          </p>
         )}
       </div>
     </article>

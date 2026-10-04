@@ -361,6 +361,7 @@ export const DEPARTMENTS: Record<string, DepartmentData> = {
           "шопери",
           "чашки",
           "відкривашки",
+          "3D-фігурки",
         ],
       },
     ],

@@ -5,20 +5,20 @@ import { RevealGroup } from "@/components/ui/Reveal";
 
 const COLUMNS = [
   [
-    { src: "/projects-main-photo.jpg", grow: 2 },
-    { src: "/merch-main-photo.jpg", grow: 3 },
+    { src: "/gallery-1.jpg", grow: 2 },
+    { src: "/gallery-2.jpg", grow: 3 },
   ],
   [
-    { src: "/partnerships-main-photo.jpg", grow: 3 },
-    { src: "/photo-4.jpg", grow: 2 },
+    { src: "/gallery-3.jpg", grow: 3 },
+    { src: "/gallery-4.jpg", grow: 2 },
   ],
   [
-    { src: "/photo-5.jpg", grow: 1 },
-    { src: "/photo-6.jpg", grow: 1 },
+    { src: "/gallery-5.jpg", grow: 1 },
+    { src: "/gallery-8.jpg", grow: 1 },
   ],
   [
-    { src: "/photo-7.jpg", grow: 2 },
-    { src: "/projects-main-photo.jpg", grow: 3 },
+    { src: "/gallery-7.jpg", grow: 2 },
+    { src: "/gallery-6.jpg", grow: 3 },
   ],
 ];
 
