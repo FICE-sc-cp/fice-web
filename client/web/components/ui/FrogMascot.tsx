@@ -1,4 +1,4 @@
-const COLORS: Record<string, string> = {
+export const FROG_COLORS: Record<string, string> = {
   d: "#2f7a45",
   g: "#57c06e",
   l: "#7ad98c",
@@ -8,7 +8,7 @@ const COLORS: Record<string, string> = {
   p: "#ff9ecf",
 };
 
-const PIXELS = [
+export const FROG_PIXELS = [
   "...dd....dd...",
   "..dwwd..dwwd..",
   "..dwkd..dkwd..",
@@ -26,7 +26,7 @@ const PIXELS = [
 ];
 
 const RECTS: { x: number; y: number; w: number; fill: string }[] = [];
-PIXELS.forEach((row, y) => {
+FROG_PIXELS.forEach((row, y) => {
   let x = 0;
   while (x < row.length) {
     const ch = row[x];
@@ -36,7 +36,7 @@ PIXELS.forEach((row, y) => {
     }
     let w = 1;
     while (x + w < row.length && row[x + w] === ch) w += 1;
-    RECTS.push({ x, y, w, fill: COLORS[ch] });
+    RECTS.push({ x, y, w, fill: FROG_COLORS[ch] });
     x += w;
   }
 });

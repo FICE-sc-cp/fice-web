@@ -285,3 +285,49 @@ body > footer {
   animation: confetti-decor 3s ease-in-out infinite;
 }
 
+@keyframes nf-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-1px); }
+}
+.nf-bob {
+  animation: nf-bob 3.2s ease-in-out infinite;
+}
+
+@keyframes nf-blink {
+  0%, 90%, 94%, 100% { opacity: 0; }
+  90.5%, 93.5% { opacity: 1; }
+}
+.nf-blink {
+  opacity: 0;
+  animation: nf-blink 5s linear infinite;
+}
+
+@keyframes nf-wobble {
+  0%, 100% { transform: translateY(0) rotate(-10deg); }
+  50% { transform: translateY(-1.5px) rotate(10deg); }
+}
+.nf-wobble {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: nf-wobble 2.6s ease-in-out infinite;
+}
+
+@keyframes nf-twinkle {
+  0%, 100% { opacity: 0.15; transform: scale(0.4); }
+  50% { opacity: 1; transform: scale(1); }
+}
+.nf-twinkle {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: nf-twinkle 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nf-bob,
+  .nf-blink,
+  .nf-wobble,
+  .nf-twinkle {
+    animation: none;
+  }
+}
+
