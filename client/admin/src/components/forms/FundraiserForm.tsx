@@ -237,6 +237,8 @@ export function FundraiserForm({
       />
       <ImageUpload
         label="Головне фото"
+        aspect="4 / 3"
+        hint="Рекомендоване співвідношення 4:3"
         value={imageUrl}
         onChange={(url) => setValue('imageUrl', url, { shouldDirty: true })}
       />

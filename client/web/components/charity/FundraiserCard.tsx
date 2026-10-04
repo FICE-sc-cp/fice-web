@@ -18,7 +18,7 @@ export function FundraiserCard({ fundraiser }: { fundraiser: Fundraiser }) {
         theme.borderHover,
       )}
     >
-      <div className="relative aspect-square w-full overflow-hidden rounded-lg bg-surface-2">
+      <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-surface-2">
         {cover ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img

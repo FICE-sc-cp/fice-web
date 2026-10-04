@@ -110,7 +110,7 @@ export function NewsCatalog({ items }: { items: News[] }) {
               href={`/news/${featured.id}`}
               className="group grid overflow-hidden rounded-3xl border border-white/10 bg-surface/45 transition-all duration-300 hover:-translate-y-1.5 hover:border-brand-cyan/60 hover:shadow-2xl hover:shadow-black/40 lg:grid-cols-[1.15fr_1fr]"
             >
-              <CardImage item={featured} className="min-h-[20rem]">
+              <CardImage item={featured} className="aspect-[4/3]">
                 <span className="absolute left-[18px] top-[18px] inline-flex items-center rounded-full bg-gradient-main px-3.5 py-1.5 text-[12.5px] font-extrabold uppercase tracking-wide text-stone-950">
                   {categoryLabel(featured.category)}
                 </span>
@@ -144,7 +144,7 @@ export function NewsCatalog({ items }: { items: News[] }) {
                   href={`/news/${item.id}`}
                   className="group flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-surface/45 transition-all duration-300 hover:-translate-y-1.5 hover:border-brand-cyan/60 hover:shadow-2xl hover:shadow-black/40"
                 >
-                  <CardImage item={item} className="h-48">
+                  <CardImage item={item} className="aspect-[4/3]">
                     <span className="absolute left-3.5 top-3.5 inline-flex items-center rounded-full border border-white/15 bg-black/70 px-3 py-1 text-[11.5px] font-extrabold uppercase tracking-wide text-white backdrop-blur-sm">
                       {categoryLabel(item.category)}
                     </span>

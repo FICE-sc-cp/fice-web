@@ -169,9 +169,9 @@ export default async function EventDetailPage({
             </Link>
 
             {cover && (
-              <div className="overflow-hidden rounded-3xl border border-white/8">
+              <div className="mx-auto max-w-3xl overflow-hidden rounded-3xl border border-white/8">
                 <div
-                  className="aspect-[16/7] w-full bg-cover bg-center"
+                  className="aspect-[4/3] w-full bg-cover bg-center"
                   style={{ backgroundImage: `url(${cover})` }}
                 />
               </div>

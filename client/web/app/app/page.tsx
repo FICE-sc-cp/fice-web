@@ -2111,7 +2111,7 @@ function MiniAppContent() {
 
             <div className="relative overflow-hidden rounded-3xl border border-border bg-surface p-4 sm:p-5 space-y-3.5">
               {selectedEvent.photoUrl && (
-                <div className="h-48 sm:h-64 w-full overflow-hidden rounded-2xl border border-white/10 bg-surface">
+                <div className="aspect-[4/3] w-full overflow-hidden rounded-2xl border border-white/10 bg-surface">
                   <img
                     src={mediaUrl(selectedEvent.photoUrl) || selectedEvent.photoUrl}
                     alt={selectedEvent.name}
@@ -2779,7 +2779,7 @@ function MiniAppContent() {
                   >
                     <div>
                       {ev.photoUrl ? (
-                        <div className="relative mb-3 h-32 sm:h-40 w-full overflow-hidden rounded-2xl border border-white/5 bg-surface">
+                        <div className="relative mb-3 aspect-[4/3] w-full overflow-hidden rounded-2xl border border-white/5 bg-surface">
                           <img
                             src={mediaUrl(ev.photoUrl) || ev.photoUrl}
                             alt={ev.name}
@@ -2792,7 +2792,7 @@ function MiniAppContent() {
                           </span>
                         </div>
                       ) : (
-                        <div className="relative mb-3 h-32 sm:h-40 w-full rounded-2xl border border-border/40 bg-surface/60 flex items-center justify-center text-muted">
+                        <div className="relative mb-3 aspect-[4/3] w-full rounded-2xl border border-border/40 bg-surface/60 flex items-center justify-center text-muted">
                           <span className="absolute top-2 right-2 rounded-full border border-border/80 bg-black/80 px-2.5 py-1 text-xs font-bold text-brand-green backdrop-blur-md">
                             {ev.feeAmount && Number(ev.feeAmount) > 0
                               ? `${Number(ev.feeAmount)} грн`

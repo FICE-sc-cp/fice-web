@@ -504,6 +504,8 @@ export function EventForm({
       {/* 3. Обкладинка */}
       <ImageUpload
         label="Обкладинка"
+        aspect="4 / 3"
+        hint="Рекомендоване співвідношення 4:3"
         value={photo}
         onChange={(url) => setValue('photoUrl', url, { shouldDirty: true })}
       />
