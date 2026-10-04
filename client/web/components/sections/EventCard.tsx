@@ -45,7 +45,7 @@ export function EventCard({ event }: { event: EventItem }) {
       />
 
       <div
-        className="aspect-square w-full overflow-hidden rounded-lg bg-cover bg-center"
+        className="aspect-[4/3] w-full overflow-hidden rounded-lg bg-cover bg-center"
         style={{
           backgroundImage: cover
             ? `url(${cover})`

@@ -23,11 +23,16 @@ export default function NewDepartmentPage() {
           lastName: v.headLastName,
           telegramTag: v.headTelegramTag?.trim() ? v.headTelegramTag.trim() : undefined,
           photo: v.headPhoto || undefined,
+          photoFocusX: v.headPhotoFocusX,
+          photoFocusY: v.headPhotoFocusY,
+          photoZoom: v.headPhotoZoom,
         });
         headId = head.id;
       }
       return api.createDepartment({
         name: v.name,
+        shortName: v.shortName?.trim() || undefined,
+        slug: v.slug || undefined,
         memberCount: v.memberCount?.trim() ? Number(v.memberCount) : undefined,
         telegramChatId: v.telegramChatId?.trim() || undefined,
         headId,

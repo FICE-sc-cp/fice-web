@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { BotService } from '../../bot/bot.service';
 import { PrismaService } from '../../database/prisma.service';
@@ -30,7 +34,21 @@ export class DepartmentService {
     };
   }
 
+  private async assertSlugFree(slug: string | null | undefined, id?: string) {
+    if (!slug) return;
+    const taken = await this.prisma.department.findUnique({
+      where: { slug },
+      select: { id: true, name: true },
+    });
+    if (taken && taken.id !== id) {
+      throw new ConflictException([
+        `slug Цю сторінку вже привʼязано до «${taken.name}»`,
+      ]);
+    }
+  }
+
   async create(dto: CreateDepartmentDto) {
+    await this.assertSlugFree(dto.slug);
     const created = await this.prisma.department.create({
       data: this.relationData(dto) as Prisma.DepartmentCreateInput,
       include: this.detailInclude,
@@ -59,6 +77,7 @@ export class DepartmentService {
 
   async update(id: string, dto: UpdateDepartmentDto) {
     await this.findOne(id);
+    await this.assertSlugFree(dto.slug, id);
     const updated = await this.prisma.department.update({
       where: { id },
       data: this.relationData(dto),

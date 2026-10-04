@@ -3,48 +3,38 @@ import { Container } from "@/components/ui/Container";
 import { Glow } from "@/components/ui/Glow";
 import { TelegramIcon } from "@/components/ui/icons";
 import {
+  FocusedPhoto,
+  photoFocus,
+  type PhotoFocus,
+} from "@/components/ui/FocusedPhoto";
+import {
   fice,
   mediaUrl,
   safe,
   type Department,
   type DepartmentMember,
-  type DepartmentMemberRole,
 } from "@/lib/api";
+import { presidiumMembers, presidiumTitle } from "@/lib/presidium";
 
 interface TeamCard {
   id: string;
   name: string;
   role: string;
-  detail: string | null;
+  description: string | null;
   telegram: string | null;
   photo: string | null;
+  focus: PhotoFocus;
 }
-
-const ROLE_LABEL: Record<DepartmentMemberRole, string> = {
-  HEAD: "Голова студради",
-  FIRST_DEPUTY: "Перший заступник",
-  SECRETARY: "Секретар",
-  DEPUTY: "Заступник",
-  HR: "HR",
-  MEMBER: "Учасник",
-};
-
-const PRESIDIUM: DepartmentMemberRole[] = [
-  "HEAD",
-  "FIRST_DEPUTY",
-  "SECRETARY",
-  "DEPUTY",
-  "HR",
-];
 
 function memberCard(m: DepartmentMember): TeamCard {
   return {
     id: m.id,
     name: `${m.firstName} ${m.lastName}`.trim(),
-    role: ROLE_LABEL[m.role] ?? m.role,
-    detail: m.specialization,
+    role: presidiumTitle(m),
+    description: m.description,
     telegram: m.telegramTag,
     photo: m.photo,
+    focus: photoFocus(m),
   };
 }
 
@@ -53,20 +43,12 @@ function headCard(d: Department): TeamCard | null {
   return {
     id: d.head.id,
     name: `${d.head.firstName} ${d.head.lastName}`.trim(),
-    role: `Голова департаменту «${d.name}»`,
-    detail: null,
+    role: `Голова департаменту «${d.shortName?.trim() || d.name}»`,
+    description: null,
     telegram: d.head.telegramTag,
     photo: d.head.photo,
+    focus: photoFocus(d.head),
   };
-}
-
-function byRole(
-  members: DepartmentMember[],
-  roles: DepartmentMemberRole[],
-): TeamCard[] {
-  return roles.flatMap((role) =>
-    members.filter((m) => m.role === role).map(memberCard),
-  );
 }
 
 export async function TeamSection() {
@@ -76,7 +58,7 @@ export async function TeamSection() {
   ]);
 
   const groups = [
-    { title: "Президія", cards: byRole(members, PRESIDIUM) },
+    { title: "Президія", cards: presidiumMembers(members).map(memberCard) },
     {
       title: "Голови департаментів",
       cards: departments.map(headCard).filter((c): c is TeamCard => c !== null),
@@ -121,9 +103,11 @@ function TeamCardView({ card }: { card: TeamCard }) {
           className="absolute left-1/2 top-1/2 h-[50%] w-[300%] -translate-x-1/2 -translate-y-1/2 opacity-100 blur-2xl pointer-events-none -z-10"
         />
         {photo ? (
-          <div
-            className="absolute inset-0 z-10 bg-cover bg-center"
-            style={{ backgroundImage: `url("${photo}")` }}
+          <FocusedPhoto
+            src={photo}
+            alt={card.name}
+            focus={card.focus}
+            className="z-10"
           />
         ) : (
           <Image
@@ -143,7 +127,6 @@ function TeamCardView({ card }: { card: TeamCard }) {
         <h3 className="text-xl font-bold text-white">{card.name}</h3>
         <div className="text-lg font-semibold text-brand-magenta">
           {card.role}
-          {card.detail && ` | ${card.detail}`}
         </div>
         {tg && (
           <a
@@ -157,6 +140,11 @@ function TeamCardView({ card }: { card: TeamCard }) {
             </span>
             <span className="text-base">@{tg}</span>
           </a>
+        )}
+        {card.description && (
+          <p className="mt-1 text-sm leading-relaxed text-stone-400">
+            {card.description}
+          </p>
         )}
       </div>
     </article>

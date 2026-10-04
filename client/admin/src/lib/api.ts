@@ -41,6 +41,9 @@ export interface DepartmentHead {
   firstName: string;
   lastName: string;
   photo: string | null;
+  photoFocusX: number;
+  photoFocusY: number;
+  photoZoom: number;
   jobDescription: string | null;
   telegramTag: string | null;
 }
@@ -48,6 +51,8 @@ export interface DepartmentHead {
 export interface Department {
   id: string;
   name: string;
+  slug: string | null;
+  shortName: string | null;
   memberCount: number | null;
   telegramChatId: string | null;
   headId: string | null;
@@ -67,7 +72,13 @@ export interface DepartmentMember {
   firstName: string;
   lastName: string;
   specialization: string | null;
+  title: string | null;
+  description: string | null;
+  order: number;
   photo: string | null;
+  photoFocusX: number;
+  photoFocusY: number;
+  photoZoom: number;
   telegramTag: string | null;
   assignments?: { id: string; department: Department }[];
 }
@@ -138,6 +149,7 @@ export interface EventItem {
   feeAtEventAmount: string | null;
   feeRequisites: string | null;
   isAbitfest: boolean;
+  donationAnyAmount: boolean;
   noRegistration: boolean;
   isDraft?: boolean;
   hasTime?: boolean;
@@ -343,6 +355,7 @@ export interface EventInput {
   feeAtEventAmount?: number;
   feeRequisites?: string;
   isAbitfest?: boolean;
+  donationAnyAmount?: boolean;
   noRegistration?: boolean;
   isDraft?: boolean;
   hasTime?: boolean;
@@ -398,6 +411,8 @@ export interface FundraiserInput {
 
 export interface DepartmentInput {
   name: string;
+  slug?: string | null;
+  shortName?: string | null;
   memberCount?: number;
   telegramChatId?: string | null;
   headId?: string;
@@ -407,6 +422,9 @@ export interface DepartmentHeadInput {
   firstName: string;
   lastName: string;
   photo?: string | null;
+  photoFocusX?: number;
+  photoFocusY?: number;
+  photoZoom?: number;
   jobDescription?: string | null;
   telegramTag?: string;
 }
@@ -416,7 +434,13 @@ export interface DepartmentMemberInput {
   firstName: string;
   lastName: string;
   specialization?: string | null;
+  title?: string | null;
+  description?: string | null;
+  order?: number;
   photo?: string | null;
+  photoFocusX?: number;
+  photoFocusY?: number;
+  photoZoom?: number;
   telegramTag?: string;
 }
 

@@ -73,6 +73,9 @@ model DepartmentHead {
   firstName      String  @db.VarChar(30)
   lastName       String  @db.VarChar(30)
   photo          String?
+  photoFocusX    Int     @default(50)
+  photoFocusY    Int     @default(50)
+  photoZoom      Int     @default(100)
   jobDescription String? @db.VarChar(100)
   telegramTag    String? @db.VarChar(50)
 
@@ -82,6 +85,8 @@ model DepartmentHead {
 model Department {
   id             String  @id @default(uuid()) @db.Uuid
   name           String  @db.VarChar(50)
+  slug           String? @unique @db.VarChar(32)
+  shortName      String? @db.VarChar(50)
   memberCount    Int?
   // Telegram chat the bot harvests this department's people wall from.
   // "chatId" or "chatId/threadId" for a forum topic. Set from the admin panel.
@@ -111,7 +116,13 @@ model DepartmentMember {
   firstName      String               @db.VarChar(30)
   lastName       String               @db.VarChar(30)
   specialization String?              @db.VarChar(100)
+  title          String?              @db.VarChar(100)
+  description    String?              @db.Text
+  order          Int                  @default(0)
   photo          String?
+  photoFocusX    Int                  @default(50)
+  photoFocusY    Int                  @default(50)
+  photoZoom      Int                  @default(100)
   telegramTag    String?              @db.VarChar(50)
 
   assignments DepartmentMemberAssignment[]
@@ -179,6 +190,7 @@ model Event {
   photoAlbumUrl         String?
   feeAmount             Decimal?  @db.Decimal(10, 2)
   feeAtEventAmount      Decimal?  @db.Decimal(10, 2)
+  donationAnyAmount     Boolean   @default(false)
   feeRequisites         String?   @db.VarChar(255)
   isAbitfest            Boolean   @default(false)
   noRegistration        Boolean   @default(false)

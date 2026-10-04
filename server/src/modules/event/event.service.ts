@@ -33,7 +33,10 @@ import {
   withRegistrationState,
 } from './event-timing';
 import { createRegistrationGuarded } from './registration-writer';
-import { paymentRuleViolation } from './payment-rules';
+import {
+  paymentRuleViolation,
+  pendingPaymentSubject,
+} from './payment-rules';
 import { validateAnswers } from './registration-answers';
 import { registrationListWhere } from './registration-filters';
 import { RegistrationListQueryDto } from './dto/registration-list-query.dto';
@@ -474,7 +477,7 @@ export class EventService {
       this.userBotService
         .sendMessageToUser(
           telegramUserId,
-          `🧾 <b>Дякуємо за реєстрацію на захід «${escapeHtml(event.name)}»!</b>\n\nТвій платіж надіслано на перевірку адміністраторам. Щойно оплату підтвердять — бот надішле тобі постійний QR-квиток для входу 🎫`,
+          `🧾 <b>Дякуємо за реєстрацію на захід «${escapeHtml(event.name)}»!</b>\n\n${pendingPaymentSubject(event)} надіслано на перевірку адміністраторам. Щойно оплату підтвердять — бот надішле тобі постійний QR-квиток для входу 🎫`,
           {
             text: 'Мої реєстрації 📱',
             url: `${this.userBotService.getMiniAppUrl()}?tab=my-events`,

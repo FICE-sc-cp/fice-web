@@ -207,8 +207,12 @@ docker compose up -d
 docker compose exec server npm run db:seed:departments
 ```
 
-`db:seed:departments` only creates missing departments with the exact names the
-website expects; it never updates or deletes anything. `GET /health` on the API
+`db:seed:departments` makes sure every department page of the website
+(`projects`, `media`, `partnerships`, `merch`, `education`, `applicants`) has a
+department linked to it by slug. It links a department that still has the
+page's default name, creates only the missing ones and never renames or deletes
+anything, so running it again is safe. It does not create «Президія»: the
+presidium is managed in the admin's «Президія» tab. `GET /health` on the API
 reports the polling state of both bots and returns 503 while one is restarting.
 
 ### Migrations on deploy
@@ -279,7 +283,7 @@ and uses the `@prisma/adapter-pg` driver adapter. All commands run from `server/
 | `npx prisma generate` | Regenerate the TypeScript client |
 | `npx prisma studio` | Open the database GUI |
 | `ALLOW_DESTRUCTIVE_SEED=1 npm run db:seed` | **Wipe** the database and fill it with sample data (dev only; refused when `APP_ENV=production`) |
-| `npm run db:seed:departments` | Create any missing departments; safe on production |
+| `npm run db:seed:departments` | Link or create the departments of the website pages; safe on production |
 
 Typical workflow: edit `schema.prisma` → `migrate dev` → use the generated client
 through `PrismaService` in your NestJS services.

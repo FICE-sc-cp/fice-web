@@ -10,6 +10,12 @@ export class DepartmentMemberEntity {
   firstName: string;
   lastName: string;
   specialization: string | null;
+  title: string | null;
+  description: string | null;
+  order: number;
   photo: string | null;
+  photoFocusX: number;
+  photoFocusY: number;
+  photoZoom: number;
   telegramTag: string | null;
 }

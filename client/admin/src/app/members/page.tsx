@@ -12,6 +12,14 @@ import { ROLE_OPTIONS } from '@/components/forms/MemberForm';
 import { hapticNotify } from '@/lib/telegram';
 
 const roleLabel = (r: string) => ROLE_OPTIONS.find((o) => o.value === r)?.label ?? r;
+const roleRank = (r: string) => {
+  const i = ROLE_OPTIONS.findIndex((o) => o.value === r);
+  return i === -1 ? ROLE_OPTIONS.length : i;
+};
+const byPresidiumOrder = (a: DepartmentMember, b: DepartmentMember) =>
+  roleRank(a.role) - roleRank(b.role) ||
+  (a.order ?? 0) - (b.order ?? 0) ||
+  a.lastName.localeCompare(b.lastName, 'uk');
 
 export default function MembersListPage() {
   const qc = useQueryClient();
@@ -51,7 +59,7 @@ export default function MembersListPage() {
         <p className="py-12 text-center text-sm text-subtle">Тут поки порожньо.</p>
       ) : (
         <ul className="flex flex-col gap-3">
-          {data.map((m) => (
+          {[...data].sort(byPresidiumOrder).map((m) => (
             <li
               key={m.id}
               className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-4"
@@ -61,7 +69,7 @@ export default function MembersListPage() {
                   {m.lastName} {m.firstName}
                 </p>
                 <p className="truncate text-xs text-subtle">
-                  {roleLabel(m.role)}
+                  {m.title || roleLabel(m.role)}
                   {m.specialization ? ` · ${m.specialization}` : ''}
                   {m.assignments?.length
                     ? ` · ${m.assignments.map((a) => a.department.name).join(', ')}`

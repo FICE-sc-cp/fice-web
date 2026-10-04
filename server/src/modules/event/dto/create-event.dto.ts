@@ -153,6 +153,14 @@ export class CreateEventDto {
   feeAtEventAmount?: number;
 
   @ApiPropertyOptional({
+    description:
+      'Entry needs an online charitable donation of any amount (receipt required, no fixed price)',
+  })
+  @IsOptional()
+  @IsBoolean()
+  donationAnyAmount?: boolean;
+
+  @ApiPropertyOptional({
     maxLength: 255,
     description: 'Donate requisites shown when paying',
   })

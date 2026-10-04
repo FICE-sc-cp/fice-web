@@ -27,7 +27,13 @@ export default function EditMemberPage() {
         firstName: v.firstName,
         lastName: v.lastName,
         specialization: v.specialization?.trim() ? v.specialization : null,
+        title: v.title?.trim() || null,
+        description: v.description?.trim() || null,
+        order: v.order?.trim() ? Number(v.order) : 0,
         photo: v.photo || null,
+        photoFocusX: v.photoFocusX,
+        photoFocusY: v.photoFocusY,
+        photoZoom: v.photoZoom,
         telegramTag: v.telegramTag?.trim() ? v.telegramTag.trim() : undefined,
       }),
     onSuccess: () => {
@@ -58,7 +64,13 @@ export default function EditMemberPage() {
                     firstName: member.firstName,
                     lastName: member.lastName,
                     specialization: member.specialization ?? '',
+                    title: member.title ?? '',
+                    description: member.description ?? '',
+                    order: String(member.order ?? 0),
                     photo: member.photo,
+                    photoFocusX: member.photoFocusX,
+                    photoFocusY: member.photoFocusY,
+                    photoZoom: member.photoZoom,
                     telegramTag: member.telegramTag ?? '',
                   }
                 : undefined

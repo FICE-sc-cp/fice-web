@@ -47,6 +47,7 @@ const schema = z.object({
   photoUrl: z.string().nullable().optional(),
   description: z.string().optional(),
   isAbitfest: z.boolean().optional(),
+  donationAnyAmount: z.boolean().optional(),
   noRegistration: z.boolean().optional(),
   isDraft: z.boolean().optional(),
   location: z.string().max(120, 'Максимум 120 символів').optional(),
@@ -138,7 +139,12 @@ export function eventValuesToInput(v: EventFormValues): EventInput {
       : undefined,
     maxRegistrations: v.maxRegistrations ? Number(v.maxRegistrations) : null,
     photoAlbumUrl: v.photoAlbumUrl?.trim() || undefined,
-    feeAmount: v.feeAmount ? Number(v.feeAmount) : undefined,
+    feeAmount: v.donationAnyAmount
+      ? 0
+      : v.feeAmount
+        ? Number(v.feeAmount)
+        : undefined,
+    donationAnyAmount: v.donationAnyAmount ?? false,
     feeAtEventAmount: v.feeAtEventAmount ? Number(v.feeAtEventAmount) : undefined,
     feeRequisites: v.feeRequisites?.trim() || undefined,
     isAbitfest: v.isAbitfest ?? false,
@@ -229,6 +235,7 @@ export function EventForm({
       photoUrl: null,
       description: '',
       isAbitfest: false,
+      donationAnyAmount: false,
       noRegistration: false,
       isDraft: false,
       location: '',
@@ -309,6 +316,7 @@ export function EventForm({
   const hasTime = watch('hasTime');
   const noRegistration = watch('noRegistration');
   const isDraft = watch('isDraft');
+  const donationAnyAmount = watch('donationAnyAmount');
 
   const { formRef, onInvalid, fieldErrors, serverMessages } = useFormErrors(
     error,
@@ -504,6 +512,8 @@ export function EventForm({
       {/* 3. Обкладинка */}
       <ImageUpload
         label="Обкладинка"
+        aspect="4 / 3"
+        hint="Рекомендоване співвідношення 4:3"
         value={photo}
         onChange={(url) => setValue('photoUrl', url, { shouldDirty: true })}
       />
@@ -569,6 +579,8 @@ export function EventForm({
                 type="number"
                 min="0"
                 inputMode="numeric"
+                disabled={!!donationAnyAmount}
+                placeholder={donationAnyAmount ? 'довільна сума' : undefined}
                 {...register('feeAmount')}
                 error={errors.feeAmount?.message}
               />
@@ -584,6 +596,25 @@ export function EventForm({
               />
             </div>
           </div>
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-bg px-4 py-3 transition-colors hover:border-white/20">
+            <input
+              type="checkbox"
+              {...register('donationAnyAmount')}
+              className="mt-0.5 size-5 shrink-0 accent-brand-cyan"
+            />
+            <span className="min-w-0">
+              <span className="block text-sm font-bold text-fg">
+                Обовʼязковий донат довільної суми
+              </span>
+              <span className="mt-1 block text-xs text-subtle">
+                Для входу потрібен благодійний внесок онлайн, але суму учасник
+                обирає сам. На сайті, в міні-застосунку й у боті буде
+                «Благодійний внесок · довільна сума». Квитанція обовʼязкова,
+                сума не перевіряється. Оплата на заході доступна, лише якщо
+                заповнено «Внесок на заході».
+              </span>
+            </span>
+          </label>
           <Input
             label="Реквізити для донату (текст або посилання)"
             {...register('feeRequisites')}

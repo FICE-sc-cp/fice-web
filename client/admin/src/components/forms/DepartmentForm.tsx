@@ -1,17 +1,35 @@
 'use client';
 
 import { useForm } from 'react-hook-form';
+import { useQuery } from '@tanstack/react-query';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Input } from '../ui/Input';
+import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
 import { FormError } from '../ui/FormError';
 import { ImageUpload } from '../ImageUpload';
+import {
+  DEFAULT_PHOTO_FOCUS,
+  PhotoFocusEditor,
+} from '../PhotoFocusEditor';
 import { useFormErrors } from '@/lib/formErrors';
 import { useMainButton } from '@/lib/telegram';
+import { api } from '@/lib/api';
+
+export const DEPARTMENT_PAGES = [
+  { slug: 'projects', label: 'Проєктний департамент' },
+  { slug: 'media', label: 'Департамент медіа' },
+  { slug: 'partnerships', label: 'Департамент партнерств' },
+  { slug: 'merch', label: 'Департамент мерчу' },
+  { slug: 'education', label: 'Департамент якості освіти' },
+  { slug: 'applicants', label: 'Департамент по роботі з абітурієнтами' },
+];
 
 const schema = z.object({
   name: z.string().min(1, 'Вкажи назву').max(50, 'Максимум 50 символів'),
+  shortName: z.string().max(50, 'Максимум 50 символів').optional(),
+  slug: z.string().optional(),
   memberCount: z.string().optional(),
   telegramChatId: z
     .string()
@@ -31,17 +49,22 @@ const schema = z.object({
   headLastName: z.string().max(30, 'Максимум 30 символів').optional(),
   headTelegramTag: z.string().max(50, 'Максимум 50 символів').optional(),
   headPhoto: z.string().nullable().optional(),
+  headPhotoFocusX: z.number().int().min(0).max(100),
+  headPhotoFocusY: z.number().int().min(0).max(100),
+  headPhotoZoom: z.number().int().min(100).max(300),
 });
 
 export type DepartmentFormValues = z.infer<typeof schema>;
 
 export function DepartmentForm({
+  departmentId,
   defaultValues,
   onSubmit,
   submitting,
   submitLabel,
   error,
 }: {
+  departmentId?: string;
   defaultValues?: Partial<DepartmentFormValues>;
   onSubmit: (values: DepartmentFormValues) => void;
   submitting: boolean;
@@ -59,17 +82,49 @@ export function DepartmentForm({
     resolver: zodResolver(schema),
     defaultValues: {
       name: '',
+      shortName: '',
+      slug: '',
       memberCount: '',
       telegramChatId: '',
       headFirstName: '',
       headLastName: '',
       headTelegramTag: '',
       headPhoto: null,
+      headPhotoFocusX: DEFAULT_PHOTO_FOCUS.x,
+      headPhotoFocusY: DEFAULT_PHOTO_FOCUS.y,
+      headPhotoZoom: DEFAULT_PHOTO_FOCUS.zoom,
       ...defaultValues,
     },
   });
 
   const photo = watch('headPhoto');
+  const focus = {
+    x: watch('headPhotoFocusX'),
+    y: watch('headPhotoFocusY'),
+    zoom: watch('headPhotoZoom'),
+  };
+  const setFocus = (f: typeof focus) => {
+    setValue('headPhotoFocusX', f.x, { shouldDirty: true });
+    setValue('headPhotoFocusY', f.y, { shouldDirty: true });
+    setValue('headPhotoZoom', f.zoom, { shouldDirty: true });
+  };
+  const { data: departments } = useQuery({
+    queryKey: ['departments'],
+    queryFn: () => api.departments(),
+  });
+  const pageOptions = [
+    { value: '', label: '— не привʼязано —' },
+    ...DEPARTMENT_PAGES.map((p) => {
+      const owner = departments?.find(
+        (d) => d.slug === p.slug && d.id !== departmentId,
+      );
+      return {
+        value: p.slug,
+        label: owner ? `${p.label} (зайнято: ${owner.name})` : p.label,
+        disabled: !!owner,
+      };
+    }),
+  ];
   const { formRef, onInvalid, serverMessages } = useFormErrors(
     error,
     setError,
@@ -82,6 +137,30 @@ export function DepartmentForm({
   return (
     <form ref={formRef} onSubmit={submit} className="flex flex-col gap-4">
       <Input label="Назва" {...register('name')} error={errors.name?.message} />
+      <div className="flex min-w-0 flex-col gap-1">
+        <Input
+          label="Коротка назва"
+          placeholder="напр. Мерч"
+          {...register('shortName')}
+          error={errors.shortName?.message}
+        />
+        <p className="break-words text-xs text-subtle">
+          Показується там, де перед назвою вже стоїть слово «департамент», напр.
+          «Голова департаменту «Мерч»». Якщо порожньо — повна назва.
+        </p>
+      </div>
+      <div className="flex min-w-0 flex-col gap-1">
+        <Select
+          label="Сторінка на сайті"
+          options={pageOptions}
+          {...register('slug')}
+          error={errors.slug?.message}
+        />
+        <p className="break-words text-xs text-subtle">
+          Сторінка департаменту бере звідси керівника, кількість учасників і
+          «сердечко». Привʼязка не зникає, якщо перейменувати департамент.
+        </p>
+      </div>
       <Input
         label="Кількість учасників"
         type="number"
@@ -127,8 +206,22 @@ export function DepartmentForm({
           <ImageUpload
             label="Фото"
             value={photo}
-            onChange={(url) => setValue('headPhoto', url, { shouldDirty: true })}
+            onChange={(url) => {
+              setValue('headPhoto', url, { shouldDirty: true });
+              setFocus(DEFAULT_PHOTO_FOCUS);
+            }}
           />
+          {photo && (
+            <PhotoFocusEditor
+              src={photo}
+              value={focus}
+              onChange={setFocus}
+              frames={[
+                { label: 'Картка на /team', aspect: '3 / 4' },
+                { label: 'Сторінка департаменту', aspect: '10 / 7', width: 168 },
+              ]}
+            />
+          )}
         </div>
       </div>
 

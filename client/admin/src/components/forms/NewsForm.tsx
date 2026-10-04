@@ -170,6 +170,8 @@ export function NewsForm({
       />
       <ImageUpload
         label="Обкладинка"
+        aspect="4 / 3"
+        hint="Рекомендоване співвідношення 4:3"
         value={image}
         onChange={(url) => setValue('image', url, { shouldDirty: true })}
       />

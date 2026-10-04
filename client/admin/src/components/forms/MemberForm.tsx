@@ -5,10 +5,15 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
+import { Textarea } from '../ui/Textarea';
 import { Button } from '../ui/Button';
 import { FormError } from '@/components/ui/FormError';
 import { useFormErrors } from '@/lib/formErrors';
 import { ImageUpload } from '../ImageUpload';
+import {
+  DEFAULT_PHOTO_FOCUS,
+  PhotoFocusEditor,
+} from '../PhotoFocusEditor';
 import { useMainButton } from '@/lib/telegram';
 
 const schema = z.object({
@@ -18,7 +23,18 @@ const schema = z.object({
   firstName: z.string().min(1, 'Вкажи імʼя').max(30, 'Максимум 30 символів'),
   lastName: z.string().min(1, 'Вкажи прізвище').max(30, 'Максимум 30 символів'),
   specialization: z.string().max(100, 'Максимум 100 символів').optional(),
+  title: z.string().max(100, 'Максимум 100 символів').optional(),
+  description: z.string().max(1000, 'Максимум 1000 символів').optional(),
+  order: z
+    .string()
+    .refine((v) => v.trim() === '' || /^\d{1,4}$/.test(v.trim()), {
+      message: 'Вкажи ціле число від 0',
+    })
+    .optional(),
   photo: z.string().nullable().optional(),
+  photoFocusX: z.number().int().min(0).max(100),
+  photoFocusY: z.number().int().min(0).max(100),
+  photoZoom: z.number().int().min(100).max(300),
   telegramTag: z.string().max(50, 'Максимум 50 символів').optional(),
 });
 
@@ -59,13 +75,29 @@ export function MemberForm({
       firstName: '',
       lastName: '',
       specialization: '',
+      title: '',
+      description: '',
+      order: '',
       photo: null,
+      photoFocusX: DEFAULT_PHOTO_FOCUS.x,
+      photoFocusY: DEFAULT_PHOTO_FOCUS.y,
+      photoZoom: DEFAULT_PHOTO_FOCUS.zoom,
       telegramTag: '',
       ...defaultValues,
     },
   });
 
   const photo = watch('photo');
+  const focus = {
+    x: watch('photoFocusX'),
+    y: watch('photoFocusY'),
+    zoom: watch('photoZoom'),
+  };
+  const setFocus = (f: typeof focus) => {
+    setValue('photoFocusX', f.x, { shouldDirty: true });
+    setValue('photoFocusY', f.y, { shouldDirty: true });
+    setValue('photoZoom', f.zoom, { shouldDirty: true });
+  };
   const { formRef, onInvalid, serverMessages } = useFormErrors(
     error,
     setError,
@@ -98,8 +130,19 @@ export function MemberForm({
       <ImageUpload
         label="Фото"
         value={photo}
-        onChange={(url) => setValue('photo', url, { shouldDirty: true })}
+        onChange={(url) => {
+          setValue('photo', url, { shouldDirty: true });
+          setFocus(DEFAULT_PHOTO_FOCUS);
+        }}
       />
+      {photo && (
+        <PhotoFocusEditor
+          src={photo}
+          value={focus}
+          onChange={setFocus}
+          frames={[{ label: 'Картка на сайті', aspect: '3 / 4' }]}
+        />
+      )}
       <Input
         label="Telegram-тег"
         placeholder="@username"
@@ -112,6 +155,38 @@ export function MemberForm({
         {...register('specialization')}
         error={errors.specialization?.message}
       />
+      <div className="flex min-w-0 flex-col gap-1">
+        <Input
+          label="Посада на сайті"
+          placeholder="напр. Заступниця голови з внутрішньої роботи"
+          {...register('title')}
+          error={errors.title?.message}
+        />
+        <p className="break-words text-xs text-subtle">
+          Якщо порожньо, на сайті буде назва ролі й напрям.
+        </p>
+      </div>
+      <Textarea
+        label="Опис (для сторінки президії)"
+        placeholder="Чим займається ця людина"
+        rows={4}
+        {...register('description')}
+        error={errors.description?.message}
+      />
+      <div className="flex min-w-0 flex-col gap-1">
+        <Input
+          label="Порядок"
+          type="number"
+          min="0"
+          placeholder="0"
+          {...register('order')}
+          error={errors.order?.message}
+        />
+        <p className="break-words text-xs text-subtle">
+          Картки йдуть за роллю (голова, перший заступник, секретар, заступники),
+          а в межах ролі — за цим числом, від меншого.
+        </p>
+      </div>
       <FormError messages={serverMessages} />
       <Button type="submit" disabled={submitting} className="mt-1">
         {submitting ? 'Збереження…' : submitLabel}

@@ -105,7 +105,7 @@ export default async function NewsArticlePage({
 
             {cover && (
               <div
-                className="mb-10 aspect-[16/9] overflow-hidden rounded-2xl border border-white/10 bg-cover bg-center"
+                className="mb-10 aspect-[4/3] overflow-hidden rounded-2xl border border-white/10 bg-cover bg-center"
                 style={{ backgroundImage: `url("${cover}")` }}
               />
             )}
@@ -187,7 +187,7 @@ export default async function NewsArticlePage({
                         href={`/news/${n.id}`}
                         className="group flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-surface/45 transition-all duration-300 hover:-translate-y-1.5 hover:border-brand-cyan/60 hover:shadow-2xl hover:shadow-black/40"
                       >
-                        <div className="relative h-42 overflow-hidden">
+                        <div className="relative aspect-[4/3] overflow-hidden">
                           <div
                             className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
                             style={

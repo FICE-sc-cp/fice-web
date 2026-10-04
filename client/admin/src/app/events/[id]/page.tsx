@@ -154,6 +154,7 @@ export default function EditEventPage() {
                       ? String(event.feeAtEventAmount)
                       : '',
                   feeRequisites: event.feeRequisites ?? '',
+                  donationAnyAmount: event.donationAnyAmount ?? false,
                   moneyCollected: event.details
                     ? String(event.details.moneyCollected)
                     : '',

@@ -28,6 +28,10 @@ import {
   createRegistrationGuarded,
   RegistrationWriteResult,
 } from '../modules/event/registration-writer';
+import {
+  pendingPaymentSubject,
+  ticketDonationLine,
+} from '../modules/event/payment-rules';
 import { errorMessage } from '../common/log-safe';
 import { UPLOAD_DIR } from '../upload/upload.constants';
 
@@ -350,7 +354,7 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
             await this.sendTicketToUser(telegramId, createdReg, pending.event);
           } else {
             await ctx.reply(
-              `🎉 Чудово, ${from.first_name || 'друже'}! Твою реєстрацію на захід «${pending.event.name}» прийнято.\n\n🧾 Твій платіж передано на перевірку адміністраторам. Щойно оплату буде підтверджено — бот надішле сюди твій постійний QR-квиток для входу! 🎫`,
+              `🎉 Чудово, ${from.first_name || 'друже'}! Твою реєстрацію на захід «${pending.event.name}» прийнято.\n\n🧾 ${pendingPaymentSubject(pending.event)} передано на перевірку адміністраторам. Щойно оплату буде підтверджено — бот надішле сюди твій постійний QR-квиток для входу! 🎫`,
               {
                 reply_markup: {
                   inline_keyboard: [
@@ -617,6 +621,7 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
       name: string;
       date: Date | string;
       location?: string | null;
+      donationAnyAmount?: boolean | null;
     },
   ): Promise<boolean> {
     if (!this.bot) return false;
@@ -663,6 +668,7 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
         (event.location
           ? `📍 <b>Де:</b> ${escapeHtml(event.location)}\n`
           : '') +
+        ticketDonationLine(event) +
         `\n` +
         `👤 <b>Гість:</b> ${escapeHtml(reg.fullName)}\n` +
         `👥 <b>Група:</b> ${escapeHtml(reg.group)}\n` +

@@ -5,6 +5,11 @@ import { Glow } from "@/components/ui/Glow";
 import { ProjectPeopleWall } from "@/components/sections/ProjectPeopleWall";
 import { RichText } from "@/components/ui/RichText";
 import {
+  FocusedPhoto,
+  photoFocus,
+  type PhotoFocus,
+} from "@/components/ui/FocusedPhoto";
+import {
   AccentCard,
   accentBorder,
   accentText,
@@ -19,17 +24,42 @@ import {
   safe,
   mediaUrl,
   type Department,
+  type DepartmentMember,
   type ProjectParticipant,
 } from "@/lib/api";
+import { presidiumMembers, presidiumTitle } from "@/lib/presidium";
 
 const PERSON_OUTLINE =
   "drop-shadow(3px 3px 0 #fff) drop-shadow(-3px -3px 0 #fff) drop-shadow(3px -3px 0 #fff) drop-shadow(-3px 3px 0 #fff)";
+
+const PRESIDIUM_TOP_ROW = new Set(["HEAD", "FIRST_DEPUTY", "SECRETARY"]);
+
+async function presidiumTeam(): Promise<{ top: Member[]; rest: Member[] }> {
+  const members = presidiumMembers(
+    await safe(fice.members(), [] as DepartmentMember[]),
+  );
+  const leadId = members.find((m) => m.role === "HEAD")?.id;
+  const toMember = (m: DepartmentMember): Member => ({
+    name: `${m.firstName} ${m.lastName}`.trim(),
+    role: presidiumTitle(m),
+    telegram: m.telegramTag,
+    description: m.description,
+    photo: mediaUrl(m.photo),
+    focus: photoFocus(m),
+    lead: m.id === leadId,
+  });
+  return {
+    top: members.filter((m) => PRESIDIUM_TOP_ROW.has(m.role)).map(toMember),
+    rest: members.filter((m) => !PRESIDIUM_TOP_ROW.has(m.role)).map(toMember),
+  };
+}
 
 function MemberCard({
   name,
   role,
   telegram,
   photo,
+  focus,
   quote,
   description,
   featured,
@@ -41,6 +71,7 @@ function MemberCard({
   role: string;
   telegram: string | null;
   photo?: string | null;
+  focus?: PhotoFocus;
   quote?: string | null;
   description?: string | null;
   featured?: boolean;
@@ -65,10 +96,7 @@ function MemberCard({
       >
         <div className="relative aspect-[3/4] overflow-hidden rounded-2xl bg-surface/40">
           {photo ? (
-            <div
-              className="absolute inset-0 bg-cover bg-center"
-              style={{ backgroundImage: `url("${photo}")` }}
-            />
+            <FocusedPhoto src={photo} alt={name} focus={focus} />
           ) : (
             <Image
               src="/placeholder-person.png"
@@ -136,27 +164,29 @@ export function DepartmentSectionHeading({
   );
 }
 
-export async function DepartmentTop({
-  d,
-  dbName,
-}: {
-  d: DepartmentData;
-  dbName?: string;
-}) {
+export async function DepartmentTop({ d }: { d: DepartmentData }) {
   const iconGrad = accentGradient[d.accent];
-  const joinHref = `/join?dept=${encodeURIComponent(d.name)}`;
-  const teamMembers: Member[] = d.team ?? [];
+  const joinHref = `/join?dept=${encodeURIComponent(d.slug)}`;
+  const presidium =
+    d.slug === "presidium" ? await presidiumTeam() : { top: [], rest: [] };
+  const teamMembers: Member[] =
+    d.slug === "presidium"
+      ? [...presidium.top, ...presidium.rest]
+      : (d.team ?? []);
   const teamLead = teamMembers.find((m) => m.lead) ?? null;
   const teamRest = teamMembers.filter((m) => !m.lead);
   const hasAbout = !!d.about?.length;
   const hasResp = !!d.responsibilities?.length;
   const hasCover = !!d.cover;
 
-  const lookupName = (dbName ?? d.name).trim();
   const dbDepartments = await safe(fice.departments(), [] as Department[]);
-  const dbDept = dbDepartments.find((x) => x.name.trim() === lookupName);
+  const dbDept = dbDepartments.find((x) => x.slug === d.slug);
   const dbHead = dbDept?.head ?? null;
-  const memberCount = dbDept?.memberCount ?? d.memberCount;
+  const memberCount =
+    dbDept?.memberCount ??
+    (d.slug === "presidium" && teamMembers.length > 0
+      ? teamMembers.length
+      : d.memberCount);
   const projectPeople = dbDept
     ? await safe(
         fice.projectParticipants(dbDept.id),
@@ -168,6 +198,7 @@ export async function DepartmentTop({
         name: `${dbHead.firstName} ${dbHead.lastName}`.trim(),
         telegram: dbHead.telegramTag,
         photo: mediaUrl(dbHead.photo),
+        focus: photoFocus(dbHead),
       }
     : null;
   const headTg = head?.telegram?.replace(/^@/, "");
@@ -361,13 +392,14 @@ export async function DepartmentTop({
               <div className="mt-12 flex flex-col gap-8 lg:gap-10">
                 {/* Рядок 1: Голова СР, перший зам, секретар */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto w-full justify-items-center">
-                  {teamMembers.slice(0, 3).map((m, i) => (
+                  {presidium.top.map((m, i) => (
                     <MemberCard
                       key={m.name}
                       name={m.name}
                       role={m.role}
                       telegram={m.telegram}
                       photo={m.photo}
+                      focus={m.focus}
                       description={m.description}
                       featured={m.lead}
                       accent={d.accent}
@@ -380,15 +412,16 @@ export async function DepartmentTop({
                   ))}
                 </div>
 
-                {/* Рядок 2: Всі 4 зами */}
+                {/* Рядок 2: заступники */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6 max-w-6xl mx-auto w-full justify-items-center">
-                  {teamMembers.slice(3).map((m) => (
+                  {presidium.rest.map((m) => (
                     <MemberCard
                       key={m.name}
                       name={m.name}
                       role={m.role}
                       telegram={m.telegram}
                       photo={m.photo}
+                      focus={m.focus}
                       description={m.description}
                       accent={d.accent}
                       gradient={d.gradient}
@@ -407,6 +440,7 @@ export async function DepartmentTop({
                         role={teamLead.role}
                         telegram={teamLead.telegram}
                         photo={teamLead.photo}
+                        focus={teamLead.focus}
                         description={teamLead.description}
                         featured
                         accent={d.accent}
@@ -419,6 +453,7 @@ export async function DepartmentTop({
                           role="Голова департаменту"
                           telegram={head.telegram}
                           photo={head.photo}
+                          focus={head.focus}
                           quote={d.headQuote}
                           featured
                           accent={d.accent}
@@ -436,6 +471,7 @@ export async function DepartmentTop({
                       role={m.role}
                       telegram={m.telegram}
                       photo={m.photo}
+                      focus={m.focus}
                       description={m.description}
                       accent={d.accent}
                       gradient={d.gradient}
@@ -455,11 +491,12 @@ export async function DepartmentTop({
           <Container>
             <div className={cn("overflow-hidden rounded-3xl p-px", d.gradient)}>
               <div className="grid grid-cols-1 overflow-hidden rounded-3xl bg-bg sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-                <div className="relative min-h-[22rem] bg-surface/40">
+                <div className="relative min-h-[22rem] overflow-hidden bg-surface/40">
                   {head.photo ? (
-                    <div
-                      className="absolute inset-0 bg-cover bg-center"
-                      style={{ backgroundImage: `url("${head.photo}")` }}
+                    <FocusedPhoto
+                      src={head.photo}
+                      alt={head.name}
+                      focus={head.focus}
                     />
                   ) : (
                     <Image

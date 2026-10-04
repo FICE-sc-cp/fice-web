@@ -60,6 +60,9 @@ export default function DepartmentsListPage() {
                     {d.head.firstName} {d.head.lastName}
                   </p>
                 )}
+                <p className="truncate text-xs text-subtle">
+                  {d.slug ? `/departments/${d.slug}` : 'Без сторінки на сайті'}
+                </p>
               </div>
               <div className="flex shrink-0 items-center gap-3">
                 <Link

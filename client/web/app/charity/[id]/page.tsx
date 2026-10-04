@@ -132,7 +132,7 @@ export default async function CharityDetailsPage({
                 </div>
 
                 {cover && (
-                  <div className="relative aspect-[16/10] w-full overflow-hidden rounded-3xl border border-border bg-surface-2">
+                  <div className="relative aspect-[4/3] w-full overflow-hidden rounded-3xl border border-border bg-surface-2">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={cover}

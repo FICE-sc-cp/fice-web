@@ -9,6 +9,7 @@ import { fice, mediaUrl, safe } from "@/lib/api";
 import { renderRichInline } from "@/lib/richText";
 import { NOINDEX, openGraph, plainText } from "@/lib/seo";
 import { cn, eventRegistrationOpen, isEventPast } from "@/lib/utils";
+import { ANY_AMOUNT_TITLE, feeInfo } from "@/lib/fees";
 
 const TZ = "Europe/Kyiv";
 const fmtDate = (d: Date) =>
@@ -134,7 +135,8 @@ export default async function EventDetailPage({
     : registrationOpen
       ? "Реєстрація триває"
       : "Реєстрацію завершено";
-  const fee = event.feeAmount != null ? Number(event.feeAmount) : 0;
+  const fees = feeInfo(event);
+  const fee = fees.online;
   const cover = mediaUrl(event.photoUrl);
   const partners = (event.eventPartners ?? [])
     .map((ep) => ({
@@ -169,9 +171,9 @@ export default async function EventDetailPage({
             </Link>
 
             {cover && (
-              <div className="overflow-hidden rounded-3xl border border-white/8">
+              <div className="mx-auto max-w-3xl overflow-hidden rounded-3xl border border-white/8">
                 <div
-                  className="aspect-[16/7] w-full bg-cover bg-center"
+                  className="aspect-[4/3] w-full bg-cover bg-center"
                   style={{ backgroundImage: `url(${cover})` }}
                 />
               </div>
@@ -238,9 +240,15 @@ export default async function EventDetailPage({
                 color="#ad46ff"
               />
               <Fact
-                label="Внесок"
-                value={fee > 0 ? `${fee} грн` : "Безкоштовно"}
-                note={fee > 0 ? "Донат на ЗСУ" : undefined}
+                label={fees.anyAmount ? ANY_AMOUNT_TITLE : "Внесок"}
+                value={
+                  fees.anyAmount
+                    ? "Довільна сума"
+                    : fee > 0
+                      ? `${fee} грн`
+                      : "Безкоштовно"
+                }
+                note={fees.onlineRequired ? "Донат на ЗСУ" : undefined}
                 color="#ff8904"
               />
             </div>

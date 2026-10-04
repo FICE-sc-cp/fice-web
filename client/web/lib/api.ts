@@ -45,6 +45,9 @@ export interface DepartmentHead {
   firstName: string;
   lastName: string;
   photo: string | null;
+  photoFocusX: number;
+  photoFocusY: number;
+  photoZoom: number;
   jobDescription: string | null;
   telegramTag: string | null;
 }
@@ -52,6 +55,8 @@ export interface DepartmentHead {
 export interface Department {
   id: string;
   name: string;
+  slug: string | null;
+  shortName: string | null;
   memberCount: number | null;
   headId: string | null;
   head?: DepartmentHead | null;
@@ -71,7 +76,13 @@ export interface DepartmentMember {
   firstName: string;
   lastName: string;
   specialization: string | null;
+  title: string | null;
+  description: string | null;
+  order: number;
   photo: string | null;
+  photoFocusX: number;
+  photoFocusY: number;
+  photoZoom: number;
   telegramTag: string | null;
 }
 
@@ -142,6 +153,7 @@ export interface EventItem {
   photoAlbumUrl: string | null;
   feeAmount: string | null;
   feeAtEventAmount: string | null;
+  donationAnyAmount?: boolean;
   feeRequisites: string | null;
   isAbitfest: boolean;
   noRegistration: boolean;
@@ -702,6 +714,7 @@ export interface MyEventRegistration {
     timeNote: string | null;
     feeAmount: string | null;
     feeAtEventAmount: string | null;
+    donationAnyAmount?: boolean;
     feeRequisites: string | null;
     registrationCloseDate: string | null;
     maxRegistrations?: number | null;

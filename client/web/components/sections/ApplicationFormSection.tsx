@@ -229,9 +229,10 @@ export function ApplicationFormSection() {
     if (!departments.length) return;
     const param = new URLSearchParams(window.location.search).get('dept');
     if (!param) return;
-    const match = departments.find(
-      (d) => d.name.toLowerCase() === param.toLowerCase(),
-    );
+    const wanted = param.trim().toLowerCase();
+    const match =
+      departments.find((d) => d.slug === wanted) ??
+      departments.find((d) => d.name.trim().toLowerCase() === wanted);
     if (match && getValues('departmentIds').length === 0) {
       setValue('departmentIds', [match.id], { shouldValidate: false });
     }
