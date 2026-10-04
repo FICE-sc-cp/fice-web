@@ -365,11 +365,11 @@ export const DEPARTMENTS: Record<string, DepartmentData> = {
       },
     ],
     projects: [
-      { title: "Бейджі", image: "/merch-bages.png" },
-      { title: "Постери", image: "/merch-posters.png" },
-      { title: "Стікери та стікерпаки", image: "/merch-stickers.png" },
-      { title: "Сувенірна продукція", image: "/merch-merch.png" },
-      { title: "Інша продукція", image: "/merch-other.png" },
+      { title: "Бейджі", image: "/merch-bages.jpg" },
+      { title: "Постери", image: "/merch-posters.jpg" },
+      { title: "Стікери та стікерпаки", image: "/merch-stickers.jpg" },
+      { title: "Сувенірна продукція", image: "/merch-merch.jpg" },
+      { title: "Інша продукція", image: "/merch-other.jpg" },
     ],
     faq: [
       {

@@ -6,6 +6,7 @@
     "dist",
     "prisma.config.ts",
     "prisma",
+    "scripts",
     "**/*spec.ts"
   ]
 }

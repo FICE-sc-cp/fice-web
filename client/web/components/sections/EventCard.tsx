@@ -1,3 +1,5 @@
+import Image from 'next/image';
+import { isRemoteImage } from '@/lib/uploads';
 import Link from 'next/link';
 import { CalendarIcon, ClockIcon, PinIcon } from '@/components/ui/icons';
 import { cn, eventRegistrationOpen } from '@/lib/utils';
@@ -45,13 +47,24 @@ export function EventCard({ event }: { event: EventItem }) {
       />
 
       <div
-        className="aspect-[4/3] w-full overflow-hidden rounded-lg bg-cover bg-center"
-        style={{
-          backgroundImage: cover
-            ? `url(${cover})`
-            : 'linear-gradient(135deg,#16161b,#1d1d24)',
-        }}
-      />
+        className="relative aspect-[4/3] w-full overflow-hidden rounded-lg"
+        style={
+          cover
+            ? undefined
+            : { backgroundImage: 'linear-gradient(135deg,#16161b,#1d1d24)' }
+        }
+      >
+        {cover && (
+          <Image
+            src={cover}
+            unoptimized={isRemoteImage(cover)}
+            alt=""
+            fill
+            sizes="(min-width: 1024px) 24rem, (min-width: 640px) 50vw, 100vw"
+            className="object-cover"
+          />
+        )}
+      </div>
 
       <div className="flex flex-1 flex-col gap-6">
         <div className="flex flex-col gap-4">

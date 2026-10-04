@@ -491,6 +491,15 @@ export interface SyncParticipantsResult {
   errors: number;
 }
 
+export interface PeopleImportSummary {
+  added: number;
+  updated: number;
+  skipped: number;
+  skippedByTool: { bots: number; deleted: number };
+  unknownDepartments: number;
+  possibleDuplicates: { department: string; fullName: string }[];
+}
+
 export const api = {
   me: () => request<Me>('/auth/me'),
   facts: () => request<Facts>('/facts'),
@@ -670,6 +679,27 @@ export const api = {
       `/project-participant/sync${departmentId ? `?departmentId=${encodeURIComponent(departmentId)}` : ''}`,
       { method: 'POST' },
     ),
+
+  peopleWallConfigLink: () =>
+    request<{ path: string }>('/project-participant/export-config-link', {
+      method: 'POST',
+    }),
+  peopleWallConfig: async (): Promise<Blob> => {
+    const res = await fetch(`${BASE}/project-participant/export-config`, {
+      headers: { 'x-telegram-init-data': getInitData() },
+      cache: 'no-store',
+    });
+    if (!res.ok) throw new Error(`Помилка ${res.status}`);
+    return res.blob();
+  },
+  importPeopleWall: (file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    return request<PeopleImportSummary>('/project-participant/import', {
+      method: 'POST',
+      body: form,
+    });
+  },
 
   upload: async (file: File): Promise<{ url: string; filename: string }> => {
     const form = new FormData();

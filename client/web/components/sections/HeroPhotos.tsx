@@ -4,12 +4,12 @@ import { useEffect, useRef } from "react";
 import { PhotoCard } from "@/components/ui/PhotoCard";
 
 const PHOTOS = [
-  { src: "/photo-2.png", className: "left-0 top-12 h-56 w-80 rotate-[7deg]", speed: 0.1 },
-  { src: "/photo-4.png", className: "left-6 top-[40%] h-56 w-72 -rotate-[6deg]", speed: 0.05 },
-  { src: "/photo-6.png", className: "bottom-8 left-0 h-52 w-72 rotate-[8deg]", speed: 0.14 },
-  { src: "/photo-1.png", className: "right-0 top-10 h-56 w-80 -rotate-[8deg]", speed: 0.12 },
-  { src: "/photo-3.png", className: "right-0 top-[42%] h-56 w-80 rotate-[4deg]", speed: 0.06 },
-  { src: "/photo-5.png", className: "bottom-2 left-[78%] h-52 w-72 -translate-x-1/2 -rotate-[4deg]", speed: 0.16 },
+  { src: "/photo-2.jpg", className: "left-0 top-12 h-56 w-80 rotate-[7deg]", speed: 0.1 },
+  { src: "/photo-4.jpg", className: "left-6 top-[40%] h-56 w-72 -rotate-[6deg]", speed: 0.05 },
+  { src: "/photo-6.jpg", className: "bottom-8 left-0 h-52 w-72 rotate-[8deg]", speed: 0.14 },
+  { src: "/photo-1.jpg", className: "right-0 top-10 h-56 w-80 -rotate-[8deg]", speed: 0.12 },
+  { src: "/photo-3.jpg", className: "right-0 top-[42%] h-56 w-80 rotate-[4deg]", speed: 0.06 },
+  { src: "/photo-5.jpg", className: "bottom-2 left-[78%] h-52 w-72 -translate-x-1/2 -rotate-[4deg]", speed: 0.16 },
 ];
 
 // Hero photo collage with a light scroll parallax: each photo drifts up at its

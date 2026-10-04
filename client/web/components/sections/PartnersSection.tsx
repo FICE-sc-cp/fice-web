@@ -1,3 +1,5 @@
+import Image from "next/image";
+import { isRemoteImage } from "@/lib/uploads";
 import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -77,10 +79,13 @@ export async function PartnersSection() {
           <RevealGroup className="mt-14 flex flex-wrap items-center justify-center gap-x-12 gap-y-8">
             {logos.map((p) => {
               const logo = (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <Image
                   src={p.logo}
+                  unoptimized={isRemoteImage(p.logo)}
                   alt={p.name}
+                  width={176}
+                  height={80}
+                  sizes="(min-width: 1024px) 176px, (min-width: 640px) 144px, 112px"
                   className="h-14 w-28 object-contain transition-transform duration-300 hover:-translate-y-1 hover:scale-110 sm:h-16 sm:w-36 lg:h-20 lg:w-44"
                 />
               );

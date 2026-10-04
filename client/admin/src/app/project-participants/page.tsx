@@ -2,7 +2,13 @@
 
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, mediaUrl, type ProjectParticipant } from '@/lib/api';
+import {
+  api,
+  mediaUrl,
+  type PeopleImportSummary,
+  type ProjectParticipant,
+} from '@/lib/api';
+import { saveFile } from '@/lib/download';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -85,6 +91,40 @@ export default function ProjectParticipantsPage() {
   });
 
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
+  const [configError, setConfigError] = useState<string | null>(null);
+  const [downloadingConfig, setDownloadingConfig] = useState(false);
+  const [importResult, setImportResult] = useState<PeopleImportSummary | null>(
+    null,
+  );
+
+  const downloadConfig = async () => {
+    setDownloadingConfig(true);
+    setConfigError(null);
+    try {
+      await saveFile({
+        fileName: 'people-wall-config.json',
+        createLink: () => api.peopleWallConfigLink(),
+        loadBlob: () => api.peopleWallConfig(),
+      });
+    } catch (e) {
+      setConfigError(
+        e instanceof Error ? e.message : 'Не вдалося завантажити конфіг',
+      );
+    } finally {
+      setDownloadingConfig(false);
+    }
+  };
+
+  const importMutation = useMutation({
+    mutationFn: (file: File) => api.importPeopleWall(file),
+    onMutate: () => setImportResult(null),
+    onSuccess: (res) => {
+      hapticNotify('success');
+      setImportResult(res);
+      invalidate();
+    },
+    onError: () => hapticNotify('error'),
+  });
 
   const syncMutation = useMutation({
     mutationFn: () => api.syncProjectParticipants(filterDept || undefined),
@@ -112,6 +152,80 @@ export default function ProjectParticipantsPage() {
         налаштовується у формі департаменту). Можна додати людину вручну або
         приховати будь-кого з публічної стінки.
       </p>
+
+      <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-border bg-bg-soft p-4">
+        <p className="text-sm font-semibold text-muted">Імпорт з Telegram</p>
+        <ol className="flex list-decimal flex-col gap-1 pl-5 text-xs text-subtle">
+          <li>Завантаж конфіг: у ньому департаменти та їхні Telegram-чати.</li>
+          <li>
+            На своєму компʼютері запусти інструмент{' '}
+            <code>tools/people-wall-export</code> із цим конфігом (інструкція в
+            його README). Він створить один архів.
+          </li>
+          <li>Завантаж архів сюди.</li>
+        </ol>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={downloadingConfig}
+          onClick={() => void downloadConfig()}
+        >
+          {downloadingConfig ? 'Завантаження…' : 'Конфіг для експорту'}
+        </Button>
+        {configError && <p className="text-xs text-brand-red">{configError}</p>}
+        <label
+          className={`flex cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-border bg-bg py-5 text-sm text-subtle transition-colors hover:border-brand-cyan ${
+            importMutation.isPending ? 'pointer-events-none opacity-60' : ''
+          }`}
+        >
+          {importMutation.isPending ? (
+            <Spinner />
+          ) : (
+            <span>Імпортувати архів (.zip)</span>
+          )}
+          <input
+            type="file"
+            accept=".zip,application/zip"
+            className="hidden"
+            disabled={importMutation.isPending}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = '';
+              if (file) importMutation.mutate(file);
+            }}
+          />
+        </label>
+        <FormError error={importMutation.error} />
+        {importResult && (
+          <div className="flex flex-col gap-2 rounded-xl border border-brand-green/30 bg-brand-green/10 p-3 text-sm text-fg">
+            <p>
+              Додано: <b>{importResult.added}</b>, оновлено:{' '}
+              <b>{importResult.updated}</b>, пропущено:{' '}
+              <b>{importResult.skipped}</b>.
+            </p>
+            <p className="text-xs text-subtle">
+              Інструмент уже відкинув ботів ({importResult.skippedByTool.bots})
+              і видалені акаунти ({importResult.skippedByTool.deleted}).
+              {importResult.unknownDepartments > 0 &&
+                ` Департаментів, яких уже немає: ${importResult.unknownDepartments}.`}
+            </p>
+            {importResult.possibleDuplicates.length > 0 && (
+              <div className="text-xs">
+                <p className="font-semibold">
+                  Не додано, бо вже є ручний запис із таким імʼям:
+                </p>
+                <ul className="mt-1 list-disc pl-5">
+                  {importResult.possibleDuplicates.map((d, i) => (
+                    <li key={i}>
+                      {d.fullName} — {d.department}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-border bg-bg-soft p-4">
         <p className="text-sm font-semibold text-muted">Додати вручну</p>

@@ -47,7 +47,7 @@ export function AboutSection() {
             </p>
             <div className="group relative aspect-[546/351] w-full overflow-hidden rounded-xl ring-1 ring-white/10">
               <Image
-                src="/photo-7.png"
+                src="/photo-7.jpg"
                 alt="Команда студради ФІОТ"
                 fill
                 sizes="(min-width: 1024px) 32rem, 100vw"
