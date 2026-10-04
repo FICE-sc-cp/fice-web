@@ -69,6 +69,9 @@ export interface DepartmentMember {
   firstName: string;
   lastName: string;
   specialization: string | null;
+  title: string | null;
+  description: string | null;
+  order: number;
   photo: string | null;
   telegramTag: string | null;
   assignments?: { id: string; department: Department }[];
@@ -420,6 +423,9 @@ export interface DepartmentMemberInput {
   firstName: string;
   lastName: string;
   specialization?: string | null;
+  title?: string | null;
+  description?: string | null;
+  order?: number;
   photo?: string | null;
   telegramTag?: string;
 }

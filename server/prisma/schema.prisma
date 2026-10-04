@@ -113,6 +113,9 @@ model DepartmentMember {
   firstName      String               @db.VarChar(30)
   lastName       String               @db.VarChar(30)
   specialization String?              @db.VarChar(100)
+  title          String?              @db.VarChar(100)
+  description    String?              @db.Text
+  order          Int                  @default(0)
   photo          String?
   telegramTag    String?              @db.VarChar(50)
 

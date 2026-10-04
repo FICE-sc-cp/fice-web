@@ -8,41 +8,24 @@ import {
   safe,
   type Department,
   type DepartmentMember,
-  type DepartmentMemberRole,
 } from "@/lib/api";
+import { presidiumMembers, presidiumTitle } from "@/lib/presidium";
 
 interface TeamCard {
   id: string;
   name: string;
   role: string;
-  detail: string | null;
+  description: string | null;
   telegram: string | null;
   photo: string | null;
 }
-
-const ROLE_LABEL: Record<DepartmentMemberRole, string> = {
-  HEAD: "Голова студради",
-  FIRST_DEPUTY: "Перший заступник",
-  SECRETARY: "Секретар",
-  DEPUTY: "Заступник",
-  HR: "HR",
-  MEMBER: "Учасник",
-};
-
-const PRESIDIUM: DepartmentMemberRole[] = [
-  "HEAD",
-  "FIRST_DEPUTY",
-  "SECRETARY",
-  "DEPUTY",
-  "HR",
-];
 
 function memberCard(m: DepartmentMember): TeamCard {
   return {
     id: m.id,
     name: `${m.firstName} ${m.lastName}`.trim(),
-    role: ROLE_LABEL[m.role] ?? m.role,
-    detail: m.specialization,
+    role: presidiumTitle(m),
+    description: m.description,
     telegram: m.telegramTag,
     photo: m.photo,
   };
@@ -54,19 +37,10 @@ function headCard(d: Department): TeamCard | null {
     id: d.head.id,
     name: `${d.head.firstName} ${d.head.lastName}`.trim(),
     role: `Голова департаменту «${d.shortName?.trim() || d.name}»`,
-    detail: null,
+    description: null,
     telegram: d.head.telegramTag,
     photo: d.head.photo,
   };
-}
-
-function byRole(
-  members: DepartmentMember[],
-  roles: DepartmentMemberRole[],
-): TeamCard[] {
-  return roles.flatMap((role) =>
-    members.filter((m) => m.role === role).map(memberCard),
-  );
 }
 
 export async function TeamSection() {
@@ -76,7 +50,7 @@ export async function TeamSection() {
   ]);
 
   const groups = [
-    { title: "Президія", cards: byRole(members, PRESIDIUM) },
+    { title: "Президія", cards: presidiumMembers(members).map(memberCard) },
     {
       title: "Голови департаментів",
       cards: departments.map(headCard).filter((c): c is TeamCard => c !== null),
@@ -143,7 +117,6 @@ function TeamCardView({ card }: { card: TeamCard }) {
         <h3 className="text-xl font-bold text-white">{card.name}</h3>
         <div className="text-lg font-semibold text-brand-magenta">
           {card.role}
-          {card.detail && ` | ${card.detail}`}
         </div>
         {tg && (
           <a
@@ -157,6 +130,11 @@ function TeamCardView({ card }: { card: TeamCard }) {
             </span>
             <span className="text-base">@{tg}</span>
           </a>
+        )}
+        {card.description && (
+          <p className="mt-1 text-sm leading-relaxed text-stone-400">
+            {card.description}
+          </p>
         )}
       </div>
     </article>

@@ -19,11 +19,34 @@ import {
   safe,
   mediaUrl,
   type Department,
+  type DepartmentMember,
   type ProjectParticipant,
 } from "@/lib/api";
+import { presidiumMembers, presidiumTitle } from "@/lib/presidium";
 
 const PERSON_OUTLINE =
   "drop-shadow(3px 3px 0 #fff) drop-shadow(-3px -3px 0 #fff) drop-shadow(3px -3px 0 #fff) drop-shadow(-3px 3px 0 #fff)";
+
+const PRESIDIUM_TOP_ROW = new Set(["HEAD", "FIRST_DEPUTY", "SECRETARY"]);
+
+async function presidiumTeam(): Promise<{ top: Member[]; rest: Member[] }> {
+  const members = presidiumMembers(
+    await safe(fice.members(), [] as DepartmentMember[]),
+  );
+  const leadId = members.find((m) => m.role === "HEAD")?.id;
+  const toMember = (m: DepartmentMember): Member => ({
+    name: `${m.firstName} ${m.lastName}`.trim(),
+    role: presidiumTitle(m),
+    telegram: m.telegramTag,
+    description: m.description,
+    photo: mediaUrl(m.photo),
+    lead: m.id === leadId,
+  });
+  return {
+    top: members.filter((m) => PRESIDIUM_TOP_ROW.has(m.role)).map(toMember),
+    rest: members.filter((m) => !PRESIDIUM_TOP_ROW.has(m.role)).map(toMember),
+  };
+}
 
 function MemberCard({
   name,
@@ -139,7 +162,12 @@ export function DepartmentSectionHeading({
 export async function DepartmentTop({ d }: { d: DepartmentData }) {
   const iconGrad = accentGradient[d.accent];
   const joinHref = `/join?dept=${encodeURIComponent(d.slug)}`;
-  const teamMembers: Member[] = d.team ?? [];
+  const presidium =
+    d.slug === "presidium" ? await presidiumTeam() : { top: [], rest: [] };
+  const teamMembers: Member[] =
+    d.slug === "presidium"
+      ? [...presidium.top, ...presidium.rest]
+      : (d.team ?? []);
   const teamLead = teamMembers.find((m) => m.lead) ?? null;
   const teamRest = teamMembers.filter((m) => !m.lead);
   const hasAbout = !!d.about?.length;
@@ -149,7 +177,11 @@ export async function DepartmentTop({ d }: { d: DepartmentData }) {
   const dbDepartments = await safe(fice.departments(), [] as Department[]);
   const dbDept = dbDepartments.find((x) => x.slug === d.slug);
   const dbHead = dbDept?.head ?? null;
-  const memberCount = dbDept?.memberCount ?? d.memberCount;
+  const memberCount =
+    dbDept?.memberCount ??
+    (d.slug === "presidium" && teamMembers.length > 0
+      ? teamMembers.length
+      : d.memberCount);
   const projectPeople = dbDept
     ? await safe(
         fice.projectParticipants(dbDept.id),
@@ -354,7 +386,7 @@ export async function DepartmentTop({ d }: { d: DepartmentData }) {
               <div className="mt-12 flex flex-col gap-8 lg:gap-10">
                 {/* Рядок 1: Голова СР, перший зам, секретар */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto w-full justify-items-center">
-                  {teamMembers.slice(0, 3).map((m, i) => (
+                  {presidium.top.map((m, i) => (
                     <MemberCard
                       key={m.name}
                       name={m.name}
@@ -373,9 +405,9 @@ export async function DepartmentTop({ d }: { d: DepartmentData }) {
                   ))}
                 </div>
 
-                {/* Рядок 2: Всі 4 зами */}
+                {/* Рядок 2: заступники */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6 max-w-6xl mx-auto w-full justify-items-center">
-                  {teamMembers.slice(3).map((m) => (
+                  {presidium.rest.map((m) => (
                     <MemberCard
                       key={m.name}
                       name={m.name}

@@ -44,6 +44,7 @@ const FIELD_LABELS: Record<string, string> = {
   lastName: 'Прізвище',
   middleName: 'По батькові',
   specialization: 'Спеціалізація',
+  order: 'Порядок',
   group: 'Група',
   phoneNumber: 'Номер телефону',
   category: 'Категорія',
