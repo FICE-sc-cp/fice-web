@@ -423,7 +423,7 @@ function MiniAppContent() {
             staffName,
           );
 
-          if (res.success) {
+          if (res.success || res.alreadyAttended) {
             const regItem = res.registration;
             const ageInfo = getAgeInfo(regItem?.birthDate);
             const isAdult = res.registration?.isAdult ?? ageInfo?.isAdult;
