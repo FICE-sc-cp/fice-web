@@ -18,7 +18,7 @@ import { Throttle } from '@nestjs/throttler';
 import { APPLICANT_LIMIT_PER_IP, THROTTLE_TTL } from '../../common/throttle';
 import { Admin } from '../../auth/admin.decorator';
 import { ApiPaginatedResponse } from '../../common/dto/paginated.dto';
-import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { ApplicantQueryDto } from './dto/applicant-query.dto';
 import { CreateApplicantDto } from './dto/create-applicant.dto';
 import { ApplicantEntity } from './entities/applicant.entity';
 import { ApplicantService } from './applicant.service';
@@ -40,8 +40,8 @@ export class ApplicantController {
   @Admin()
   @ApiOperation({ summary: 'List join applications (admin)' })
   @ApiPaginatedResponse(ApplicantEntity)
-  findAll(@Query() pagination: PaginationQueryDto) {
-    return this.applicantService.findAll(pagination);
+  findAll(@Query() query: ApplicantQueryDto) {
+    return this.applicantService.findAll(query);
   }
 
   @Get(':id')

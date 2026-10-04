@@ -191,6 +191,7 @@ export function EventForm({
   error,
   partnersSlot,
   draftKey,
+  unresolvedStaffTags = [],
 }: {
   defaultValues?: Partial<EventFormValues>;
   onSubmit: (values: EventFormValues) => void;
@@ -198,6 +199,7 @@ export function EventForm({
   submitLabel: string;
   error?: unknown;
   partnersSlot?: React.ReactNode;
+  unresolvedStaffTags?: string[];
   draftKey?: string;
 }) {
   const {
@@ -744,6 +746,7 @@ export function EventForm({
                 { key: 'phone', defLabel: 'Номер телефону', defaultReq: false },
               ].map(({ key, defLabel }) => {
                 const cfg = baseQuestions[key as keyof BaseQuestionsConfig];
+                const locked = key === 'telegramTag';
                 return (
                   <div
                     key={key}
@@ -752,7 +755,13 @@ export function EventForm({
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <input
                         type="checkbox"
-                        checked={cfg.enabled}
+                        checked={locked || cfg.enabled}
+                        disabled={locked}
+                        title={
+                          locked
+                            ? 'Telegram-тег потрібен завжди: реєстрацію з сайту підтверджують через бота'
+                            : undefined
+                        }
                         onChange={(e) =>
                           setBaseQuestions((prev) => ({
                             ...prev,
@@ -774,11 +783,12 @@ export function EventForm({
                         className="min-w-0 flex-1 bg-transparent text-sm font-medium text-fg outline-none border-b border-transparent focus:border-brand-cyan"
                       />
                     </div>
-                    {cfg.enabled && (
+                    {(locked || cfg.enabled) && (
                       <label className="flex items-center gap-2 text-xs text-muted shrink-0 pl-7 sm:pl-0 cursor-pointer">
                         <input
                           type="checkbox"
-                          checked={cfg.required}
+                          checked={locked || cfg.required}
+                          disabled={locked}
                           onChange={(e) =>
                             setBaseQuestions((prev) => ({
                               ...prev,
@@ -974,14 +984,28 @@ export function EventForm({
           Якщо на цьому заході допомагають інші студенти або волонтери — вкажіть їхні Telegram-теги (@username), щоб надати їм доступ до списку чек-іну для цієї події.
         </p>
 
+        {checkInStaffTags.some((tag) => unresolvedStaffTags.includes(tag)) && (
+          <p className="rounded-xl border border-amber-400/40 bg-amber-400/10 px-3 py-2 text-xs leading-relaxed text-amber-200">
+            {checkInStaffTags
+              .filter((tag) => unresolvedStaffTags.includes(tag))
+              .join(', ')}{' '}
+            ще не мають доступу: ця людина має спершу натиснути /start у
+            студентському боті, а потім збережіть захід ще раз.
+          </p>
+        )}
+
         {checkInStaffTags.length > 0 && (
           <div className="flex flex-wrap gap-2 pt-1">
             {checkInStaffTags.map((tag) => (
               <span
                 key={tag}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-brand-cyan/30 bg-brand-cyan/10 px-2.5 py-1 text-xs font-semibold text-brand-cyan"
+                className={
+                  unresolvedStaffTags.includes(tag)
+                    ? 'inline-flex items-center gap-1.5 rounded-xl border border-amber-400/40 bg-amber-400/10 px-2.5 py-1 text-xs font-semibold text-amber-300'
+                    : 'inline-flex items-center gap-1.5 rounded-xl border border-brand-cyan/30 bg-brand-cyan/10 px-2.5 py-1 text-xs font-semibold text-brand-cyan'
+                }
               >
-                {tag}
+                {unresolvedStaffTags.includes(tag) ? `⚠️ ${tag}` : tag}
                 <button
                   type="button"
                   onClick={() => removeStaffTag(tag)}

@@ -8,6 +8,7 @@ import {
   fice,
   mediaUrl,
   type BotUserProfile,
+  type CheckInEventSummary,
   type CheckInItem,
   type EventItem,
   type MyEventRegistration,
@@ -22,6 +23,13 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Glow } from '@/components/ui/Glow';
 import { cn } from '@/lib/utils';
 import { USER_BOT_USERNAME } from '@/lib/bot';
+import { baseQuestionsOf, choiceOptions } from '@/lib/registrationConfig';
+import {
+  MAX_UPLOAD_MB,
+  PHOTO_ACCEPT,
+  RECEIPT_ACCEPT,
+  uploadProblem,
+} from '@/lib/uploads';
 
 function getAgeInfo(birthDate?: string | null) {
   if (!birthDate) return null;
@@ -88,10 +96,12 @@ function MiniAppContent() {
   const [votingData, setVotingData] = useState<PublicVoting | null>(null);
   const [isLoadingVoting, setIsLoadingVoting] = useState(false);
   const [votingError, setVotingError] = useState<string | null>(null);
+  const [voteActionError, setVoteActionError] = useState<string | null>(null);
   const [isVotingSubmitting, setIsVotingSubmitting] = useState(false);
 
   // Organizer Check-In State
   const [canCheckIn, setCanCheckIn] = useState(false);
+  const [checkInEvents, setCheckInEvents] = useState<CheckInEventSummary[]>([]);
   const [checkInModalOpen, setCheckInModalOpen] = useState(false);
   const [checkInList, setCheckInList] = useState<CheckInItem[]>([]);
   const [serverCheckInStats, setServerCheckInStats] = useState<{
@@ -283,6 +293,26 @@ function MiniAppContent() {
       .catch(() => setEventVotings([]));
   }, [selectedEventId, profile, user]);
 
+  useEffect(() => {
+    if (!user?.id) return;
+    const tgId = String(user.id);
+    const tgTag = user.username ? `@${user.username}` : undefined;
+    fice
+      .getCheckInEvents(initData, tgId, tgTag)
+      .then((list) => {
+        const now = Date.now();
+        setCheckInEvents(
+          list
+            .filter((ev) => {
+              const at = new Date(ev.date).getTime();
+              return at >= now - 36 * 3600_000 && at <= now + 48 * 3600_000;
+            })
+            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
+        );
+      })
+      .catch(() => setCheckInEvents([]));
+  }, [user, initData]);
+
   // Verify organizer check-in access when selectedEventId changes
   useEffect(() => {
     if (!selectedEventId) {
@@ -393,7 +423,7 @@ function MiniAppContent() {
             staffName,
           );
 
-          if (res.success) {
+          if (res.success || res.alreadyAttended) {
             const regItem = res.registration;
             const ageInfo = getAgeInfo(regItem?.birthDate);
             const isAdult = res.registration?.isAdult ?? ageInfo?.isAdult;
@@ -579,6 +609,7 @@ function MiniAppContent() {
     const tgId = user?.id ? String(user.id) : undefined;
     setIsLoadingVoting(true);
     setVotingError(null);
+    setVoteActionError(null);
     fice
       .publicVoting(activeVotingId, initData, tgId)
       .then((v) => setVotingData(v))
@@ -591,7 +622,7 @@ function MiniAppContent() {
     if (!activeVotingId) return;
     haptic('medium');
     setIsVotingSubmitting(true);
-    setVotingError(null);
+    setVoteActionError(null);
     try {
       const tgId = user?.id ? String(user.id) : undefined;
       await fice.castVote(activeVotingId, candidateId, initData, tgId);
@@ -601,7 +632,7 @@ function MiniAppContent() {
       setVotingData(v);
     } catch (err: unknown) {
       hapticNotify('error');
-      setVotingError(
+      setVoteActionError(
         err instanceof Error ? err.message : 'Помилка при голосуванні',
       );
     } finally {
@@ -631,14 +662,21 @@ function MiniAppContent() {
   const handleCostumePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const problem = uploadProblem(file, { allowPdf: false });
+    if (problem) {
+      setCostumeError(problem);
+      e.target.value = '';
+      hapticNotify('error');
+      return;
+    }
     setCostumeUploading(true);
     setCostumeError(null);
     try {
       const { url } = await fice.uploadReceipt(file);
       setCostumePhotoUrl(url);
       hapticNotify('success');
-    } catch {
-      setCostumeError('Не вдалося завантажити фото');
+    } catch (err) {
+      setCostumeError(err instanceof Error ? err.message : 'Не вдалося завантажити фото');
       hapticNotify('error');
     } finally {
       setCostumeUploading(false);
@@ -731,12 +769,24 @@ function MiniAppContent() {
   const handleReceiptUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const problem = uploadProblem(file, { allowPdf: true });
+    if (problem) {
+      setRegErrors((prev) => ({ ...prev, receipt: problem }));
+      e.target.value = '';
+      hapticNotify('error');
+      return;
+    }
     setRegUploading(true);
+    setRegErrors((prev) => ({ ...prev, receipt: '' }));
     try {
       const { url } = await fice.uploadReceipt(file);
       setRegReceiptUrl(url);
       hapticNotify('success');
-    } catch {
+    } catch (err) {
+      setRegErrors((prev) => ({
+        ...prev,
+        receipt: err instanceof Error ? err.message : 'Не вдалося завантажити файл',
+      }));
       hapticNotify('error');
     } finally {
       setRegUploading(false);
@@ -749,14 +799,27 @@ function MiniAppContent() {
     if (!selectedEvent) return;
     setRegSubmitError(null);
 
+    const base = baseQuestionsOf(selectedEvent);
+    const askName = base.fullName?.enabled !== false;
+    const askGroup = base.group?.enabled !== false;
+    const askBirthDate = base.birthDate?.enabled !== false;
+    const askPhone = base.phone?.enabled === true;
+
     const errs: Record<string, string> = {};
-    if (!regFullName.trim()) errs.fullName = 'Вкажи ПІБ';
+    if (askName && base.fullName?.required !== false && !regFullName.trim())
+      errs.fullName = 'Вкажи ПІБ';
     if (!regTelegram.trim())
       errs.telegram = 'Встанови username у налаштуваннях Telegram';
-    if (!regGroup.trim()) errs.group = 'Вкажи академічну групу';
+    if (askGroup && base.group?.required !== false && !regGroup.trim())
+      errs.group = 'Вкажи академічну групу';
+    if (askBirthDate && base.birthDate?.required && !regBirthDate)
+      errs.birthDate = 'Вкажи дату народження';
+    if (askPhone && base.phone?.required && !regPhone.trim())
+      errs.phone = 'Вкажи номер телефону';
 
-    const fee = selectedEvent.feeAmount ? Number(selectedEvent.feeAmount) : 0;
-    const hasFee = fee > 0;
+    const hasFee =
+      Number(selectedEvent.feeAmount ?? 0) > 0 ||
+      Number(selectedEvent.feeAtEventAmount ?? 0) > 0;
     if (hasFee && !regPayment) errs.payment = 'Обери спосіб оплати';
     if (regPayment === 'DONATED' && !regReceiptUrl) {
       errs.receipt = 'Додай скриншот оплати';
@@ -783,17 +846,17 @@ function MiniAppContent() {
     setRegSubmitting(true);
     try {
       const tgId = user?.id ? String(user.id) : undefined;
-      await fice.registerEvent(
+      const res = await fice.registerEvent(
         selectedEvent.id,
         {
-          fullName: regFullName.trim(),
+          fullName: (askName && regFullName.trim()) || 'Учасник',
           telegramTag: `@${regTelegram.trim().replace(/^@+/, '')}`,
-          group: regGroup.trim(),
-          birthDate: regBirthDate || undefined,
+          group: (askGroup && regGroup.trim()) || 'ФІОТ',
+          birthDate: (askBirthDate && regBirthDate) || undefined,
           payment: hasFee ? (regPayment as RegistrationPayment) : 'NONE',
           receiptUrl: regReceiptUrl ?? undefined,
           telegramUserId: tgId,
-          phoneNumber: regPhone.trim() || undefined,
+          phoneNumber: (askPhone && regPhone.trim()) || undefined,
           saveProfile: regSaveProfile,
           answers: questions
             .map((q) => ({
@@ -804,6 +867,14 @@ function MiniAppContent() {
         },
         initData,
       );
+
+      if (res.requiresBotStart) {
+        hapticNotify('warning');
+        setRegSubmitError(
+          'Не вдалося підтвердити твій Telegram-акаунт. Закрий і знову відкрий додаток через бота та спробуй ще раз.',
+        );
+        return;
+      }
 
       hapticNotify('success');
       setRegSuccess(true);
@@ -1005,6 +1076,11 @@ function MiniAppContent() {
                 </div>
               ) : votingData ? (
                 <div className="space-y-4">
+                  {voteActionError && (
+                    <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-400">
+                      {voteActionError}
+                    </div>
+                  )}
                   {votingData.description && (
                     <p className="text-sm text-muted whitespace-pre-line">
                       {votingData.description}
@@ -1875,7 +1951,7 @@ function MiniAppContent() {
                           <span>Змінити фото</span>
                           <input
                             type="file"
-                            accept="image/*"
+                            accept={PHOTO_ACCEPT}
                             onChange={handleCostumePhotoUpload}
                             className="hidden"
                           />
@@ -1901,7 +1977,7 @@ function MiniAppContent() {
                         )}
                         <input
                           type="file"
-                          accept="image/*"
+                          accept={PHOTO_ACCEPT}
                           onChange={handleCostumePhotoUpload}
                           disabled={costumeUploading}
                           className="hidden"
@@ -2211,8 +2287,20 @@ function MiniAppContent() {
                             Ви зареєстровані
                           </span>
                         </div>
-                        <p className="text-xs text-muted">
-                          Ваша реєстрація дійсна для входу
+                        <p
+                          className={`text-xs ${
+                            existingReg.paymentStatus === 'REJECTED'
+                              ? 'text-red-400 font-bold'
+                              : existingReg.paymentStatus === 'PENDING'
+                                ? 'text-amber-300'
+                                : 'text-muted'
+                          }`}
+                        >
+                          {existingReg.paymentStatus === 'REJECTED'
+                            ? 'Оплату відхилено — реєстрація поки не дійсна для входу'
+                            : existingReg.paymentStatus === 'PENDING'
+                              ? 'Оплата на перевірці — квиток прийде після підтвердження'
+                              : 'Ваша реєстрація дійсна для входу'}
                         </p>
                       </div>
                     </div>
@@ -2338,6 +2426,10 @@ function MiniAppContent() {
               <div className="rounded-2xl border border-border bg-surface p-4 text-center text-xs text-muted">
                 Вхід вільний, попередня реєстрація не потрібна.
               </div>
+            ) : selectedEvent.registrationOpen === false ? (
+              <div className="rounded-2xl border border-border bg-surface p-4 text-center text-xs text-muted">
+                Реєстрацію на цей захід закрито.
+              </div>
             ) : (
               <form
                 onSubmit={handleRegisterSubmit}
@@ -2357,24 +2449,28 @@ function MiniAppContent() {
                   </p>
                 </div>
 
-                <Input
-                  label="ПІБ"
-                  placeholder="Шевченко Тарас Григорович"
-                  value={regFullName}
-                  onChange={(e) => setRegFullName(e.target.value)}
-                  error={regErrors.fullName}
-                  required
-                />
+                {baseQuestionsOf(selectedEvent).fullName?.enabled !== false && (
+                  <Input
+                    label={baseQuestionsOf(selectedEvent).fullName?.label || 'ПІБ'}
+                    placeholder="Шевченко Тарас Григорович"
+                    value={regFullName}
+                    onChange={(e) => setRegFullName(e.target.value)}
+                    error={regErrors.fullName}
+                    required={baseQuestionsOf(selectedEvent).fullName?.required !== false}
+                  />
+                )}
 
                 <div className="grid grid-cols-2 gap-2.5">
-                  <Input
-                    label="Група"
-                    placeholder="ІП-31"
-                    value={regGroup}
-                    onChange={(e) => setRegGroup(e.target.value)}
-                    error={regErrors.group}
-                    required
-                  />
+                  {baseQuestionsOf(selectedEvent).group?.enabled !== false && (
+                    <Input
+                      label={baseQuestionsOf(selectedEvent).group?.label || 'Група'}
+                      placeholder="ІП-31"
+                      value={regGroup}
+                      onChange={(e) => setRegGroup(e.target.value)}
+                      error={regErrors.group}
+                      required={baseQuestionsOf(selectedEvent).group?.required !== false}
+                    />
+                  )}
                   <Input
                     label="Telegram"
                     placeholder="@username"
@@ -2386,25 +2482,63 @@ function MiniAppContent() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-2.5">
-                  <Input
-                    label="Дата народження"
-                    type="date"
-                    value={regBirthDate}
-                    onChange={(e) => setRegBirthDate(e.target.value)}
-                  />
-                  <Input
-                    label="Номер телефону"
-                    type="tel"
-                    placeholder="+380..."
-                    value={regPhone}
-                    onChange={(e) => setRegPhone(e.target.value)}
-                  />
+                  {baseQuestionsOf(selectedEvent).birthDate?.enabled !== false && (
+                    <Input
+                      label={baseQuestionsOf(selectedEvent).birthDate?.label || 'Дата народження'}
+                      type="date"
+                      value={regBirthDate}
+                      onChange={(e) => setRegBirthDate(e.target.value)}
+                      error={regErrors.birthDate}
+                      required={!!baseQuestionsOf(selectedEvent).birthDate?.required}
+                    />
+                  )}
+                  {baseQuestionsOf(selectedEvent).phone?.enabled === true && (
+                    <Input
+                      label={baseQuestionsOf(selectedEvent).phone?.label || 'Номер телефону'}
+                      type="tel"
+                      placeholder="+380..."
+                      value={regPhone}
+                      onChange={(e) => setRegPhone(e.target.value)}
+                      error={regErrors.phone}
+                      required={!!baseQuestionsOf(selectedEvent).phone?.required}
+                    />
+                  )}
                 </div>
 
                 {/* Custom event questions */}
                 {(selectedEvent.questions ?? []).map((q) => (
                   <div key={q.id}>
-                    {q.type === 'LONG_TEXT' ? (
+                    {choiceOptions(q) ? (
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-semibold text-muted">
+                          {q.label}
+                          {q.required ? ' *' : ''}
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {choiceOptions(q)!.map((opt) => (
+                            <button
+                              key={opt}
+                              type="button"
+                              onClick={() =>
+                                setRegAnswers((prev) => ({ ...prev, [q.id]: opt }))
+                              }
+                              className={`rounded-xl border px-3 py-1.5 text-xs font-bold transition-all ${
+                                regAnswers[q.id] === opt
+                                  ? 'border-brand-cyan bg-brand-cyan/15 text-brand-cyan'
+                                  : 'border-border bg-bg/50 text-muted'
+                              }`}
+                            >
+                              {opt}
+                            </button>
+                          ))}
+                        </div>
+                        {regErrors[`q_${q.id}`] && (
+                          <span className="text-xs text-red-400">
+                            {regErrors[`q_${q.id}`]}
+                          </span>
+                        )}
+                      </div>
+                    ) : q.type === 'LONG_TEXT' ? (
                       <Textarea
                         label={q.label}
                         value={regAnswers[q.id] || ''}
@@ -2435,12 +2569,14 @@ function MiniAppContent() {
                 ))}
 
                 {/* Fee payment choices */}
-                {selectedEvent.feeAmount && Number(selectedEvent.feeAmount) > 0 && (
+                {(Number(selectedEvent.feeAmount ?? 0) > 0 ||
+                  Number(selectedEvent.feeAtEventAmount ?? 0) > 0) && (
                   <div className="space-y-2 pt-2 border-t border-border">
                     <label className="text-sm font-semibold text-fg">
                       Оплата благодійного внеску
                     </label>
                     <div className="grid grid-cols-2 gap-2.5">
+                      {Number(selectedEvent.feeAmount ?? 0) > 0 && (
                       <button
                         type="button"
                         onClick={() => setRegPayment('DONATED')}
@@ -2450,8 +2586,10 @@ function MiniAppContent() {
                             : 'border-border bg-bg/50 text-muted'
                         }`}
                       >
-                        Онлайн зараз
+                        Онлайн зараз · {Number(selectedEvent.feeAmount)} грн
                       </button>
+                      )}
+                      {Number(selectedEvent.feeAtEventAmount ?? 0) > 0 && (
                       <button
                         type="button"
                         onClick={() => setRegPayment('AT_EVENT')}
@@ -2461,8 +2599,9 @@ function MiniAppContent() {
                             : 'border-border bg-bg/50 text-muted'
                         }`}
                       >
-                        На вході
+                        На вході · {Number(selectedEvent.feeAtEventAmount)} грн
                       </button>
+                      )}
                     </div>
                     {regErrors.payment && (
                       <span className="text-xs text-red-400">
@@ -2479,11 +2618,11 @@ function MiniAppContent() {
                           {selectedEvent.feeRequisites || 'Уточнюйте у організаторів'}
                         </div>
                         <label className="block text-xs font-semibold text-fg pt-1">
-                          Завантажити квитанцію або скриншот (PDF, зображення):
+                          Завантажити квитанцію або скриншот (JPG, PNG, WEBP, PDF, до {MAX_UPLOAD_MB} МБ):
                         </label>
                         <input
                           type="file"
-                          accept="image/*,application/pdf"
+                          accept={RECEIPT_ACCEPT}
                           onChange={handleReceiptUpload}
                           className="text-xs text-muted file:mr-2 file:py-1 file:px-3 file:rounded-xl file:border-0 file:bg-surface file:text-xs file:font-semibold file:text-fg"
                         />
@@ -2580,6 +2719,36 @@ function MiniAppContent() {
         {/* ================= VIEW: EVENTS CATALOG TAB ================= */}
         {!selectedEventId && activeTab === 'events' && (
           <div className="space-y-3">
+            {checkInEvents.length > 0 && (
+              <div className="rounded-3xl border border-brand-green/30 bg-brand-green/5 p-3 space-y-2">
+                <h2 className="px-1 text-xs font-black uppercase tracking-wider text-brand-green">
+                  Відмітка учасників
+                </h2>
+                {checkInEvents.map((ev) => (
+                  <button
+                    key={ev.id}
+                    type="button"
+                    onClick={() => {
+                      haptic('light');
+                      setSelectedEventId(ev.id);
+                    }}
+                    className="flex w-full items-center justify-between gap-3 rounded-2xl border border-border bg-surface px-3 py-2.5 text-left transition-colors hover:border-brand-green/50"
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate text-sm font-bold text-fg">
+                        {ev.name}
+                      </span>
+                      <span className="block text-xs text-muted">
+                        {fmtDate(ev.date, ev.hasTime, null)}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-xs font-bold text-brand-green">
+                      Відкрити →
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="flex justify-between items-center px-1">
               <h2 className="text-base sm:text-lg font-black uppercase tracking-wider text-muted">
                 Майбутні події

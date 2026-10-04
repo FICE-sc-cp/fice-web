@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
+  NotFoundException,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -16,6 +18,7 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Admin } from '../../auth/admin.decorator';
+import { AdminAccessService } from '../../auth/admin-access.service';
 import { ApiPaginatedResponse } from '../../common/dto/paginated.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { CreateNewsDto } from './dto/create-news.dto';
@@ -27,7 +30,10 @@ import { NewsService } from './news.service';
 @ApiTags('news')
 @Controller('news')
 export class NewsController {
-  constructor(private readonly newsService: NewsService) {}
+  constructor(
+    private readonly newsService: NewsService,
+    private readonly adminAccess: AdminAccessService,
+  ) {}
 
   @Post()
   @Admin()
@@ -40,15 +46,26 @@ export class NewsController {
   @Get()
   @ApiOperation({ summary: 'List news, newest first' })
   @ApiPaginatedResponse(NewsEntity)
-  findAll(@Query() query: NewsQueryDto) {
-    return this.newsService.findAll(query);
+  async findAll(
+    @Query() query: NewsQueryDto,
+    @Headers('x-telegram-init-data') initData?: string,
+  ) {
+    const draft = await this.adminAccess.draftsAllowed(query.draft, initData);
+    return this.newsService.findAll({ ...query, draft });
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a news item by id' })
   @ApiOkResponse({ type: NewsEntity })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.newsService.findOne(id);
+  async findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Headers('x-telegram-init-data') initData?: string,
+  ) {
+    const news = await this.newsService.findOne(id);
+    if (news.isDraft && !(await this.adminAccess.isAdmin(initData))) {
+      throw new NotFoundException(`News ${id} not found`);
+    }
+    return news;
   }
 
   @Patch(':id')

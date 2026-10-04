@@ -16,6 +16,8 @@ import { ApiOperation, ApiSecurity, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { Admin } from '../../auth/admin.decorator';
 import { resolveValidatedTelegramUser } from '../../auth/init-data.util';
+import { DownloadTokenService } from '../../auth/download-token.service';
+import { sendXlsx } from '../../common/xlsx-response';
 import { CastVoteDto } from './dto/cast-vote.dto';
 import { CreateCandidateDto } from './dto/create-candidate.dto';
 import { UpdateCandidateDto } from './dto/update-candidate.dto';
@@ -30,6 +32,7 @@ export class VotingController {
   constructor(
     private readonly votingService: VotingService,
     private readonly config: ConfigService,
+    private readonly downloads: DownloadTokenService,
   ) {}
 
   private resolveTelegramId(initData?: string, fallbackId?: string): bigint {
@@ -123,13 +126,29 @@ export class VotingController {
     @Res() res: Response,
   ) {
     const buffer = await this.votingService.exportResults(id);
-    res.set({
-      'Content-Type':
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'Content-Disposition': `attachment; filename="voting-${id}-results.xlsx"`,
-      'Content-Length': buffer.length.toString(),
-    });
-    res.send(buffer);
+    sendXlsx(res, buffer, `voting-${id}-results.xlsx`);
+  }
+
+  @Post(':id/results/export-link')
+  @Admin()
+  @ApiOperation({
+    summary: 'Create a one-time, 2-minute link to the results Excel (admin)',
+  })
+  createResultsExportLink(@Param('id', ParseUUIDPipe) id: string) {
+    const token = this.downloads.issue(`voting:${id}`);
+    return { path: `/voting/${id}/results/export-file?token=${token}` };
+  }
+
+  @Get(':id/results/export-file')
+  @ApiOperation({ summary: 'Download the results Excel with a one-time link' })
+  async exportResultsFile(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('token') token: string | undefined,
+    @Res() res: Response,
+  ) {
+    this.downloads.redeem(token, `voting:${id}`);
+    const buffer = await this.votingService.exportResults(id);
+    sendXlsx(res, buffer, `voting-${id}-results.xlsx`);
   }
 
   @Post(':id/notify')

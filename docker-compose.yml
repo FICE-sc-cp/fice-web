@@ -9,6 +9,7 @@ services:
     image: postgres:15
     container_name: fice-postgres
     logging: *default-logging
+    mem_limit: 2g
     restart: always
     environment:
       POSTGRES_DB: fice
@@ -24,17 +25,37 @@ services:
       timeout: 5s
       retries: 10
 
+  migrate:
+    image: fice-web-server:latest
+    pull_policy: never
+    container_name: fice-migrate
+    logging: *default-logging
+    mem_limit: 512m
+    restart: "no"
+    command: ["npx", "prisma", "migrate", "deploy"]
+    environment:
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in the root .env}@postgres:5432/fice?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   server:
+    image: fice-web-server:latest
     build:
       context: ./server
       dockerfile: Dockerfile
+      network: host
+      secrets:
+        - postgres_password
     container_name: fice-server
     logging: *default-logging
+    mem_limit: 1g
     restart: always
     environment:
       # `postgres` is the service name on the compose network.
       DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in the root .env}@postgres:5432/fice?schema=public
       PORT: 3001
+      NODE_OPTIONS: --max-old-space-size=640
       APP_ENV: ${APP_ENV:-development}
       CORS_ORIGIN: ${CORS_ORIGIN:-}
       TZ: Europe/Kyiv
@@ -71,6 +92,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3001/health || exit 1"]
       interval: 10s
@@ -86,11 +109,13 @@ services:
         BACKEND_URL: http://server:3001
     container_name: fice-admin
     logging: *default-logging
+    mem_limit: 512m
     restart: always
     ports:
       - "127.0.0.1:3000:3000"
     environment:
       TZ: Europe/Kyiv
+      NODE_OPTIONS: --max-old-space-size=320
       # The /api-proxy rewrite runs inside this container, so it must reach the
       # backend via the compose service name — `localhost` would be the admin
       # container itself.
@@ -107,11 +132,13 @@ services:
         NEXT_PUBLIC_USER_BOT_USERNAME: ${USER_BOT_USERNAME:-}
     container_name: fice-web
     logging: *default-logging
+    mem_limit: 1g
     restart: always
     ports:
       - "127.0.0.1:3002:3000"
     environment:
       TZ: Europe/Kyiv
+      NODE_OPTIONS: --max-old-space-size=640
       # Internal URL for server-side (SSR/RSC) data fetches on the compose network.
       INTERNAL_API_URL: http://server:3001
       BACKEND_URL: http://server:3001
@@ -122,6 +149,7 @@ services:
     image: caddy:2-alpine
     container_name: fice-caddy
     logging: *default-logging
+    mem_limit: 256m
     profiles: ["prod"]
     restart: always
     ports:
@@ -135,6 +163,10 @@ services:
     depends_on:
       - web
       - admin
+
+secrets:
+  postgres_password:
+    environment: POSTGRES_PASSWORD
 
 volumes:
   fice_pg_data:

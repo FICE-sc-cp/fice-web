@@ -144,6 +144,7 @@ export interface EventItem {
   time?: string | null;
   allowedFaculties?: string[];
   checkInStaffTags?: string[];
+  checkInStaffUnresolved?: string[];
   baseQuestionsConfig?: any;
   detailsId: string | null;
   details?: EventDetails | null;
@@ -159,6 +160,13 @@ export type PaymentStatus =
   | 'CONFIRMED'
   | 'REJECTED';
 export type RegistrationSource = 'WEB' | 'BOT';
+
+export interface RegistrationFilters {
+  payment?: 'PENDING' | 'CONFIRMED' | 'AT_EVENT' | 'REJECTED';
+  source?: RegistrationSource;
+  attended?: boolean;
+  search?: string;
+}
 
 export interface RegistrationAnalytics {
   total: number;
@@ -279,6 +287,10 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
   if (res.status === 204) return undefined as T;
   return (await res.json()) as Promise<T>;
+}
+
+export function apiUrl(path: string): string {
+  return `${BASE}${path}`;
 }
 
 export function mediaUrl(path: string | null | undefined): string | undefined {
@@ -465,7 +477,7 @@ export const api = {
     request<unknown>(`/facts/overrides/${key}`, { method: 'DELETE' }),
 
   news: (page = 1, limit = 20) =>
-    request<Paginated<News>>(`/news?page=${page}&limit=${limit}`),
+    request<Paginated<News>>(`/news?page=${page}&limit=${limit}&draft=true`),
   newsById: (id: string) => request<News>(`/news/${id}`),
   createNews: (body: NewsInput) => request<News>('/news', { method: 'POST', ...json(body) }),
   updateNews: (id: string, body: Partial<NewsInput>) =>
@@ -473,7 +485,7 @@ export const api = {
   deleteNews: (id: string) => request<News>(`/news/${id}`, { method: 'DELETE' }),
 
   events: (page = 1, limit = 20) =>
-    request<Paginated<EventItem>>(`/event?page=${page}&limit=${limit}`),
+    request<Paginated<EventItem>>(`/event?page=${page}&limit=${limit}&draft=true`),
   event: (id: string) => request<EventItem>(`/event/${id}`),
   createEvent: (body: EventInput) => request<EventItem>('/event', { method: 'POST', ...json(body) }),
   updateEvent: (id: string, body: Partial<EventInput>) =>
@@ -485,10 +497,21 @@ export const api = {
   ) => request<unknown>(`/event/${id}/partners`, { method: 'POST', ...json(body) }),
   removeEventPartner: (id: string, eventPartnerId: string) =>
     request<unknown>(`/event/${id}/partners/${eventPartnerId}`, { method: 'DELETE' }),
-  eventRegistrations: (id: string, page = 1, limit = 100) =>
-    request<Paginated<EventRegistration> & { analytics?: RegistrationAnalytics }>(
-      `/event/${id}/registrations?page=${page}&limit=${limit}`,
-    ),
+  eventRegistrations: (
+    id: string,
+    page = 1,
+    limit = 100,
+    filters: RegistrationFilters = {},
+  ) => {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (filters.payment) params.set('payment', filters.payment);
+    if (filters.source) params.set('source', filters.source);
+    if (filters.attended !== undefined) params.set('attended', String(filters.attended));
+    if (filters.search) params.set('search', filters.search);
+    return request<Paginated<EventRegistration> & { analytics?: RegistrationAnalytics }>(
+      `/event/${id}/registrations?${params.toString()}`,
+    );
+  },
   confirmRegistrationPayment: (eventId: string, registrationId: string) =>
     request<{ success: boolean; registration: EventRegistration }>(
       `/event/${eventId}/registrations/${registrationId}/confirm-payment`,
@@ -512,6 +535,10 @@ export const api = {
       `/event/${eventId}/registrations/${registrationId}`,
       { method: 'DELETE', ...json({ reason }) },
     ),
+  eventRegistrationsExportLink: (id: string) =>
+    request<{ path: string }>(`/event/${id}/registrations/export-link`, {
+      method: 'POST',
+    }),
   exportEventRegistrations: async (id: string): Promise<Blob> => {
     const res = await fetch(`${BASE}/event/${id}/registrations/export`, {
       headers: { 'x-telegram-init-data': getInitData() },
@@ -528,6 +555,8 @@ export const api = {
 
   partners: (page = 1, limit = 50) =>
     request<Paginated<Partner>>(`/partner?page=${page}&limit=${limit}`),
+  allPartners: (page = 1, limit = 100) =>
+    request<Paginated<Partner>>(`/partner/all?page=${page}&limit=${limit}`),
   createPartner: (body: PartnerInput) =>
     request<Partner>('/partner', { method: 'POST', ...json(body) }),
   updatePartner: (id: string, body: Partial<PartnerInput>) =>
@@ -537,7 +566,7 @@ export const api = {
   deletePartner: (id: string) => request<Partner>(`/partner/${id}`, { method: 'DELETE' }),
 
   fundraisers: (page = 1, limit = 50) =>
-    request<Paginated<Fundraiser>>(`/fundraiser?page=${page}&limit=${limit}`),
+    request<Paginated<Fundraiser>>(`/fundraiser?page=${page}&limit=${limit}&draft=true`),
   fundraiser: (id: string) => request<Fundraiser>(`/fundraiser/${id}`),
   createFundraiser: (body: FundraiserInput) =>
     request<Fundraiser>('/fundraiser', { method: 'POST', ...json(body) }),
@@ -580,8 +609,11 @@ export const api = {
   unassignMember: (id: string, departmentId: string) =>
     request<unknown>(`/department-member/${id}/assignments/${departmentId}`, { method: 'DELETE' }),
 
-  applicants: (page = 1, limit = 50) =>
-    request<Paginated<Applicant>>(`/applicant?page=${page}&limit=${limit}`),
+  applicants: (page = 1, limit = 50, search?: string) => {
+    const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+    if (search) params.set('search', search);
+    return request<Paginated<Applicant>>(`/applicant?${params.toString()}`);
+  },
   applicant: (id: string) => request<Applicant>(`/applicant/${id}`),
   deleteApplicant: (id: string) => request<unknown>(`/applicant/${id}`, { method: 'DELETE' }),
 
@@ -659,6 +691,10 @@ export const api = {
     }),
   votingResults: (id: string) => request<VotingResults>(`/voting/${id}/results`),
   exportVotingResultsUrl: (id: string) => `${BASE}/voting/${id}/results/export`,
+  votingResultsExportLink: (id: string) =>
+    request<{ path: string }>(`/voting/${id}/results/export-link`, {
+      method: 'POST',
+    }),
   exportVotingResultsBlob: async (id: string): Promise<Blob> => {
     const res = await fetch(`${BASE}/voting/${id}/results/export`, {
       headers: { 'x-telegram-init-data': getInitData() },
@@ -669,10 +705,10 @@ export const api = {
   },
   notifyVotingStarted: (id: string) =>
     request<{
+      id: string;
       ok: boolean;
+      status: BroadcastStatus;
       recipientsCount: number;
-      sentCount: number;
-      failedCount: number;
     }>(`/voting/${id}/notify`, { method: 'POST' }),
   votingSubmissions: (votingId: string, status?: string) =>
     request<VotingCandidate[]>(
@@ -691,10 +727,10 @@ export const api = {
   // --- Broadcasts ---
   broadcastToEvent: (eventId: string, body: BroadcastInput) =>
     request<{
+      id: string;
       ok: boolean;
+      status: BroadcastStatus;
       recipientsCount: number;
-      sentCount: number;
-      failedCount: number;
     }>(`/broadcast/event/${eventId}`, {
       method: 'POST',
       ...json(body),
@@ -725,10 +761,10 @@ export const api = {
     }),
   broadcastToAll: (body: BroadcastInput) =>
     request<{
+      id: string;
       ok: boolean;
+      status: BroadcastStatus;
       recipientsCount: number;
-      sentCount: number;
-      failedCount: number;
     }>('/broadcast/global', {
       method: 'POST',
       ...json(body),
@@ -830,6 +866,7 @@ export interface CandidateInput {
 }
 
 export type BroadcastTarget = 'EVENT_PARTICIPANTS' | 'ALL_BOT_USERS';
+export type BroadcastStatus = 'SENDING' | 'COMPLETED' | 'INTERRUPTED';
 
 export interface BroadcastMessage {
   id: string;
@@ -842,6 +879,8 @@ export interface BroadcastMessage {
   recipientsCount: number;
   sentCount: number;
   failedCount: number;
+  status: BroadcastStatus;
+  finishedAt: string | null;
   createdAt: string;
   event?: { id: string; name: string } | null;
 }

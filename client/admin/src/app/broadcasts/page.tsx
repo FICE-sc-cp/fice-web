@@ -26,6 +26,8 @@ export default function BroadcastsPage() {
     queryKey: ['broadcast-history'],
     queryFn: () => api.broadcastHistory(1, 30),
     enabled: tab === 'history',
+    refetchInterval: (query) =>
+      query.state.data?.items.some((b) => b.status === 'SENDING') ? 3000 : false,
   });
 
   const [text, setText] = useState('');
@@ -123,8 +125,7 @@ export default function BroadcastsPage() {
       setConfirmOpen(false);
       hapticNotify('success');
       setResult(
-        `Глобальну розсилку успішно виконано! ✅ Надіслано: ${res.sentCount}` +
-          (res.failedCount > 0 ? `, не вдалося: ${res.failedCount}` : ''),
+        `Розсилку запущено для ${res.recipientsCount} отримувачів ✅ Прогрес видно на вкладці історії.`,
       );
       qc.invalidateQueries({ queryKey: ['broadcast-stats'] });
       qc.invalidateQueries({ queryKey: ['broadcast-history'] });
@@ -344,6 +345,12 @@ export default function BroadcastsPage() {
                       Отримувачів: <b className="text-fg">{item.recipientsCount}</b>
                     </div>
                     <div className="flex gap-2">
+                      {item.status === 'SENDING' && (
+                        <span className="text-amber-300">⏳ Надсилається…</span>
+                      )}
+                      {item.status === 'INTERRUPTED' && (
+                        <span className="text-red-400">Перервано</span>
+                      )}
                       <span className="text-brand-green">Успішно: {item.sentCount}</span>
                       {item.failedCount > 0 && (
                         <span className="text-red-400">Невдало: {item.failedCount}</span>

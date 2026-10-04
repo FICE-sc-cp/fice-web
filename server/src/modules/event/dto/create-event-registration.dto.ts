@@ -2,6 +2,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { RegistrationPayment, RegistrationSource } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   IsArray,
   IsDate,
   IsEnum,
@@ -9,17 +10,20 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   MaxLength,
   ValidateNested,
 } from 'class-validator';
+import { OWN_UPLOAD_URL } from '../../../upload/own-upload';
 
 export class EventAnswerDto {
   @ApiProperty({ format: 'uuid' })
   @IsUUID()
   questionId: string;
 
-  @ApiProperty()
+  @ApiProperty({ maxLength: 2000 })
   @IsString()
+  @MaxLength(2000)
   value: string;
 }
 
@@ -66,6 +70,9 @@ export class CreateEventRegistrationDto {
   })
   @IsOptional()
   @IsString()
+  @Matches(OWN_UPLOAD_URL, {
+    message: 'Квитанцію потрібно завантажити через форму реєстрації',
+  })
   receiptUrl?: string;
 
   @ApiPropertyOptional({ description: 'Telegram User ID for bot linking' })
@@ -76,14 +83,16 @@ export class CreateEventRegistrationDto {
   @IsOptional()
   saveProfile?: boolean;
 
-  @ApiPropertyOptional({ description: 'Phone number' })
+  @ApiPropertyOptional({ description: 'Phone number', maxLength: 20 })
   @IsOptional()
   @IsString()
+  @MaxLength(20)
   phoneNumber?: string;
 
   @ApiPropertyOptional({ type: [EventAnswerDto] })
   @IsOptional()
   @IsArray()
+  @ArrayMaxSize(50)
   @ValidateNested({ each: true })
   @Type(() => EventAnswerDto)
   answers?: EventAnswerDto[];

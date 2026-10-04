@@ -13,22 +13,10 @@ import {
   type RegistrationPayment,
 } from '@/lib/api';
 import { normalizeKpiGroup, parseKpiGroup } from '@/lib/kpi-groups';
+import { baseQuestionsOf, choiceOptions } from '@/lib/registrationConfig';
+import { MAX_UPLOAD_MB, RECEIPT_ACCEPT, uploadProblem } from '@/lib/uploads';
 
 const isUrl = (s: string) => /^https?:\/\//i.test(s.trim());
-
-interface BaseQuestionConfig {
-  enabled: boolean;
-  required: boolean;
-  label: string;
-}
-
-interface BaseQuestionsConfig {
-  fullName?: BaseQuestionConfig;
-  telegramTag?: BaseQuestionConfig;
-  group?: BaseQuestionConfig;
-  birthDate?: BaseQuestionConfig;
-  phone?: BaseQuestionConfig;
-}
 
 function TelegramIcon({ className = 'size-5' }: { className?: string }) {
   return (
@@ -47,16 +35,10 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
   const questions = event.questions ?? [];
   const fee = event.feeAmount != null ? Number(event.feeAmount) : 0;
   const feeAtEvent =
-    event.feeAtEventAmount != null ? Number(event.feeAtEventAmount) : fee;
+    event.feeAtEventAmount != null ? Number(event.feeAtEventAmount) : 0;
   const hasFee = fee > 0 || feeAtEvent > 0;
 
-  const baseConfig: BaseQuestionsConfig = (event.baseQuestionsConfig as BaseQuestionsConfig) ?? {
-    fullName: { enabled: true, required: true, label: 'ПІБ' },
-    telegramTag: { enabled: true, required: true, label: 'Telegram-тег' },
-    group: { enabled: true, required: true, label: 'Академічна група' },
-    birthDate: { enabled: true, required: false, label: 'Дата народження' },
-    phone: { enabled: false, required: false, label: 'Номер телефону' },
-  };
+  const baseConfig = baseQuestionsOf(event);
 
   const [lastName, setLastName] = useState('');
   const [firstName, setFirstName] = useState('');
@@ -99,13 +81,22 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
   const onReceiptChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (!f) return;
+    const problem = uploadProblem(f, { allowPdf: true });
+    if (problem) {
+      setErrors((prev) => ({ ...prev, receipt: problem }));
+      e.target.value = '';
+      return;
+    }
     setUploading(true);
     setErrors((prev) => ({ ...prev, receipt: '' }));
     try {
       const { url } = await fice.uploadReceipt(f);
       setReceiptUrl(url);
-    } catch {
-      setErrors((prev) => ({ ...prev, receipt: 'Не вдалося завантажити файл' }));
+    } catch (err) {
+      setErrors((prev) => ({
+        ...prev,
+        receipt: err instanceof Error ? err.message : 'Не вдалося завантажити файл',
+      }));
     } finally {
       setUploading(false);
     }
@@ -121,17 +112,14 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
       if (!middleName.trim()) e.middleName = 'Вкажи по батькові';
     }
 
-    const tgCfg = baseConfig.telegramTag;
-    if (tgCfg?.enabled !== false && tgCfg?.required !== false) {
-      if (!telegram.trim()) {
-        e.telegram = 'Вкажи Telegram-тег';
-      } else {
-        const clean = telegram.trim().replace(/^@+/, '');
-        if (clean.length < 5 || clean.length > 32 || !/^[a-zA-Z0-9_]+$/.test(clean)) {
-          e.telegram = 'Telegram-тег: 5-32 символи (латиниця, цифри, _)';
-        } else if (!/[a-zA-Z]/.test(clean)) {
-          e.telegram = 'Telegram-тег повинен містити хоча б одну літеру';
-        }
+    if (!telegram.trim()) {
+      e.telegram = 'Вкажи Telegram-тег';
+    } else {
+      const clean = telegram.trim().replace(/^@+/, '');
+      if (clean.length < 5 || clean.length > 32 || !/^[a-zA-Z0-9_]+$/.test(clean)) {
+        e.telegram = 'Telegram-тег: 5-32 символи (латиниця, цифри, _)';
+      } else if (!/[a-zA-Z]/.test(clean)) {
+        e.telegram = 'Telegram-тег повинен містити хоча б одну літеру';
       }
     }
 
@@ -468,33 +456,31 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
                 />
               )}
 
-              {baseConfig.telegramTag?.enabled !== false && (
-                <div className="flex w-full flex-col gap-1.5">
-                  <label className="text-sm font-semibold text-muted">
-                    {baseConfig.telegramTag?.label || 'Telegram-тег'}
-                  </label>
-                  <div
-                    className={cn(
-                      'flex items-center rounded-xl border bg-surface px-4 transition-colors focus-within:border-brand-cyan',
-                      errors.telegram ? 'border-brand-red' : 'border-border',
-                    )}
-                  >
-                    <span className="pr-1 font-bold text-subtle">@</span>
-                    <input
-                      type="text"
-                      placeholder="username"
-                      className="w-full bg-transparent py-3 text-fg outline-none placeholder:text-subtle"
-                      value={telegram}
-                      onChange={(e) => setTelegram(e.target.value)}
-                    />
-                  </div>
-                  {errors.telegram && (
-                    <span className="text-xs font-medium text-brand-red">
-                      {errors.telegram}
-                    </span>
+              <div className="flex w-full flex-col gap-1.5">
+                <label className="text-sm font-semibold text-muted">
+                  {baseConfig.telegramTag?.label || 'Telegram-тег'}
+                </label>
+                <div
+                  className={cn(
+                    'flex items-center rounded-xl border bg-surface px-4 transition-colors focus-within:border-brand-cyan',
+                    errors.telegram ? 'border-brand-red' : 'border-border',
                   )}
+                >
+                  <span className="pr-1 font-bold text-subtle">@</span>
+                  <input
+                    type="text"
+                    placeholder="username"
+                    className="w-full bg-transparent py-3 text-fg outline-none placeholder:text-subtle"
+                    value={telegram}
+                    onChange={(e) => setTelegram(e.target.value)}
+                  />
                 </div>
-              )}
+                {errors.telegram && (
+                  <span className="text-xs font-medium text-brand-red">
+                    {errors.telegram}
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Birth Date & Phone */}
@@ -536,7 +522,7 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
                 );
               }
               if (q.type === 'SINGLE_CHOICE' || q.type === 'YES_NO') {
-                const opts = q.type === 'YES_NO' ? ['Так', 'Ні'] : q.options;
+                const opts = choiceOptions(q) ?? [];
                 return (
                   <div key={q.id} className="flex flex-col gap-2">
                     <label className="text-sm font-semibold text-muted">{q.label}</label>
@@ -577,22 +563,26 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
                   Спосіб оплати внеску
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setPayment('DONATED')}
-                    aria-pressed={payment === 'DONATED'}
-                    className={chip(payment === 'DONATED')}
-                  >
-                    Задонатив онлайн{fee > 0 ? ` · ${fee} грн` : ''}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPayment('AT_EVENT')}
-                    aria-pressed={payment === 'AT_EVENT'}
-                    className={chip(payment === 'AT_EVENT')}
-                  >
-                    Оплачу на заході{feeAtEvent > 0 ? ` · ${feeAtEvent} грн` : ''}
-                  </button>
+                  {fee > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setPayment('DONATED')}
+                      aria-pressed={payment === 'DONATED'}
+                      className={chip(payment === 'DONATED')}
+                    >
+                      Задонатив онлайн · {fee} грн
+                    </button>
+                  )}
+                  {feeAtEvent > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setPayment('AT_EVENT')}
+                      aria-pressed={payment === 'AT_EVENT'}
+                      className={chip(payment === 'AT_EVENT')}
+                    >
+                      Оплачу на заході · {feeAtEvent} грн
+                    </button>
+                  )}
                 </div>
 
                 {payment === 'DONATED' && (
@@ -619,7 +609,7 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
                     <input
                       ref={fileRef}
                       type="file"
-                      accept="image/*,application/pdf,.pdf"
+                      accept={RECEIPT_ACCEPT}
                       className="hidden"
                       onChange={onReceiptChange}
                     />
@@ -640,7 +630,7 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
                         <>
                           <span>⬆️ Додати скриншот оплати або PDF квитанцію</span>
                           <span className="text-xs font-normal text-muted/70">
-                            Формати: JPG, PNG, PDF (до 10 МБ)
+                            Формати: JPG, PNG, WEBP, PDF (до {MAX_UPLOAD_MB} МБ)
                           </span>
                         </>
                       )}

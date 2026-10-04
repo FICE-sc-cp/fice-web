@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/Textarea';
 import { ImageUpload } from '@/components/ImageUpload';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { FormError } from '@/components/ui/FormError';
+import { saveFile } from '@/lib/download';
 import { Spinner } from '@/components/ui/Spinner';
 import { hapticNotify } from '@/lib/telegram';
 
@@ -215,15 +216,11 @@ export default function EventVotingPage() {
   const handleDownloadVotingExcel = async (vId: string, vTitle: string) => {
     try {
       setDownloadingVotingId(vId);
-      const blob = await api.exportVotingResultsBlob(vId);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `voting-${vTitle.slice(0, 30)}-results.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      await saveFile({
+        fileName: `voting-${vTitle.slice(0, 30)}-results.xlsx`,
+        createLink: () => api.votingResultsExportLink(vId),
+        loadBlob: () => api.exportVotingResultsBlob(vId),
+      });
     } catch (err) {
       alert(err instanceof Error ? err.message : 'Не вдалося експортувати Excel');
     } finally {
@@ -252,7 +249,9 @@ export default function EventVotingPage() {
     onSuccess: (res) => {
       setNotifyVotingId(null);
       hapticNotify('success');
-      setNotifyMsg(`Сповіщення надіслано ${res.sentCount} зареєстрованим учасникам!`);
+      setNotifyMsg(
+        `Сповіщення надсилається ${res.recipientsCount} зареєстрованим учасникам. Прогрес — в історії розсилок.`,
+      );
     },
   });
 

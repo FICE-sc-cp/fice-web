@@ -15,7 +15,10 @@ const resolveUser = resolveValidatedTelegramUser as jest.MockedFunction<
 const EVENT = {
   id: 'e1',
   name: 'Event',
-  date: new Date('2026-11-01T18:00:00Z'),
+  date: new Date('2099-11-01T18:00:00Z'),
+  hasTime: true,
+  isDraft: false,
+  noRegistration: false,
   location: null,
   registrationCloseDate: null,
   maxRegistrations: null,
@@ -73,7 +76,9 @@ describe('EventService.register identity', () => {
         upsert: jest.fn().mockResolvedValue({ id: 'b1' }),
       },
       pendingWebRegistration: { create: jest.fn().mockResolvedValue({}) },
+      $queryRaw: jest.fn().mockResolvedValue([]),
     };
+    prisma.$transaction = jest.fn((fn: (tx: unknown) => unknown) => fn(prisma));
     userBot = {
       getUsername: () => 'fice_student_bot',
       getMiniAppUrl: () => 'https://fice-sc.kpi.ua/app',
@@ -130,6 +135,32 @@ describe('EventService.register identity', () => {
     );
   });
 
+  describe('payment rules', () => {
+    beforeEach(() => {
+      prisma.event.findUnique.mockResolvedValue({
+        ...EVENT,
+        feeAmount: '150.00',
+        feeAtEventAmount: null,
+      });
+    });
+
+    it('refuses NONE for a paid event', async () => {
+      await expect(
+        service.register('e1', dto({ payment: 'NONE' })),
+      ).rejects.toThrow('оберіть спосіб оплати');
+      expect(prisma.pendingWebRegistration.create).not.toHaveBeenCalled();
+    });
+
+    it('refuses DONATED with an external receipt URL', async () => {
+      await expect(
+        service.register(
+          'e1',
+          dto({ payment: 'DONATED', receiptUrl: 'https://evil.example/r.jpg' }),
+        ),
+      ).rejects.toThrow('квитанції');
+    });
+  });
+
   describe('Mini App (validated initData)', () => {
     beforeEach(() => {
       resolveUser.mockReturnValue({
@@ -177,7 +208,7 @@ describe('EventService.register identity', () => {
       expect(prisma.eventRegistration.findFirst).toHaveBeenCalledWith({
         where: {
           eventId: 'e1',
-          OR: [{ telegramTag: '@attacker' }, { telegramUserId: 42n }],
+          OR: [{ telegramUserId: 42n }, { telegramTag: '@attacker' }],
         },
       });
     });

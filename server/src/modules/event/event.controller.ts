@@ -4,7 +4,9 @@ import {
   Controller,
   Delete,
   Get,
+  ForbiddenException,
   Headers,
+  NotFoundException,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -24,6 +26,9 @@ import {
 import { Throttle } from '@nestjs/throttler';
 import { REGISTER_LIMIT_PER_IP, THROTTLE_TTL } from '../../common/throttle';
 import { Admin } from '../../auth/admin.decorator';
+import { AdminAccessService } from '../../auth/admin-access.service';
+import { DownloadTokenService } from '../../auth/download-token.service';
+import { sendXlsx } from '../../common/xlsx-response';
 import {
   extractTelegramUser,
   resolveValidatedTelegramUser,
@@ -33,6 +38,7 @@ import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { AddEventPartnerDto } from './dto/add-event-partner.dto';
 import { CreateEventDto } from './dto/create-event.dto';
 import { EventQueryDto } from './dto/event-query.dto';
+import { RegistrationListQueryDto } from './dto/registration-list-query.dto';
 import { CreateEventRegistrationDto } from './dto/create-event-registration.dto';
 import {
   CancelRegistrationDto,
@@ -42,7 +48,11 @@ import {
 import { RejectPaymentDto } from './dto/reject-payment.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { EventEntity } from './entities/event.entity';
-import { EventService, SESSION_TOKEN_PATTERN } from './event.service';
+import {
+  EventService,
+  SESSION_TOKEN_PATTERN,
+  toPublicEvent,
+} from './event.service';
 
 @ApiTags('events')
 @Controller('event')
@@ -50,6 +60,8 @@ export class EventController {
   constructor(
     private readonly eventService: EventService,
     private readonly configService: ConfigService,
+    private readonly adminAccess: AdminAccessService,
+    private readonly downloads: DownloadTokenService,
   ) {}
 
   private resolveTelegramUser(
@@ -74,13 +86,23 @@ export class EventController {
   @Get()
   @ApiOperation({ summary: 'List events with details and partners' })
   @ApiPaginatedResponse(EventEntity)
-  findAll(@Query() query: EventQueryDto) {
-    return this.eventService.findAll(
+  async findAll(
+    @Query() query: EventQueryDto,
+    @Headers('x-telegram-init-data') initData?: string,
+  ) {
+    const isAdmin = await this.adminAccess.isAdmin(initData);
+    if (query.draft && !isAdmin) {
+      throw new ForbiddenException('Чернетки доступні лише адміністраторам');
+    }
+    const result = await this.eventService.findAll(
       query,
       query.past,
       query.abitfest,
-      query.draft,
+      !!query.draft,
     );
+    return isAdmin
+      ? result
+      : { ...result, items: result.items.map(toPublicEvent) };
   }
 
   @Get('registration-session/:token')
@@ -110,8 +132,18 @@ export class EventController {
   @Get(':id')
   @ApiOperation({ summary: 'Get an event by id' })
   @ApiOkResponse({ type: EventEntity })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.eventService.findOne(id);
+  async findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Headers('x-telegram-init-data') initData?: string,
+  ) {
+    const event = await this.eventService.findOne(id);
+    const isAdmin = await this.adminAccess.isAdmin(initData);
+    if (event.isDraft && !isAdmin) {
+      throw new NotFoundException(`Event ${id} not found`);
+    }
+    return isAdmin
+      ? this.eventService.withStaffStatus(event)
+      : toPublicEvent(event);
   }
 
   @Get(':id/checkin/access')
@@ -285,9 +317,9 @@ export class EventController {
   @ApiOperation({ summary: 'List event registrations (admin)' })
   listRegistrations(
     @Param('id', ParseUUIDPipe) id: string,
-    @Query() pagination: PaginationQueryDto,
+    @Query() query: RegistrationListQueryDto,
   ) {
-    return this.eventService.listRegistrations(id, pagination);
+    return this.eventService.listRegistrations(id, query);
   }
 
   @Get(':id/registrations/export')
@@ -298,13 +330,32 @@ export class EventController {
     @Res() res: Response,
   ) {
     const buffer = await this.eventService.exportRegistrations(id);
-    res.set({
-      'Content-Type':
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'Content-Disposition': `attachment; filename="event-${id}-registrations.xlsx"`,
-      'Content-Length': buffer.length.toString(),
-    });
-    res.send(buffer);
+    sendXlsx(res, buffer, `event-${id}-registrations.xlsx`);
+  }
+
+  @Post(':id/registrations/export-link')
+  @Admin()
+  @ApiOperation({
+    summary:
+      'Create a one-time, 2-minute link to the registrations Excel (admin)',
+  })
+  createRegistrationsExportLink(@Param('id', ParseUUIDPipe) id: string) {
+    const token = this.downloads.issue(`registrations:${id}`);
+    return { path: `/event/${id}/registrations/export-file?token=${token}` };
+  }
+
+  @Get(':id/registrations/export-file')
+  @ApiOperation({
+    summary: 'Download the registrations Excel with a one-time link',
+  })
+  async exportRegistrationsFile(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('token') token: string | undefined,
+    @Res() res: Response,
+  ) {
+    this.downloads.redeem(token, `registrations:${id}`);
+    const buffer = await this.eventService.exportRegistrations(id);
+    sendXlsx(res, buffer, `event-${id}-registrations.xlsx`);
   }
 
   @Delete(':id/registrations/:registrationId')

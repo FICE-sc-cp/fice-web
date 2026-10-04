@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Bot, GrammyError, InputFile } from 'grammy';
-import type { User } from 'grammy/types';
+import type { ChatMember, User } from 'grammy/types';
 import { UPLOAD_DIR, UPLOAD_URL_PREFIX } from '../upload/upload.constants';
 import { PrismaService } from '../database/prisma.service';
 import { ProjectParticipantService } from '../modules/project_participant/project_participant.service';
@@ -24,6 +24,26 @@ import { PollingStatus, PollingSupervisor } from './polling';
 import { errorMessage } from '../common/log-safe';
 
 const DEPARTMENT_CHATS_TTL_MS = 60_000;
+const MEMBERSHIP_CACHE_MS = 2 * 60_000;
+const MEMBERSHIP_TIMEOUT_MS = 5_000;
+
+type GrammySignal = Parameters<Bot['api']['getChatMember']>[2];
+
+export function isActiveMember(member: ChatMember): boolean {
+  return (
+    member.status === 'creator' ||
+    member.status === 'administrator' ||
+    member.status === 'member' ||
+    (member.status === 'restricted' && member.is_member)
+  );
+}
+
+export function isUnknownMemberError(err: GrammyError): boolean {
+  return (
+    err.error_code === 400 &&
+    /user not found|member not found|participant/i.test(err.description)
+  );
+}
 
 export interface ChannelPostOptions {
   text: string;
@@ -54,6 +74,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
   private syncInitialTimeout?: NodeJS.Timeout;
   private syncInterval?: NodeJS.Timeout;
   private polling?: PollingSupervisor;
+  private readonly membershipCache = new Map<string, number>();
 
   constructor(
     private readonly configService: ConfigService,
@@ -423,12 +444,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     if (!this.bot) return 'error';
     try {
       const member = await this.bot.api.getChatMember(chatId, userId);
-      const isMember =
-        member.status === 'creator' ||
-        member.status === 'administrator' ||
-        member.status === 'member' ||
-        (member.status === 'restricted' && member.is_member);
-      return isMember ? 'member' : 'left';
+      return isActiveMember(member) ? 'member' : 'left';
     } catch (err) {
       if (err instanceof GrammyError) {
         if (
@@ -528,23 +544,41 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       this.logger.warn('Cannot check chat membership: bot is not configured.');
       return false;
     }
+    const key = `${chatId}:${userId}`;
+    const cachedUntil = this.membershipCache.get(key);
+    if (cachedUntil !== undefined && cachedUntil > Date.now()) return true;
+
+    let member: ChatMember;
     try {
-      const member = await this.bot.api.getChatMember(chatId, userId);
-      const isMember =
-        member.status === 'creator' ||
-        member.status === 'administrator' ||
-        member.status === 'member';
-      this.logger.log(
-        `Membership check: user ${userId} in chat ${chatId} -> status="${member.status}" (allowed=${isMember})`,
+      member = await this.bot.api.getChatMember(
+        chatId,
+        userId,
+        AbortSignal.timeout(MEMBERSHIP_TIMEOUT_MS) as GrammySignal,
       );
-      return isMember;
     } catch (err) {
+      if (err instanceof GrammyError && isUnknownMemberError(err)) {
+        this.membershipCache.delete(key);
+        return false;
+      }
       this.logger.warn(
         `Failed to check membership of user ${userId} in chat ${chatId}: ` +
           errorMessage(err),
       );
-      return false;
+      throw new ServiceUnavailableException(
+        'Не вдалося перевірити членство в адмін-групі через Telegram. Спробуй ще раз за хвилину.',
+      );
     }
+
+    const isMember = isActiveMember(member);
+    if (isMember) {
+      this.membershipCache.set(key, Date.now() + MEMBERSHIP_CACHE_MS);
+    } else {
+      this.membershipCache.delete(key);
+      this.logger.log(
+        `Membership check: user ${userId} in chat ${chatId} -> status="${member.status}" (not allowed)`,
+      );
+    }
+    return isMember;
   }
 
   async notifyGroup(text: string): Promise<void> {

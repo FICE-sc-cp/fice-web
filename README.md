@@ -92,8 +92,9 @@ docker compose up --build
 | API docs (Scalar) | http://localhost:3001/api/docs |
 | PostgreSQL | localhost:5433 |
 
-All ports are bound to `127.0.0.1`. The `server` container automatically runs
-`prisma migrate deploy` on startup, so the schema is always in sync. The
+All ports are bound to `127.0.0.1`. Database migrations are applied before the
+new API starts (see [Migrations on deploy](#migrations-on-deploy)), so the schema
+is always in sync. The
 Telegram bots are optional locally: without their tokens they are skipped. Use
 separate dev bots; never run a laptop stack with the production tokens.
 
@@ -209,6 +210,24 @@ docker compose exec server npm run db:seed:departments
 `db:seed:departments` only creates missing departments with the exact names the
 website expects; it never updates or deletes anything. `GET /health` on the API
 reports the polling state of both bots and returns 503 while one is restarting.
+
+### Migrations on deploy
+
+Later deploys stay `git pull && docker compose up -d --build`. Migrations run in
+two places:
+
+1. **While the server image is built.** If Postgres is reachable on
+   `127.0.0.1:5433`, the build applies pending migrations
+   (`server/scripts/migrate-gate.sh`, password passed as a build secret, never
+   stored in the image). If a migration fails, the build fails, compose stops
+   before touching any container, and the running API and bots keep serving the
+   old version. Fix the migration, mark the failed one with
+   `docker compose run --rm migrate npx prisma migrate resolve --rolled-back <name>`
+   if Prisma asks for it, and deploy again.
+2. **In the one-shot `migrate` service**, which `server` waits for. This covers
+   the first start, when the database is not running yet during the build.
+
+Take a database backup before deploying a change that contains migrations.
 
 ---
 

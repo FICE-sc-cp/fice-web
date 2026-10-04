@@ -1,3 +1,5 @@
+import { cache } from 'react';
+
 // Base URL for data fetches. On the server (SSR/RSC) reach the backend via the
 // internal docker network name (`INTERNAL_API_URL`, e.g. http://server:3001);
 // in the browser go through the same-origin /api-proxy rewrite.
@@ -134,6 +136,9 @@ export interface EventItem {
   timeNote: string | null;
   registrationCloseDate: string | null;
   maxRegistrations?: number | null;
+  registrationOpen?: boolean;
+  registrationClosesAt?: string | null;
+  isPast?: boolean;
   photoAlbumUrl: string | null;
   feeAmount: string | null;
   feeAtEventAmount: string | null;
@@ -200,8 +205,10 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${apiBase()}${path}`, { cache: 'no-store', ...init });
+const SERVER_FETCH_TIMEOUT_MS = 8_000;
+
+async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(url, { cache: 'no-store', ...init });
   if (!res.ok) {
     let msg = `Помилка запиту (${res.status})`;
     try {
@@ -213,6 +220,22 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new ApiError(msg, res.status);
   }
   return res.json() as Promise<T>;
+}
+
+const serverGet = cache((url: string) =>
+  fetchJson<unknown>(url, {
+    signal: AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS),
+  }),
+);
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const url = `${apiBase()}${path}`;
+  if (typeof window !== 'undefined') return fetchJson<T>(url, init);
+  if (!init) return serverGet(url) as Promise<T>;
+  return fetchJson<T>(url, {
+    ...init,
+    signal: init.signal ?? AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS),
+  });
 }
 
 export function mediaUrl(path: string | null | undefined): string | null {
@@ -283,7 +306,6 @@ export interface EventRegistrationResult {
 // project chat (or added manually in the admin).
 export interface ProjectParticipant {
   fullName: string;
-  telegramTag: string | null;
   photo: string | null;
 }
 
@@ -327,7 +349,21 @@ export const fice = {
       method: 'POST',
       body: form,
     });
-    if (!res.ok) throw new Error(`Upload failed ${res.status}`);
+    if (!res.ok) {
+      let msg =
+        res.status === 413
+          ? 'Файл завеликий: максимум 5 МБ.'
+          : res.status === 429
+            ? 'Забагато завантажень. Спробуйте трохи згодом.'
+            : `Не вдалося завантажити файл (${res.status})`;
+      try {
+        const data = await res.json();
+        if (data?.message) {
+          msg = Array.isArray(data.message) ? data.message.join(', ') : data.message;
+        }
+      } catch {}
+      throw new ApiError(msg, res.status);
+    }
     return res.json() as Promise<{ url: string }>;
   },
   fundraisers: (limit = 6, page = 1, status?: FundraiserStatus) =>
@@ -464,6 +500,15 @@ export const fice = {
     ),
   votingScreen: (votingId: string) =>
     request<VotingScreenData>(`/voting/${votingId}/screen`),
+  getCheckInEvents: (initData?: string, tgUserId?: string, tgTag?: string) => {
+    const params = new URLSearchParams();
+    if (tgUserId) params.set('tgUserId', tgUserId);
+    if (tgTag) params.set('tgTag', tgTag);
+    const qs = params.toString() ? `?${params.toString()}` : '';
+    return request<CheckInEventSummary[]>(`/event/checkin/events${qs}`, {
+      headers: initData ? { 'x-telegram-init-data': initData } : undefined,
+    });
+  },
   getCheckInAccess: (
     eventId: string,
     initData?: string,
@@ -555,6 +600,16 @@ export const fice = {
     });
   },
 };
+
+export interface CheckInEventSummary {
+  id: string;
+  name: string;
+  date: string;
+  hasTime?: boolean;
+  location: string | null;
+  photoUrl: string | null;
+  isAdmin: boolean;
+}
 
 export interface CheckInItem {
   id: string;

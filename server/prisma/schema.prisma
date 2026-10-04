@@ -187,6 +187,7 @@ model Event {
   time                  String?   @db.VarChar(10)
   allowedFaculties      String[]  @default([])
   checkInStaffTags      String[]  @default([])
+  checkInStaffIds       BigInt[]  @default([])
   baseQuestionsConfig   Json?
 
   detailsId String?       @unique @db.Uuid
@@ -286,6 +287,7 @@ model EventRegistration {
   telegramTag            String              @db.VarChar(50)
   group                  String              @db.VarChar(10)
   birthDate              DateTime?
+  phoneNumber            String?             @db.VarChar(20)
   source                 RegistrationSource  @default(WEB)
   payment                RegistrationPayment @default(NONE)
   paymentStatus          PaymentStatus       @default(NOT_REQUIRED)
@@ -441,6 +443,7 @@ model VotingCandidate {
   voting      EventVoting @relation(fields: [votingId], references: [id], onDelete: Cascade)
   votes       Vote[]
 
+  @@unique([votingId, submittedByTelegramId])
   @@index([votingId])
   @@index([submittedByTelegramId])
 }
@@ -468,6 +471,12 @@ enum BroadcastTarget {
   ALL_BOT_USERS
 }
 
+enum BroadcastStatus {
+  SENDING
+  COMPLETED
+  INTERRUPTED
+}
+
 model BroadcastMessage {
   id              String          @id @default(uuid()) @db.Uuid
   eventId         String?         @db.Uuid
@@ -479,6 +488,8 @@ model BroadcastMessage {
   recipientsCount Int             @default(0)
   sentCount       Int             @default(0)
   failedCount     Int             @default(0)
+  status          BroadcastStatus @default(COMPLETED)
+  finishedAt      DateTime?
   createdAt       DateTime        @default(now())
 
   event           Event?          @relation(fields: [eventId], references: [id], onDelete: SetNull)
@@ -486,3 +497,15 @@ model BroadcastMessage {
   @@index([eventId])
 }
 
+
+model PublicUpload {
+  id                String    @id @default(uuid()) @db.Uuid
+  filename          String    @unique @db.VarChar(64)
+  size              Int
+  ipHash            String    @db.VarChar(64)
+  createdAt         DateTime  @default(now())
+  unreferencedSince DateTime?
+
+  @@index([ipHash, createdAt])
+  @@index([createdAt])
+}

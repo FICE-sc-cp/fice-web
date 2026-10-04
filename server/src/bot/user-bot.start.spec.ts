@@ -7,6 +7,12 @@ const TOKEN = 'a'.repeat(32);
 
 describe('UserBotService /start reg_ confirmation', () => {
   let startHandler: Handler;
+  let service: UserBotService;
+
+  const start = async (ctx: unknown) => {
+    await startHandler(ctx);
+    await (service as any).registrationQueue.onIdle();
+  };
   let prisma: any;
   let spies: jest.SpyInstance[];
 
@@ -61,13 +67,26 @@ describe('UserBotService /start reg_ confirmation', () => {
         }),
       },
       eventQuestion: { findMany: jest.fn().mockResolvedValue([]) },
+      event: {
+        findUnique: jest.fn().mockResolvedValue({
+          date: new Date('2099-01-01T12:00:00Z'),
+          hasTime: true,
+          registrationCloseDate: null,
+          noRegistration: false,
+          isDraft: false,
+          maxRegistrations: null,
+        }),
+      },
+      $queryRaw: jest.fn().mockResolvedValue([]),
     };
+    prisma.eventRegistration.count = jest.fn().mockResolvedValue(0);
+    prisma.$transaction = jest.fn((fn: (tx: unknown) => unknown) => fn(prisma));
 
     const env: Record<string, string> = {
       TELEGRAM_BOT_TOKEN: '111:admin',
       USER_BOT_TOKEN: '222:user',
     };
-    const service = new UserBotService(
+    service = new UserBotService(
       { get: (key: string) => env[key] } as never,
       prisma,
     );
@@ -84,9 +103,22 @@ describe('UserBotService /start reg_ confirmation', () => {
     reply: jest.fn().mockResolvedValue(undefined),
   });
 
+  it('does not hold up update polling while completing a registration', async () => {
+    let release!: (value: unknown) => void;
+    prisma.pendingWebRegistration.findUnique.mockReturnValue(
+      new Promise((resolve) => (release = resolve)),
+    );
+
+    await startHandler(ctxFrom({ username: 'Victim' }));
+
+    expect((service as any).registrationQueue.size).toBe(1);
+    release(null);
+    await (service as any).registrationQueue.onIdle();
+  });
+
   it('refuses to bind the registration to a different Telegram account', async () => {
     const ctx = ctxFrom({ username: 'attacker' });
-    await startHandler(ctx);
+    await start(ctx);
 
     expect(prisma.eventRegistration.create).not.toHaveBeenCalled();
     expect(prisma.pendingWebRegistration.update).not.toHaveBeenCalled();
@@ -97,13 +129,13 @@ describe('UserBotService /start reg_ confirmation', () => {
 
   it('refuses an account without a username', async () => {
     const ctx = ctxFrom({});
-    await startHandler(ctx);
+    await start(ctx);
 
     expect(prisma.eventRegistration.create).not.toHaveBeenCalled();
   });
 
   it('binds the registration to the account that owns the typed tag', async () => {
-    await startHandler(ctxFrom({ username: 'Victim' }));
+    await start(ctxFrom({ username: 'Victim' }));
 
     expect(prisma.eventRegistration.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -127,7 +159,7 @@ describe('UserBotService /start reg_ confirmation', () => {
       isBlocked: true,
     });
     const ctx = ctxFrom({ username: 'Victim' });
-    await startHandler(ctx);
+    await start(ctx);
 
     expect(prisma.blockedUser.findFirst).toHaveBeenCalledWith({
       where: {
@@ -141,8 +173,26 @@ describe('UserBotService /start reg_ confirmation', () => {
     );
   });
 
+  it('refuses to complete a website registration after the deadline', async () => {
+    prisma.event.findUnique.mockResolvedValue({
+      date: new Date('2000-01-01T12:00:00Z'),
+      hasTime: true,
+      registrationCloseDate: null,
+      noRegistration: false,
+      isDraft: false,
+      maxRegistrations: null,
+    });
+    const ctx = ctxFrom({ username: 'Victim' });
+    await start(ctx);
+
+    expect(prisma.eventRegistration.create).not.toHaveBeenCalled();
+    expect(ctx.reply).toHaveBeenCalledWith(
+      expect.stringContaining('Реєстрацію на цей захід закрито'),
+    );
+  });
+
   it('checks for an existing registration by exact tag, never with ILIKE', async () => {
-    await startHandler(ctxFrom({ username: 'Victim' }));
+    await start(ctxFrom({ username: 'Victim' }));
 
     expect(prisma.eventRegistration.findFirst).toHaveBeenCalledWith({
       where: {

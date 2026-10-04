@@ -6,7 +6,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { BotService } from '../../bot/bot.service';
-import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { Prisma } from '@prisma/client';
+import { ApplicantQueryDto } from './dto/applicant-query.dto';
 import { paginated, skipFor } from '../../common/pagination';
 import { parseKpiGroup } from '../../common/kpi-groups';
 import { CreateApplicantDto } from './dto/create-applicant.dto';
@@ -169,15 +170,36 @@ export class ApplicantService {
     await this.bot.notifyGroup(text);
   }
 
-  async findAll({ page, limit }: PaginationQueryDto) {
+  async findAll({ page, limit, search, departmentId }: ApplicantQueryDto) {
+    const text = search?.trim()
+      ? { contains: search.trim(), mode: 'insensitive' as const }
+      : undefined;
+    const where: Prisma.ApplicantWhereInput = {
+      ...(text
+        ? {
+            OR: [
+              { lastName: text },
+              { firstName: text },
+              { middleName: text },
+              { telegramTag: text },
+              { group: text },
+              { phoneNumber: text },
+            ],
+          }
+        : {}),
+      ...(departmentId
+        ? { applicantDepartments: { some: { departmentId } } }
+        : {}),
+    };
     const [items, total] = await this.prisma.$transaction([
       this.prisma.applicant.findMany({
+        where,
         skip: skipFor(page, limit),
         take: limit,
         orderBy: { createdAt: 'desc' },
         include: this.include,
       }),
-      this.prisma.applicant.count(),
+      this.prisma.applicant.count({ where }),
     ]);
     return paginated(items, total, page, limit);
   }

@@ -70,9 +70,13 @@ export default function EditEventPage() {
         isDraft: v.isDraft ?? false,
       });
     },
-    onSuccess: () => {
+    onSuccess: (saved) => {
       qc.invalidateQueries({ queryKey: ['events'] });
       qc.invalidateQueries({ queryKey: ['event', id] });
+      if (saved.checkInStaffUnresolved?.length) {
+        hapticNotify('warning');
+        return;
+      }
       hapticNotify('success');
       router.push('/events');
     },
@@ -112,6 +116,7 @@ export default function EditEventPage() {
           onSubmit={(v) => mutation.mutate(v)}
           error={mutation.error}
           draftKey={`edit_event_${id}`}
+          unresolvedStaffTags={event?.checkInStaffUnresolved}
           partnersSlot={
             event ? (
               <EventPartners eventId={event.id} attached={event.eventPartners ?? []} />

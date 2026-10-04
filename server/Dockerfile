@@ -11,7 +11,9 @@ COPY . .
 RUN npx prisma generate
 RUN npm run build
 
+RUN --mount=type=secret,id=postgres_password,required=false \
+    sh scripts/migrate-gate.sh
+
 EXPOSE 3001
 
-# Apply any pending migrations, then start the API.
-CMD ["sh", "-c", "npx prisma migrate deploy && exec node dist/main"]
+CMD ["node", "dist/main"]

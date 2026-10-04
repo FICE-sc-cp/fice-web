@@ -4,7 +4,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { VotingStatus } from '@prisma/client';
+import { ownUploadExists } from '../../upload/own-upload';
 import { VotingService } from './voting.service';
+
+jest.mock('../../upload/own-upload', () => ({
+  ...jest.requireActual('../../upload/own-upload'),
+  ownUploadExists: jest.fn(() => true),
+}));
 
 describe('VotingService', () => {
   let service: VotingService;
@@ -53,7 +59,7 @@ describe('VotingService', () => {
       sendBroadcast: jest.fn().mockResolvedValue({ sent: 5, failed: 0 }),
     };
 
-    service = new VotingService(prisma, userBot, config);
+    service = new VotingService(prisma, userBot, config, {} as never);
   });
 
   describe('castVote', () => {
@@ -78,6 +84,22 @@ describe('VotingService', () => {
       await expect(
         service.castVote(votingId, telegramId, { candidateId }),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    it('only counts votes for approved candidates', async () => {
+      prisma.eventVoting.findUnique.mockResolvedValue({
+        id: votingId,
+        status: VotingStatus.ACTIVE,
+        allowChangeVote: false,
+      });
+      prisma.votingCandidate.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.castVote(votingId, telegramId, { candidateId }),
+      ).rejects.toThrow(NotFoundException);
+      expect(prisma.votingCandidate.findFirst).toHaveBeenCalledWith({
+        where: { id: candidateId, votingId, status: 'APPROVED' },
+      });
     });
 
     it('rejects if user has already voted and allowChangeVote is false', async () => {
@@ -158,6 +180,27 @@ describe('VotingService', () => {
     });
   });
 
+  describe('getPublicVoting', () => {
+    it('treats everyone as registered at an event without registration', async () => {
+      prisma.eventVoting.findUnique.mockResolvedValue({
+        id: 'v1',
+        eventId: 'e1',
+        status: VotingStatus.ACTIVE,
+        onlyRegistered: true,
+        event: { id: 'e1', name: 'Event', noRegistration: true },
+        candidates: [],
+        _count: { votes: 0 },
+      });
+      prisma.vote.findUnique.mockResolvedValue(null);
+      prisma.eventRegistration.findFirst.mockResolvedValue(null);
+      prisma.votingCandidate.findFirst.mockResolvedValue(null);
+
+      const view: any = await service.getPublicVoting('v1', BigInt(5));
+
+      expect(view.isRegistered).toBe(true);
+    });
+  });
+
   describe('submitCandidate & moderation', () => {
     const votingId = 'vote-uuid';
     const telegramId = BigInt(999888);
@@ -190,6 +233,43 @@ describe('VotingService', () => {
           photoUrl: '/uploads/batman.jpg',
         }),
       ).rejects.toThrow(BadRequestException);
+    });
+
+    const openVoting = {
+      id: votingId,
+      eventId: 'event-uuid',
+      allowSubmissions: true,
+      submissionsOpen: true,
+      onlyRegistered: false,
+    };
+
+    it('refuses a photo that is not our own upload', async () => {
+      prisma.eventVoting.findUnique.mockResolvedValue(openVoting);
+      (ownUploadExists as jest.Mock).mockReturnValueOnce(false);
+
+      await expect(
+        service.submitCandidate(votingId, telegramId, {
+          name: 'Batman',
+          photoUrl: 'https://tracker.example/pixel.jpg',
+        }),
+      ).rejects.toThrow('Фото потрібно завантажити');
+    });
+
+    it('refuses to reopen an already approved entry', async () => {
+      prisma.eventVoting.findUnique.mockResolvedValue(openVoting);
+      prisma.votingCandidate.findFirst.mockResolvedValue({
+        id: 'cand-1',
+        status: 'APPROVED',
+      });
+      prisma.votingCandidate.update = jest.fn();
+
+      await expect(
+        service.submitCandidate(votingId, telegramId, {
+          name: 'Batman 2',
+          photoUrl: '/uploads/0e352379-dbd8-407f-98a5-38d60ab53528.jpg',
+        }),
+      ).rejects.toThrow('вже схвалено');
+      expect(prisma.votingCandidate.update).not.toHaveBeenCalled();
     });
 
     it('creates candidate with PENDING status on valid submission', async () => {

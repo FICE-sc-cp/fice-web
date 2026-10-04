@@ -34,6 +34,7 @@ declare global {
           callback?: (text: string) => boolean | void,
         ) => void;
         closeScanQrPopup?: () => void;
+        isVersionAtLeast?: (version: string) => boolean;
       };
     };
   }
@@ -45,6 +46,8 @@ export interface TelegramUser {
   lastName?: string;
   username?: string;
 }
+
+let activeBackHandler: (() => void) | null = null;
 
 export function useTelegram() {
   const [ready, setReady] = useState(false);
@@ -123,8 +126,10 @@ export function useTelegram() {
     try {
       const tg = window.Telegram?.WebApp;
       if (tg?.BackButton) {
-        tg.BackButton.show();
+        if (activeBackHandler) tg.BackButton.offClick(activeBackHandler);
+        activeBackHandler = cb;
         tg.BackButton.onClick(cb);
+        tg.BackButton.show();
       }
     } catch {}
   };
@@ -133,6 +138,8 @@ export function useTelegram() {
     try {
       const tg = window.Telegram?.WebApp;
       if (tg?.BackButton) {
+        if (activeBackHandler) tg.BackButton.offClick(activeBackHandler);
+        activeBackHandler = null;
         tg.BackButton.hide();
       }
     } catch {}
@@ -142,19 +149,19 @@ export function useTelegram() {
     text: string,
     onScan: (scannedText: string) => boolean | void,
   ) => {
-    try {
-      const tg = window.Telegram?.WebApp;
-      if (tg?.showScanQrPopup) {
+    const tg = window.Telegram?.WebApp;
+    if (tg?.showScanQrPopup && tg.isVersionAtLeast?.('6.4')) {
+      try {
         tg.showScanQrPopup({ text }, onScan);
-      } else {
-        const manual = window.prompt(
-          'Сканер доступний у додатку Telegram на телефоні.\nВведіть код квитка або ID учасника вручну:',
-        );
-        if (manual) onScan(manual.trim());
+        return;
+      } catch (e) {
+        console.error('Scan QR error:', e);
       }
-    } catch (e) {
-      console.error('Scan QR error:', e);
     }
+    const manual = window.prompt(
+      'Сканер доступний у додатку Telegram на телефоні.\nВведіть код квитка або ID учасника вручну:',
+    );
+    if (manual) onScan(manual.trim());
   };
 
   const closeQrScanner = () => {

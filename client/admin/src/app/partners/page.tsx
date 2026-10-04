@@ -13,10 +13,21 @@ import { hapticNotify } from '@/lib/telegram';
 export default function PartnersListPage() {
   const qc = useQueryClient();
   const { data, isLoading, isError } = useQuery({
-    queryKey: ['partners'],
-    queryFn: () => api.partners(),
+    queryKey: ['partners', 'all'],
+    queryFn: () => api.allPartners(),
   });
   const [pending, setPending] = useState<Partner | null>(null);
+  const applications = (data?.items ?? []).filter((p) => !p.isApproved);
+  const approved = (data?.items ?? []).filter((p) => p.isApproved);
+
+  const approve = useMutation({
+    mutationFn: (id: string) => api.approvePartner(id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['partners'] });
+      hapticNotify('success');
+    },
+    onError: () => hapticNotify('error'),
+  });
 
   const del = useMutation({
     mutationFn: (id: string) => api.deletePartner(id),
@@ -47,8 +58,59 @@ export default function PartnersListPage() {
       ) : !data?.items.length ? (
         <p className="py-12 text-center text-sm text-subtle">Партнерів ще немає.</p>
       ) : (
+        <>
+        {applications.length > 0 && (
+          <section className="mb-6">
+            <h2 className="mb-2 text-sm font-bold text-amber-300">
+              Заявки на партнерство ({applications.length})
+            </h2>
+            <ul className="flex flex-col gap-3">
+              {applications.map((p) => (
+                <li
+                  key={p.id}
+                  className="space-y-2 rounded-2xl border border-amber-400/40 bg-amber-400/5 p-4"
+                >
+                  <p className="font-semibold">{p.name}</p>
+                  {p.websiteLink && (
+                    <a
+                      href={p.websiteLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block truncate text-xs text-brand-cyan underline"
+                    >
+                      {p.websiteLink}
+                    </a>
+                  )}
+                  {(p.contactName || p.contactMethod) && (
+                    <p className="text-xs text-muted">
+                      Контакт: {[p.contactName, p.contactMethod].filter(Boolean).join(' · ')}
+                    </p>
+                  )}
+                  {p.proposal && (
+                    <p className="whitespace-pre-line rounded-xl bg-bg-soft p-3 text-sm text-fg">
+                      {p.proposal}
+                    </p>
+                  )}
+                  <div className="flex gap-2 pt-1">
+                    <Button
+                      type="button"
+                      disabled={approve.isPending}
+                      onClick={() => approve.mutate(p.id)}
+                    >
+                      Схвалити
+                    </Button>
+                    <Button type="button" variant="danger" onClick={() => setPending(p)}>
+                      Видалити
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+        {approved.length > 0 && (
         <ul className="flex flex-col gap-3">
-          {data.items.map((p) => {
+          {approved.map((p) => {
             const logo = mediaUrl(p.logoImage);
             return (
               <li
@@ -97,6 +159,8 @@ export default function PartnersListPage() {
             );
           })}
         </ul>
+        )}
+        </>
       )}
 
       <ConfirmDialog

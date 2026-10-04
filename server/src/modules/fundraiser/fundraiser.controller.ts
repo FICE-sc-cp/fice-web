@@ -3,7 +3,9 @@ import {
   Controller,
   Delete,
   Get,
+  Headers,
   HttpCode,
+  NotFoundException,
   Param,
   ParseUUIDPipe,
   Patch,
@@ -16,7 +18,9 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { FundraiserStatus } from '@prisma/client';
 import { Admin } from '../../auth/admin.decorator';
+import { AdminAccessService } from '../../auth/admin-access.service';
 import { ApiPaginatedResponse } from '../../common/dto/paginated.dto';
 import { CreateFundraiserDto } from './dto/create-fundraiser.dto';
 import { FundraiserQueryDto } from './dto/fundraiser-query.dto';
@@ -29,7 +33,10 @@ import { FundraiserService } from './fundraiser.service';
 @ApiTags('fundraisers')
 @Controller('fundraiser')
 export class FundraiserController {
-  constructor(private readonly fundraiserService: FundraiserService) {}
+  constructor(
+    private readonly fundraiserService: FundraiserService,
+    private readonly adminAccess: AdminAccessService,
+  ) {}
 
   @Post()
   @Admin()
@@ -54,15 +61,32 @@ export class FundraiserController {
   @Get()
   @ApiOperation({ summary: 'List fundraisers, optionally filtered by status' })
   @ApiPaginatedResponse(FundraiserEntity)
-  findAll(@Query() query: FundraiserQueryDto) {
-    return this.fundraiserService.findAll(query, query.status);
+  async findAll(
+    @Query() query: FundraiserQueryDto,
+    @Headers('x-telegram-init-data') initData?: string,
+  ) {
+    const includeDrafts = await this.adminAccess.draftsAllowed(
+      query.draft || query.status === FundraiserStatus.DRAFT,
+      initData,
+    );
+    return this.fundraiserService.findAll(query, query.status, includeDrafts);
   }
 
   @Get(':id')
   @ApiOperation({ summary: 'Get a fundraiser by id' })
   @ApiOkResponse({ type: FundraiserEntity })
-  findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.fundraiserService.findOne(id);
+  async findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Headers('x-telegram-init-data') initData?: string,
+  ) {
+    const fundraiser = await this.fundraiserService.findOne(id);
+    if (
+      fundraiser.status === FundraiserStatus.DRAFT &&
+      !(await this.adminAccess.isAdmin(initData))
+    ) {
+      throw new NotFoundException(`Fundraiser ${id} not found`);
+    }
+    return fundraiser;
   }
 
   @Patch(':id')
