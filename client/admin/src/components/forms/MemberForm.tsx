@@ -10,6 +10,10 @@ import { Button } from '../ui/Button';
 import { FormError } from '@/components/ui/FormError';
 import { useFormErrors } from '@/lib/formErrors';
 import { ImageUpload } from '../ImageUpload';
+import {
+  DEFAULT_PHOTO_FOCUS,
+  PhotoFocusEditor,
+} from '../PhotoFocusEditor';
 import { useMainButton } from '@/lib/telegram';
 
 const schema = z.object({
@@ -28,6 +32,9 @@ const schema = z.object({
     })
     .optional(),
   photo: z.string().nullable().optional(),
+  photoFocusX: z.number().int().min(0).max(100),
+  photoFocusY: z.number().int().min(0).max(100),
+  photoZoom: z.number().int().min(100).max(300),
   telegramTag: z.string().max(50, 'Максимум 50 символів').optional(),
 });
 
@@ -72,12 +79,25 @@ export function MemberForm({
       description: '',
       order: '',
       photo: null,
+      photoFocusX: DEFAULT_PHOTO_FOCUS.x,
+      photoFocusY: DEFAULT_PHOTO_FOCUS.y,
+      photoZoom: DEFAULT_PHOTO_FOCUS.zoom,
       telegramTag: '',
       ...defaultValues,
     },
   });
 
   const photo = watch('photo');
+  const focus = {
+    x: watch('photoFocusX'),
+    y: watch('photoFocusY'),
+    zoom: watch('photoZoom'),
+  };
+  const setFocus = (f: typeof focus) => {
+    setValue('photoFocusX', f.x, { shouldDirty: true });
+    setValue('photoFocusY', f.y, { shouldDirty: true });
+    setValue('photoZoom', f.zoom, { shouldDirty: true });
+  };
   const { formRef, onInvalid, serverMessages } = useFormErrors(
     error,
     setError,
@@ -110,8 +130,19 @@ export function MemberForm({
       <ImageUpload
         label="Фото"
         value={photo}
-        onChange={(url) => setValue('photo', url, { shouldDirty: true })}
+        onChange={(url) => {
+          setValue('photo', url, { shouldDirty: true });
+          setFocus(DEFAULT_PHOTO_FOCUS);
+        }}
       />
+      {photo && (
+        <PhotoFocusEditor
+          src={photo}
+          value={focus}
+          onChange={setFocus}
+          frames={[{ label: 'Картка на сайті', aspect: '3 / 4' }]}
+        />
+      )}
       <Input
         label="Telegram-тег"
         placeholder="@username"

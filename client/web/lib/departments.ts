@@ -1,4 +1,5 @@
 import type { Accent } from "@/components/ui/AccentCard";
+import type { PhotoFocus } from "@/components/ui/FocusedPhoto";
 
 export interface Member {
   name: string;
@@ -6,6 +7,7 @@ export interface Member {
   telegram: string | null;
   description?: string | null;
   photo?: string | null;
+  focus?: PhotoFocus;
   lead?: boolean;
 }
 

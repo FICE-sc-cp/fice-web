@@ -11,11 +11,12 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { PhotoFocusDto } from '../../../common/dto/photo-focus.dto';
 
 const blankToNull = ({ value }: { value: unknown }) =>
   typeof value === 'string' ? value.trim() || null : value;
 
-export class CreateDepartmentMemberDto {
+export class CreateDepartmentMemberDto extends PhotoFocusDto {
   @ApiProperty({ enum: DepartmentMemberRole })
   @IsEnum(DepartmentMemberRole)
   role: DepartmentMemberRole;

@@ -22,6 +22,9 @@ export default function NewMemberPage() {
         description: v.description?.trim() || undefined,
         order: v.order?.trim() ? Number(v.order) : undefined,
         photo: v.photo ?? undefined,
+        photoFocusX: v.photoFocusX,
+        photoFocusY: v.photoFocusY,
+        photoZoom: v.photoZoom,
         telegramTag: v.telegramTag?.trim() ? v.telegramTag.trim() : undefined,
       }),
     onSuccess: () => {

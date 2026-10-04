@@ -3,6 +3,11 @@ import { Container } from "@/components/ui/Container";
 import { Glow } from "@/components/ui/Glow";
 import { TelegramIcon } from "@/components/ui/icons";
 import {
+  FocusedPhoto,
+  photoFocus,
+  type PhotoFocus,
+} from "@/components/ui/FocusedPhoto";
+import {
   fice,
   mediaUrl,
   safe,
@@ -18,6 +23,7 @@ interface TeamCard {
   description: string | null;
   telegram: string | null;
   photo: string | null;
+  focus: PhotoFocus;
 }
 
 function memberCard(m: DepartmentMember): TeamCard {
@@ -28,6 +34,7 @@ function memberCard(m: DepartmentMember): TeamCard {
     description: m.description,
     telegram: m.telegramTag,
     photo: m.photo,
+    focus: photoFocus(m),
   };
 }
 
@@ -40,6 +47,7 @@ function headCard(d: Department): TeamCard | null {
     description: null,
     telegram: d.head.telegramTag,
     photo: d.head.photo,
+    focus: photoFocus(d.head),
   };
 }
 
@@ -95,9 +103,11 @@ function TeamCardView({ card }: { card: TeamCard }) {
           className="absolute left-1/2 top-1/2 h-[50%] w-[300%] -translate-x-1/2 -translate-y-1/2 opacity-100 blur-2xl pointer-events-none -z-10"
         />
         {photo ? (
-          <div
-            className="absolute inset-0 z-10 bg-cover bg-center"
-            style={{ backgroundImage: `url("${photo}")` }}
+          <FocusedPhoto
+            src={photo}
+            alt={card.name}
+            focus={card.focus}
+            className="z-10"
           />
         ) : (
           <Image

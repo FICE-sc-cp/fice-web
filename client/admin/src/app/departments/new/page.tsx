@@ -23,6 +23,9 @@ export default function NewDepartmentPage() {
           lastName: v.headLastName,
           telegramTag: v.headTelegramTag?.trim() ? v.headTelegramTag.trim() : undefined,
           photo: v.headPhoto || undefined,
+          photoFocusX: v.headPhotoFocusX,
+          photoFocusY: v.headPhotoFocusY,
+          photoZoom: v.headPhotoZoom,
         });
         headId = head.id;
       }

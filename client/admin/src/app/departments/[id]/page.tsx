@@ -30,6 +30,9 @@ export default function EditDepartmentPage() {
           lastName: v.headLastName,
           telegramTag: v.headTelegramTag?.trim() ? v.headTelegramTag.trim() : undefined,
           photo: v.headPhoto || null,
+          photoFocusX: v.headPhotoFocusX,
+          photoFocusY: v.headPhotoFocusY,
+          photoZoom: v.headPhotoZoom,
         };
         if (dep?.headId) {
           await api.updateDepartmentHead(dep.headId, body);
@@ -83,6 +86,9 @@ export default function EditDepartmentPage() {
                   headLastName: dep.head?.lastName ?? '',
                   headTelegramTag: dep.head?.telegramTag ?? '',
                   headPhoto: dep.head?.photo ?? null,
+                  headPhotoFocusX: dep.head?.photoFocusX ?? 50,
+                  headPhotoFocusY: dep.head?.photoFocusY ?? 50,
+                  headPhotoZoom: dep.head?.photoZoom ?? 100,
                 }
               : undefined
           }

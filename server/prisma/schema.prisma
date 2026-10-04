@@ -73,6 +73,9 @@ model DepartmentHead {
   firstName      String  @db.VarChar(30)
   lastName       String  @db.VarChar(30)
   photo          String?
+  photoFocusX    Int     @default(50)
+  photoFocusY    Int     @default(50)
+  photoZoom      Int     @default(100)
   jobDescription String? @db.VarChar(100)
   telegramTag    String? @db.VarChar(50)
 
@@ -117,6 +120,9 @@ model DepartmentMember {
   description    String?              @db.Text
   order          Int                  @default(0)
   photo          String?
+  photoFocusX    Int                  @default(50)
+  photoFocusY    Int                  @default(50)
+  photoZoom      Int                  @default(100)
   telegramTag    String?              @db.VarChar(50)
 
   assignments DepartmentMemberAssignment[]

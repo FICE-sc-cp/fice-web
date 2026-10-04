@@ -41,6 +41,9 @@ export interface DepartmentHead {
   firstName: string;
   lastName: string;
   photo: string | null;
+  photoFocusX: number;
+  photoFocusY: number;
+  photoZoom: number;
   jobDescription: string | null;
   telegramTag: string | null;
 }
@@ -73,6 +76,9 @@ export interface DepartmentMember {
   description: string | null;
   order: number;
   photo: string | null;
+  photoFocusX: number;
+  photoFocusY: number;
+  photoZoom: number;
   telegramTag: string | null;
   assignments?: { id: string; department: Department }[];
 }
@@ -414,6 +420,9 @@ export interface DepartmentHeadInput {
   firstName: string;
   lastName: string;
   photo?: string | null;
+  photoFocusX?: number;
+  photoFocusY?: number;
+  photoZoom?: number;
   jobDescription?: string | null;
   telegramTag?: string;
 }
@@ -427,6 +436,9 @@ export interface DepartmentMemberInput {
   description?: string | null;
   order?: number;
   photo?: string | null;
+  photoFocusX?: number;
+  photoFocusY?: number;
+  photoZoom?: number;
   telegramTag?: string;
 }
 

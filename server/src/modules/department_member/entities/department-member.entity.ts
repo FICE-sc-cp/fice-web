@@ -14,5 +14,8 @@ export class DepartmentMemberEntity {
   description: string | null;
   order: number;
   photo: string | null;
+  photoFocusX: number;
+  photoFocusY: number;
+  photoZoom: number;
   telegramTag: string | null;
 }

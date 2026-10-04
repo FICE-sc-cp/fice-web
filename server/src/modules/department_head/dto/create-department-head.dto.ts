@@ -1,7 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
+import { PhotoFocusDto } from '../../../common/dto/photo-focus.dto';
 
-export class CreateDepartmentHeadDto {
+export class CreateDepartmentHeadDto extends PhotoFocusDto {
   @ApiProperty({ maxLength: 30 })
   @IsString()
   @IsNotEmpty()

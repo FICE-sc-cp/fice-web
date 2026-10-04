@@ -9,6 +9,10 @@ import { Select } from '../ui/Select';
 import { Button } from '../ui/Button';
 import { FormError } from '../ui/FormError';
 import { ImageUpload } from '../ImageUpload';
+import {
+  DEFAULT_PHOTO_FOCUS,
+  PhotoFocusEditor,
+} from '../PhotoFocusEditor';
 import { useFormErrors } from '@/lib/formErrors';
 import { useMainButton } from '@/lib/telegram';
 import { api } from '@/lib/api';
@@ -45,6 +49,9 @@ const schema = z.object({
   headLastName: z.string().max(30, 'Максимум 30 символів').optional(),
   headTelegramTag: z.string().max(50, 'Максимум 50 символів').optional(),
   headPhoto: z.string().nullable().optional(),
+  headPhotoFocusX: z.number().int().min(0).max(100),
+  headPhotoFocusY: z.number().int().min(0).max(100),
+  headPhotoZoom: z.number().int().min(100).max(300),
 });
 
 export type DepartmentFormValues = z.infer<typeof schema>;
@@ -83,11 +90,24 @@ export function DepartmentForm({
       headLastName: '',
       headTelegramTag: '',
       headPhoto: null,
+      headPhotoFocusX: DEFAULT_PHOTO_FOCUS.x,
+      headPhotoFocusY: DEFAULT_PHOTO_FOCUS.y,
+      headPhotoZoom: DEFAULT_PHOTO_FOCUS.zoom,
       ...defaultValues,
     },
   });
 
   const photo = watch('headPhoto');
+  const focus = {
+    x: watch('headPhotoFocusX'),
+    y: watch('headPhotoFocusY'),
+    zoom: watch('headPhotoZoom'),
+  };
+  const setFocus = (f: typeof focus) => {
+    setValue('headPhotoFocusX', f.x, { shouldDirty: true });
+    setValue('headPhotoFocusY', f.y, { shouldDirty: true });
+    setValue('headPhotoZoom', f.zoom, { shouldDirty: true });
+  };
   const { data: departments } = useQuery({
     queryKey: ['departments'],
     queryFn: () => api.departments(),
@@ -186,8 +206,22 @@ export function DepartmentForm({
           <ImageUpload
             label="Фото"
             value={photo}
-            onChange={(url) => setValue('headPhoto', url, { shouldDirty: true })}
+            onChange={(url) => {
+              setValue('headPhoto', url, { shouldDirty: true });
+              setFocus(DEFAULT_PHOTO_FOCUS);
+            }}
           />
+          {photo && (
+            <PhotoFocusEditor
+              src={photo}
+              value={focus}
+              onChange={setFocus}
+              frames={[
+                { label: 'Картка на /team', aspect: '3 / 4' },
+                { label: 'Сторінка департаменту', aspect: '10 / 7', width: 168 },
+              ]}
+            />
+          )}
         </div>
       </div>
 

@@ -5,6 +5,11 @@ import { Glow } from "@/components/ui/Glow";
 import { ProjectPeopleWall } from "@/components/sections/ProjectPeopleWall";
 import { RichText } from "@/components/ui/RichText";
 import {
+  FocusedPhoto,
+  photoFocus,
+  type PhotoFocus,
+} from "@/components/ui/FocusedPhoto";
+import {
   AccentCard,
   accentBorder,
   accentText,
@@ -40,6 +45,7 @@ async function presidiumTeam(): Promise<{ top: Member[]; rest: Member[] }> {
     telegram: m.telegramTag,
     description: m.description,
     photo: mediaUrl(m.photo),
+    focus: photoFocus(m),
     lead: m.id === leadId,
   });
   return {
@@ -53,6 +59,7 @@ function MemberCard({
   role,
   telegram,
   photo,
+  focus,
   quote,
   description,
   featured,
@@ -64,6 +71,7 @@ function MemberCard({
   role: string;
   telegram: string | null;
   photo?: string | null;
+  focus?: PhotoFocus;
   quote?: string | null;
   description?: string | null;
   featured?: boolean;
@@ -88,10 +96,7 @@ function MemberCard({
       >
         <div className="relative aspect-[3/4] overflow-hidden rounded-2xl bg-surface/40">
           {photo ? (
-            <div
-              className="absolute inset-0 bg-cover bg-center"
-              style={{ backgroundImage: `url("${photo}")` }}
-            />
+            <FocusedPhoto src={photo} alt={name} focus={focus} />
           ) : (
             <Image
               src="/placeholder-person.png"
@@ -193,6 +198,7 @@ export async function DepartmentTop({ d }: { d: DepartmentData }) {
         name: `${dbHead.firstName} ${dbHead.lastName}`.trim(),
         telegram: dbHead.telegramTag,
         photo: mediaUrl(dbHead.photo),
+        focus: photoFocus(dbHead),
       }
     : null;
   const headTg = head?.telegram?.replace(/^@/, "");
@@ -393,6 +399,7 @@ export async function DepartmentTop({ d }: { d: DepartmentData }) {
                       role={m.role}
                       telegram={m.telegram}
                       photo={m.photo}
+                      focus={m.focus}
                       description={m.description}
                       featured={m.lead}
                       accent={d.accent}
@@ -414,6 +421,7 @@ export async function DepartmentTop({ d }: { d: DepartmentData }) {
                       role={m.role}
                       telegram={m.telegram}
                       photo={m.photo}
+                      focus={m.focus}
                       description={m.description}
                       accent={d.accent}
                       gradient={d.gradient}
@@ -432,6 +440,7 @@ export async function DepartmentTop({ d }: { d: DepartmentData }) {
                         role={teamLead.role}
                         telegram={teamLead.telegram}
                         photo={teamLead.photo}
+                        focus={teamLead.focus}
                         description={teamLead.description}
                         featured
                         accent={d.accent}
@@ -444,6 +453,7 @@ export async function DepartmentTop({ d }: { d: DepartmentData }) {
                           role="Голова департаменту"
                           telegram={head.telegram}
                           photo={head.photo}
+                          focus={head.focus}
                           quote={d.headQuote}
                           featured
                           accent={d.accent}
@@ -461,6 +471,7 @@ export async function DepartmentTop({ d }: { d: DepartmentData }) {
                       role={m.role}
                       telegram={m.telegram}
                       photo={m.photo}
+                      focus={m.focus}
                       description={m.description}
                       accent={d.accent}
                       gradient={d.gradient}
@@ -480,11 +491,12 @@ export async function DepartmentTop({ d }: { d: DepartmentData }) {
           <Container>
             <div className={cn("overflow-hidden rounded-3xl p-px", d.gradient)}>
               <div className="grid grid-cols-1 overflow-hidden rounded-3xl bg-bg sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-                <div className="relative min-h-[22rem] bg-surface/40">
+                <div className="relative min-h-[22rem] overflow-hidden bg-surface/40">
                   {head.photo ? (
-                    <div
-                      className="absolute inset-0 bg-cover bg-center"
-                      style={{ backgroundImage: `url("${head.photo}")` }}
+                    <FocusedPhoto
+                      src={head.photo}
+                      alt={head.name}
+                      focus={head.focus}
                     />
                   ) : (
                     <Image
