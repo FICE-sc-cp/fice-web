@@ -1,6 +1,8 @@
 "use client";
 
 import { useRef, useState } from "react";
+import Image from "next/image";
+import { isRemoteImage } from "@/lib/uploads";
 import Link from "next/link";
 import { fice, mediaUrl, type News, type NewsCategory } from "@/lib/api";
 import { Container } from "@/components/ui/Container";
@@ -18,19 +20,25 @@ type Filter = NewsCategory | "all";
 function CardImage({
   item,
   className,
+  sizes,
   children,
 }: {
   item: News;
   className?: string;
+  sizes: string;
   children?: React.ReactNode;
 }) {
   const url = mediaUrl(item.image);
   return (
     <div className={cn("relative overflow-hidden bg-white/5", className)}>
       {url ? (
-        <div
-          className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
-          style={{ backgroundImage: `url("${url}")` }}
+        <Image
+          src={url}
+          unoptimized={isRemoteImage(url)}
+          alt=""
+          fill
+          sizes={sizes}
+          className="object-cover transition-transform duration-500 group-hover:scale-105"
         />
       ) : (
         <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-brand-cyan/15 via-black/60 to-purple-600/15">
@@ -165,7 +173,11 @@ export function MoreNews({
               href={`/news/${featured.id}`}
               className="group grid overflow-hidden rounded-3xl border border-white/10 bg-surface/45 transition-all duration-300 hover:-translate-y-1.5 hover:border-brand-cyan/60 hover:shadow-2xl hover:shadow-black/40 lg:grid-cols-[1.15fr_1fr]"
             >
-              <CardImage item={featured} className="aspect-[4/3]">
+              <CardImage
+                item={featured}
+                className="aspect-[4/3]"
+                sizes="(min-width: 1024px) 40rem, 100vw"
+              >
                 <span className="absolute left-[18px] top-[18px] inline-flex items-center rounded-full bg-gradient-main px-3.5 py-1.5 text-[12.5px] font-extrabold uppercase tracking-wide text-stone-950">
                   {categoryLabel(featured.category)}
                 </span>
@@ -199,7 +211,11 @@ export function MoreNews({
                   href={`/news/${item.id}`}
                   className="group flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-surface/45 transition-all duration-300 hover:-translate-y-1.5 hover:border-brand-cyan/60 hover:shadow-2xl hover:shadow-black/40"
                 >
-                  <CardImage item={item} className="aspect-[4/3]">
+                  <CardImage
+                    item={item}
+                    className="aspect-[4/3]"
+                    sizes="(min-width: 1024px) 24rem, 50vw"
+                  >
                     <span className="absolute left-3.5 top-3.5 inline-flex items-center rounded-full border border-white/15 bg-black/70 px-3 py-1 text-[11.5px] font-extrabold uppercase tracking-wide text-white backdrop-blur-sm">
                       {categoryLabel(item.category)}
                     </span>

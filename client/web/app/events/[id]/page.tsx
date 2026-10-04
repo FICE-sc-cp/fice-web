@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Image from "next/image";
+import { isRemoteImage } from "@/lib/uploads";
 import Link from "next/link";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -171,10 +173,15 @@ export default async function EventDetailPage({
             </Link>
 
             {cover && (
-              <div className="mx-auto max-w-3xl overflow-hidden rounded-3xl border border-white/8">
-                <div
-                  className="aspect-[4/3] w-full bg-cover bg-center"
-                  style={{ backgroundImage: `url(${cover})` }}
+              <div className="relative mx-auto aspect-[4/3] max-w-3xl overflow-hidden rounded-3xl border border-white/8">
+                <Image
+                  src={cover}
+                  unoptimized={isRemoteImage(cover)}
+                  alt={event.name}
+                  fill
+                  preload
+                  sizes="(min-width: 800px) 48rem, 100vw"
+                  className="object-cover"
                 />
               </div>
             )}

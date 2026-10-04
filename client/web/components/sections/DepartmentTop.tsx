@@ -497,6 +497,7 @@ export async function DepartmentTop({ d }: { d: DepartmentData }) {
                       src={head.photo}
                       alt={head.name}
                       focus={head.focus}
+                      sizes="(min-width: 640px) 32rem, 100vw"
                     />
                   ) : (
                     <Image

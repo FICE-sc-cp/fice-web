@@ -8,7 +8,7 @@ export const PDF_CSP = "default-src 'none'";
 
 export function setUploadHeaders(res: HeaderSink, filePath: string): void {
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
+  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
   if (extname(filePath).toLowerCase() === '.pdf') {
     res.setHeader('Content-Disposition', 'attachment');
     res.setHeader('Content-Security-Policy', PDF_CSP);

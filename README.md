@@ -233,6 +233,28 @@ two places:
 
 Take a database backup before deploying a change that contains migrations.
 
+### Images
+
+Uploaded JPEG and PNG images are resized (1920 px for admin uploads, 3200 px
+for receipts and costume photos) and stripped of EXIF data on upload, one image
+at a time. This uses sharp when the CPU supports it. On a CPU without
+x86-64-v2 sharp cannot load: the server logs one warning and falls back to a
+slower pure-JavaScript encoder. The fallback stores images over 25 megapixels,
+and WebP files, as they are. Anything over 50 megapixels is rejected in both
+modes. The web app's `/_next/image` also needs sharp; without it, it serves the
+original file, so static images in `client/web/public` are kept small.
+
+To shrink uploads that were stored before this processing existed, back up the
+uploads volume and run:
+
+```bash
+docker compose exec server npm run uploads:reencode
+```
+
+It re-encodes oversized JPEG and PNG files in place, keeping their names and
+URLs, and keeps the original when the new file would not be smaller. Add
+`-- --dry-run` to only list the files it would change.
+
 ---
 
 ## API Overview
@@ -284,6 +306,7 @@ and uses the `@prisma/adapter-pg` driver adapter. All commands run from `server/
 | `npx prisma studio` | Open the database GUI |
 | `ALLOW_DESTRUCTIVE_SEED=1 npm run db:seed` | **Wipe** the database and fill it with sample data (dev only; refused when `APP_ENV=production`) |
 | `npm run db:seed:departments` | Link or create the departments of the website pages; safe on production |
+| `npm run uploads:reencode` | Shrink oversized uploaded images in place (add `-- --dry-run` to only list them) |
 
 Typical workflow: edit `schema.prisma` → `migrate dev` → use the generated client
 through `PrismaService` in your NestJS services.

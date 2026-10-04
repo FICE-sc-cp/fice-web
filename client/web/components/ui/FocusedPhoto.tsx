@@ -1,3 +1,5 @@
+import Image from "next/image";
+import { isRemoteImage } from "@/lib/uploads";
 import { cn } from "@/lib/utils";
 
 export interface PhotoFocus {
@@ -24,22 +26,25 @@ export function FocusedPhoto({
   src,
   alt,
   focus = DEFAULT_FOCUS,
+  sizes = "18rem",
   className,
 }: {
   src: string;
   alt: string;
   focus?: PhotoFocus;
+  sizes?: string;
   className?: string;
 }) {
   const origin = `${focus.x}% ${focus.y}%`;
   return (
-    <img
+    <Image
       src={src}
+      unoptimized={isRemoteImage(src)}
       alt={alt}
-      loading="lazy"
-      decoding="async"
+      fill
+      sizes={sizes}
       draggable={false}
-      className={cn("absolute inset-0 h-full w-full object-cover", className)}
+      className={cn("object-cover", className)}
       style={{
         objectPosition: origin,
         transformOrigin: origin,

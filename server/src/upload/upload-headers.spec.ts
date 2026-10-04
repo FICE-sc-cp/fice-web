@@ -19,6 +19,12 @@ describe('setUploadHeaders', () => {
     }
   });
 
+  it('lets browsers cache uploads for a year, since their names never repeat', () => {
+    expect(headersFor('/app/uploads/a.jpg')['Cache-Control']).toBe(
+      'public, max-age=31536000, immutable',
+    );
+  });
+
   it('serves PDFs as downloads without the sandbox directive', () => {
     const headers = headersFor('/app/uploads/receipt.PDF');
     expect(headers['Content-Disposition']).toBe('attachment');

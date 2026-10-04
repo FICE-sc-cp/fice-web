@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Image from "next/image";
+import { isRemoteImage } from "@/lib/uploads";
 import Link from "next/link";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -133,11 +135,14 @@ export default async function CharityDetailsPage({
 
                 {cover && (
                   <div className="relative aspect-[4/3] w-full overflow-hidden rounded-3xl border border-border bg-surface-2">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Image
                       src={cover}
+                      unoptimized={isRemoteImage(cover)}
                       alt={fundraiser.name}
-                      className="absolute inset-0 size-full object-cover"
+                      fill
+                      preload
+                      sizes="(min-width: 1024px) 48rem, 100vw"
+                      className="object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-bg/70 via-transparent to-transparent" />
                   </div>

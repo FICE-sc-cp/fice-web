@@ -21,3 +21,4 @@ export function uploadProblem(
   }
   return null;
 }
+export const isRemoteImage = (src: string) => /^https?:\/\//i.test(src);

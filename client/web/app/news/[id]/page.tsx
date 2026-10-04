@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import Image from "next/image";
+import { isRemoteImage } from "@/lib/uploads";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { IconDefs } from "@/components/ui/icons";
@@ -104,10 +106,17 @@ export default async function NewsArticlePage({
             </h1>
 
             {cover && (
-              <div
-                className="mb-10 aspect-[4/3] overflow-hidden rounded-2xl border border-white/10 bg-cover bg-center"
-                style={{ backgroundImage: `url("${cover}")` }}
-              />
+              <div className="relative mb-10 aspect-[4/3] overflow-hidden rounded-2xl border border-white/10">
+                <Image
+                  src={cover}
+                  unoptimized={isRemoteImage(cover)}
+                  alt={item.title}
+                  fill
+                  preload
+                  sizes="(min-width: 800px) 48rem, 100vw"
+                  className="object-cover"
+                />
+              </div>
             )}
 
             {event && (
@@ -188,18 +197,18 @@ export default async function NewsArticlePage({
                         className="group flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-surface/45 transition-all duration-300 hover:-translate-y-1.5 hover:border-brand-cyan/60 hover:shadow-2xl hover:shadow-black/40"
                       >
                         <div className="relative aspect-[4/3] overflow-hidden">
-                          <div
-                            className="absolute inset-0 bg-cover bg-center transition-transform duration-500 group-hover:scale-105"
-                            style={
-                              url
-                                ? { backgroundImage: `url("${url}")` }
-                                : undefined
-                            }
-                          >
-                            {!url && (
-                              <div className="absolute inset-0 bg-gradient-main opacity-20" />
-                            )}
-                          </div>
+                          {url ? (
+                            <Image
+                              src={url}
+                              unoptimized={isRemoteImage(url)}
+                              alt=""
+                              fill
+                              sizes="(min-width: 1024px) 24rem, (min-width: 640px) 50vw, 100vw"
+                              className="object-cover transition-transform duration-500 group-hover:scale-105"
+                            />
+                          ) : (
+                            <div className="absolute inset-0 bg-gradient-main opacity-20" />
+                          )}
                           <span className="absolute left-3.5 top-3.5 inline-flex items-center rounded-full border border-white/15 bg-black/70 px-3 py-1 text-[11.5px] font-extrabold uppercase tracking-wide text-white">
                             {categoryLabel(n.category)}
                           </span>

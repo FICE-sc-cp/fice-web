@@ -10,14 +10,14 @@ const COLUMNS = [
   ],
   [
     { src: "/partnerships-main-photo.jpg", grow: 3 },
-    { src: "/photo-4.png", grow: 2 },
+    { src: "/photo-4.jpg", grow: 2 },
   ],
   [
-    { src: "/photo-5.png", grow: 1 },
-    { src: "/photo-6.png", grow: 1 },
+    { src: "/photo-5.jpg", grow: 1 },
+    { src: "/photo-6.jpg", grow: 1 },
   ],
   [
-    { src: "/photo-7.png", grow: 2 },
+    { src: "/photo-7.jpg", grow: 2 },
     { src: "/projects-main-photo.jpg", grow: 3 },
   ],
 ];
