@@ -27,6 +27,8 @@ import { Throttle } from '@nestjs/throttler';
 import { REGISTER_LIMIT_PER_IP, THROTTLE_TTL } from '../../common/throttle';
 import { Admin } from '../../auth/admin.decorator';
 import { AdminAccessService } from '../../auth/admin-access.service';
+import { DownloadTokenService } from '../../auth/download-token.service';
+import { sendXlsx } from '../../common/xlsx-response';
 import {
   extractTelegramUser,
   resolveValidatedTelegramUser,
@@ -59,6 +61,7 @@ export class EventController {
     private readonly eventService: EventService,
     private readonly configService: ConfigService,
     private readonly adminAccess: AdminAccessService,
+    private readonly downloads: DownloadTokenService,
   ) {}
 
   private resolveTelegramUser(
@@ -327,13 +330,32 @@ export class EventController {
     @Res() res: Response,
   ) {
     const buffer = await this.eventService.exportRegistrations(id);
-    res.set({
-      'Content-Type':
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      'Content-Disposition': `attachment; filename="event-${id}-registrations.xlsx"`,
-      'Content-Length': buffer.length.toString(),
-    });
-    res.send(buffer);
+    sendXlsx(res, buffer, `event-${id}-registrations.xlsx`);
+  }
+
+  @Post(':id/registrations/export-link')
+  @Admin()
+  @ApiOperation({
+    summary:
+      'Create a one-time, 2-minute link to the registrations Excel (admin)',
+  })
+  createRegistrationsExportLink(@Param('id', ParseUUIDPipe) id: string) {
+    const token = this.downloads.issue(`registrations:${id}`);
+    return { path: `/event/${id}/registrations/export-file?token=${token}` };
+  }
+
+  @Get(':id/registrations/export-file')
+  @ApiOperation({
+    summary: 'Download the registrations Excel with a one-time link',
+  })
+  async exportRegistrationsFile(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query('token') token: string | undefined,
+    @Res() res: Response,
+  ) {
+    this.downloads.redeem(token, `registrations:${id}`);
+    const buffer = await this.eventService.exportRegistrations(id);
+    sendXlsx(res, buffer, `event-${id}-registrations.xlsx`);
   }
 
   @Delete(':id/registrations/:registrationId')

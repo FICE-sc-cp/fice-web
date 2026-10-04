@@ -289,6 +289,10 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   return (await res.json()) as Promise<T>;
 }
 
+export function apiUrl(path: string): string {
+  return `${BASE}${path}`;
+}
+
 export function mediaUrl(path: string | null | undefined): string | undefined {
   if (!path) return undefined;
   return path.startsWith('http') ? path : `${BASE}${path}`;
@@ -531,6 +535,10 @@ export const api = {
       `/event/${eventId}/registrations/${registrationId}`,
       { method: 'DELETE', ...json({ reason }) },
     ),
+  eventRegistrationsExportLink: (id: string) =>
+    request<{ path: string }>(`/event/${id}/registrations/export-link`, {
+      method: 'POST',
+    }),
   exportEventRegistrations: async (id: string): Promise<Blob> => {
     const res = await fetch(`${BASE}/event/${id}/registrations/export`, {
       headers: { 'x-telegram-init-data': getInitData() },
@@ -683,6 +691,10 @@ export const api = {
     }),
   votingResults: (id: string) => request<VotingResults>(`/voting/${id}/results`),
   exportVotingResultsUrl: (id: string) => `${BASE}/voting/${id}/results/export`,
+  votingResultsExportLink: (id: string) =>
+    request<{ path: string }>(`/voting/${id}/results/export-link`, {
+      method: 'POST',
+    }),
   exportVotingResultsBlob: async (id: string): Promise<Blob> => {
     const res = await fetch(`${BASE}/voting/${id}/results/export`, {
       headers: { 'x-telegram-init-data': getInitData() },

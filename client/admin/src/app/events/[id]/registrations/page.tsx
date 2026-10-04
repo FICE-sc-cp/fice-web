@@ -20,6 +20,8 @@ import { Spinner } from '@/components/ui/Spinner';
 import { Button } from '@/components/ui/Button';
 import { hapticNotify } from '@/lib/telegram';
 import { useDebouncedValue } from '@/lib/useDebouncedValue';
+import { saveFile } from '@/lib/download';
+import { downloadFile } from '@telegram-apps/sdk';
 
 const PAYMENT_LABEL: Record<RegistrationPayment, string> = {
   NONE: 'Без оплати',
@@ -233,15 +235,11 @@ export default function EventRegistrationsPage() {
     setDownloading(true);
     setDownloadError(null);
     try {
-      const blob = await api.exportEventRegistrations(id);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `registrations-${id}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
+      await saveFile({
+        fileName: `registrations-${id}.xlsx`,
+        createLink: () => api.eventRegistrationsExportLink(id),
+        loadBlob: () => api.exportEventRegistrations(id),
+      });
     } catch (e) {
       setDownloadError(e instanceof Error ? e.message : 'Не вдалося завантажити Excel');
     } finally {
@@ -1286,6 +1284,15 @@ export default function EventRegistrationsPage() {
                     target="_blank"
                     rel="noreferrer"
                     download
+                    onClick={(e) => {
+                      const href = mediaUrl(receiptModal.receiptUrl);
+                      if (!href || !downloadFile.isAvailable()) return;
+                      e.preventDefault();
+                      void downloadFile(
+                        new URL(href, window.location.origin).toString(),
+                        `receipt-${receiptModal.fullName}.pdf`,
+                      ).catch(() => window.open(href, '_blank'));
+                    }}
                     className="rounded-2xl bg-brand-cyan px-5 py-3 text-sm font-bold text-black transition-opacity hover:opacity-90"
                   >
                     Відкрити PDF
