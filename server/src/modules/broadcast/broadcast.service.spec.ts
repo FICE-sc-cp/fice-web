@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 import { BroadcastService } from './broadcast.service';
 
 describe('BroadcastService', () => {
@@ -18,9 +18,13 @@ describe('BroadcastService', () => {
         count: jest.fn(),
       },
       broadcastMessage: {
-        create: jest.fn(),
-        count: jest.fn(),
+        create: jest.fn((args: any) =>
+          Promise.resolve({ id: 'bcast-1', ...args.data }),
+        ),
+        count: jest.fn().mockResolvedValue(0),
         findMany: jest.fn(),
+        update: jest.fn().mockResolvedValue({}),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
       $transaction: jest.fn(),
     };
@@ -61,17 +65,27 @@ describe('BroadcastService', () => {
       }));
 
       const res = await service.broadcastToEvent(eventId, dto);
+      await service.whenIdle();
 
       expect(res.ok).toBe(true);
+      expect(res.status).toBe('SENDING');
       expect(res.recipientsCount).toBe(2);
-      expect(res.sentCount).toBe(3);
       expect(userBot.sendBroadcast).toHaveBeenCalledWith(
         [
           { chatId: BigInt(100), telegramId: BigInt(100) },
           { chatId: BigInt(200), telegramId: BigInt(200) },
         ],
         expect.objectContaining({ text: 'Нагадування про захід!' }),
+        expect.any(Function),
       );
+      expect(prisma.broadcastMessage.update).toHaveBeenLastCalledWith({
+        where: { id: 'bcast-1' },
+        data: expect.objectContaining({
+          sentCount: 3,
+          failedCount: 0,
+          status: 'COMPLETED',
+        }),
+      });
     });
   });
 
@@ -87,10 +101,79 @@ describe('BroadcastService', () => {
       }));
 
       const res = await service.broadcastToAll({ text: 'Новини для всіх!' });
+      await service.whenIdle();
 
       expect(res.ok).toBe(true);
       expect(res.recipientsCount).toBe(2);
       expect(userBot.sendBroadcast).toHaveBeenCalled();
+    });
+  });
+
+  describe('background delivery', () => {
+    beforeEach(() => {
+      prisma.botUser.findMany.mockResolvedValue([
+        { chatId: BigInt(101), telegramId: BigInt(101) },
+      ]);
+    });
+
+    it('answers before the messages are sent', async () => {
+      let finish!: (v: unknown) => void;
+      userBot.sendBroadcast.mockReturnValue(
+        new Promise((resolve) => (finish = resolve)),
+      );
+
+      const res = await service.broadcastToAll({ text: 'Привіт' });
+
+      expect(res.status).toBe('SENDING');
+      expect(prisma.broadcastMessage.update).not.toHaveBeenCalled();
+      finish({ sent: 1, failed: 0 });
+      await service.whenIdle();
+      expect(prisma.broadcastMessage.update).toHaveBeenCalled();
+    });
+
+    it('refuses a second broadcast while one is still sending', async () => {
+      let finish!: (v: unknown) => void;
+      userBot.sendBroadcast.mockReturnValue(
+        new Promise((resolve) => (finish = resolve)),
+      );
+      await service.broadcastToAll({ text: 'Перша' });
+
+      await expect(
+        service.broadcastToAll({ text: 'Друга' }),
+      ).rejects.toBeInstanceOf(ConflictException);
+      expect(prisma.broadcastMessage.create).toHaveBeenCalledTimes(1);
+
+      finish({ sent: 1, failed: 0 });
+      await service.whenIdle();
+    });
+
+    it('refuses when the database still has a broadcast in progress', async () => {
+      prisma.broadcastMessage.count.mockResolvedValue(1);
+
+      await expect(
+        service.broadcastToAll({ text: 'Друга' }),
+      ).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('marks a broadcast as interrupted when delivery crashes', async () => {
+      userBot.sendBroadcast.mockRejectedValue(new Error('boom'));
+
+      await service.broadcastToAll({ text: 'Привіт' });
+      await service.whenIdle();
+
+      expect(prisma.broadcastMessage.update).toHaveBeenCalledWith({
+        where: { id: 'bcast-1' },
+        data: expect.objectContaining({ status: 'INTERRUPTED' }),
+      });
+    });
+
+    it('marks broadcasts left SENDING by a restart as interrupted', async () => {
+      await service.onModuleInit();
+
+      expect(prisma.broadcastMessage.updateMany).toHaveBeenCalledWith({
+        where: { status: 'SENDING' },
+        data: expect.objectContaining({ status: 'INTERRUPTED' }),
+      });
     });
   });
 });

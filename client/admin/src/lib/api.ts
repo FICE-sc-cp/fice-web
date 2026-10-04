@@ -693,10 +693,10 @@ export const api = {
   },
   notifyVotingStarted: (id: string) =>
     request<{
+      id: string;
       ok: boolean;
+      status: BroadcastStatus;
       recipientsCount: number;
-      sentCount: number;
-      failedCount: number;
     }>(`/voting/${id}/notify`, { method: 'POST' }),
   votingSubmissions: (votingId: string, status?: string) =>
     request<VotingCandidate[]>(
@@ -715,10 +715,10 @@ export const api = {
   // --- Broadcasts ---
   broadcastToEvent: (eventId: string, body: BroadcastInput) =>
     request<{
+      id: string;
       ok: boolean;
+      status: BroadcastStatus;
       recipientsCount: number;
-      sentCount: number;
-      failedCount: number;
     }>(`/broadcast/event/${eventId}`, {
       method: 'POST',
       ...json(body),
@@ -749,10 +749,10 @@ export const api = {
     }),
   broadcastToAll: (body: BroadcastInput) =>
     request<{
+      id: string;
       ok: boolean;
+      status: BroadcastStatus;
       recipientsCount: number;
-      sentCount: number;
-      failedCount: number;
     }>('/broadcast/global', {
       method: 'POST',
       ...json(body),
@@ -854,6 +854,7 @@ export interface CandidateInput {
 }
 
 export type BroadcastTarget = 'EVENT_PARTICIPANTS' | 'ALL_BOT_USERS';
+export type BroadcastStatus = 'SENDING' | 'COMPLETED' | 'INTERRUPTED';
 
 export interface BroadcastMessage {
   id: string;
@@ -866,6 +867,8 @@ export interface BroadcastMessage {
   recipientsCount: number;
   sentCount: number;
   failedCount: number;
+  status: BroadcastStatus;
+  finishedAt: string | null;
   createdAt: string;
   event?: { id: string; name: string } | null;
 }

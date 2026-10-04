@@ -59,7 +59,7 @@ describe('VotingService', () => {
       sendBroadcast: jest.fn().mockResolvedValue({ sent: 5, failed: 0 }),
     };
 
-    service = new VotingService(prisma, userBot, config);
+    service = new VotingService(prisma, userBot, config, {} as never);
   });
 
   describe('castVote', () => {

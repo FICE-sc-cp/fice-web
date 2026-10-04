@@ -252,7 +252,9 @@ export default function EventVotingPage() {
     onSuccess: (res) => {
       setNotifyVotingId(null);
       hapticNotify('success');
-      setNotifyMsg(`Сповіщення надіслано ${res.sentCount} зареєстрованим учасникам!`);
+      setNotifyMsg(
+        `Сповіщення надсилається ${res.recipientsCount} зареєстрованим учасникам. Прогрес — в історії розсилок.`,
+      );
     },
   });
 

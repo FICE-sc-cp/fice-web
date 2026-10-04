@@ -182,8 +182,7 @@ export default function EventBroadcastPage() {
       setConfirmOpen(false);
       hapticNotify('success');
       setResult(
-        `Розсилку завершено! ✅ Надіслано: ${res.sentCount} користувачам` +
-          (res.failedCount > 0 ? `, не вдалося: ${res.failedCount}` : ''),
+        `Розсилку запущено для ${res.recipientsCount} учасників ✅ Прогрес видно в історії розсилок.`,
       );
       clearDraft();
     },

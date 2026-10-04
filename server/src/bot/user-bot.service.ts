@@ -32,6 +32,9 @@ import { errorMessage } from '../common/log-safe';
 import { UPLOAD_DIR } from '../upload/upload.constants';
 
 const REGISTRATION_CONCURRENCY = 4;
+const BROADCAST_DELAY_MS = 40;
+const BROADCAST_MAX_ATTEMPTS = 4;
+const BROADCAST_PROGRESS_EVERY = 25;
 
 export interface BroadcastPayload {
   text: string;
@@ -403,6 +406,7 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
   async sendBroadcast(
     recipients: { chatId: bigint; telegramId?: bigint }[],
     payload: BroadcastPayload,
+    onProgress?: (progress: { sent: number; failed: number }) => Promise<void>,
   ): Promise<{ sent: number; failed: number }> {
     if (!this.bot) {
       this.logger.warn('User bot is not configured — broadcast skipped');
@@ -483,48 +487,67 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
       return new InputFile(resolve(UPLOAD_DIR, filename));
     };
 
-    for (const recipient of recipients) {
+    let photo: string | InputFile | undefined =
+      payload.imageUrl && payload.text.length <= 1024
+        ? resolvePhoto(payload.imageUrl)
+        : undefined;
+
+    for (const [index, recipient] of recipients.entries()) {
       const chatIdNumber = Number(recipient.chatId);
-      try {
-        if (payload.imageUrl && payload.text.length <= 1024) {
-          await this.bot.api.sendPhoto(
-            chatIdNumber,
-            resolvePhoto(payload.imageUrl),
-            {
+      for (let attempt = 1; ; attempt++) {
+        try {
+          if (photo) {
+            const msg = await this.bot.api.sendPhoto(chatIdNumber, photo, {
               caption: payload.text,
               parse_mode: 'HTML',
               reply_markup,
-            },
-          );
-        } else {
-          await this.bot.api.sendMessage(chatIdNumber, payload.text, {
-            parse_mode: 'HTML',
-            reply_markup,
-          });
-        }
-        sent++;
-      } catch (err) {
-        failed++;
-        if (
-          err instanceof GrammyError &&
-          (err.error_code === 403 ||
-            err.description.includes('bot was blocked'))
-        ) {
-          if (recipient.telegramId) {
-            await this.prisma.botUser
-              .updateMany({
-                where: { telegramId: recipient.telegramId },
-                data: { isBlocked: true },
-              })
-              .catch(() => {});
+            });
+            const uploaded = msg.photo?.[msg.photo.length - 1]?.file_id;
+            if (uploaded) photo = uploaded;
+          } else {
+            await this.bot.api.sendMessage(chatIdNumber, payload.text, {
+              parse_mode: 'HTML',
+              reply_markup,
+            });
           }
+          sent++;
+          break;
+        } catch (err) {
+          if (
+            err instanceof GrammyError &&
+            err.error_code === 429 &&
+            attempt < BROADCAST_MAX_ATTEMPTS
+          ) {
+            const waitSeconds = err.parameters?.retry_after ?? 1;
+            await new Promise((r) => setTimeout(r, waitSeconds * 1000));
+            continue;
+          }
+          failed++;
+          if (
+            err instanceof GrammyError &&
+            (err.error_code === 403 ||
+              err.description.includes('bot was blocked'))
+          ) {
+            if (recipient.telegramId) {
+              await this.prisma.botUser
+                .updateMany({
+                  where: { telegramId: recipient.telegramId },
+                  data: { isBlocked: true },
+                })
+                .catch(() => {});
+            }
+          }
+          this.logger.warn(
+            `Failed to send broadcast to ${chatIdNumber}: ${errorMessage(err)}`,
+          );
+          break;
         }
-        this.logger.warn(
-          `Failed to send broadcast to ${chatIdNumber}: ${errorMessage(err)}`,
-        );
       }
 
-      await new Promise((r) => setTimeout(r, 40));
+      if (onProgress && (index + 1) % BROADCAST_PROGRESS_EVERY === 0) {
+        await onProgress({ sent, failed }).catch(() => {});
+      }
+      await new Promise((r) => setTimeout(r, BROADCAST_DELAY_MS));
     }
 
     return { sent, failed };

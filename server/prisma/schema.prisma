@@ -471,6 +471,12 @@ enum BroadcastTarget {
   ALL_BOT_USERS
 }
 
+enum BroadcastStatus {
+  SENDING
+  COMPLETED
+  INTERRUPTED
+}
+
 model BroadcastMessage {
   id              String          @id @default(uuid()) @db.Uuid
   eventId         String?         @db.Uuid
@@ -482,6 +488,8 @@ model BroadcastMessage {
   recipientsCount Int             @default(0)
   sentCount       Int             @default(0)
   failedCount     Int             @default(0)
+  status          BroadcastStatus @default(COMPLETED)
+  finishedAt      DateTime?
   createdAt       DateTime        @default(now())
 
   event           Event?          @relation(fields: [eventId], references: [id], onDelete: SetNull)

@@ -5,9 +5,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { CandidateStatus, VotingStatus } from '@prisma/client';
+import { BroadcastTarget, CandidateStatus, VotingStatus } from '@prisma/client';
 import * as ExcelJS from 'exceljs';
 import { UserBotService } from '../../bot/user-bot.service';
+import { BroadcastService } from '../broadcast/broadcast.service';
 import { PrismaService } from '../../database/prisma.service';
 import { escapeHtml } from '../../common/html';
 import { OWN_IMAGE_URL, ownUploadExists } from '../../upload/own-upload';
@@ -24,6 +25,7 @@ export class VotingService {
     private readonly prisma: PrismaService,
     private readonly userBot: UserBotService,
     private readonly config: ConfigService,
+    private readonly broadcasts: BroadcastService,
   ) {}
 
   private getScreenUrl(votingId: string): string {
@@ -889,24 +891,18 @@ export class VotingService {
       (voting.description ? `${escapeHtml(voting.description)}\n\n` : '') +
       `Переходь за кнопкою нижче та віддай свій голос:`;
 
-    const result = await this.userBot.sendBroadcast(
-      uniqueIds.map((id) => ({ chatId: id, telegramId: id })),
+    const buttonText = 'Взяти участь у голосуванні';
+    return this.broadcasts.startBroadcast(
       {
+        eventId: voting.eventId,
+        target: BroadcastTarget.EVENT_PARTICIPANTS,
         text,
-        button: {
-          text: 'Взяти участь у голосуванні',
-          url: votingUrl,
-          isWebApp: true,
-        },
+        buttonText,
+        buttonUrl: votingUrl,
       },
+      uniqueIds.map((id) => ({ chatId: id, telegramId: id })),
+      { text, button: { text: buttonText, url: votingUrl, isWebApp: true } },
     );
-
-    return {
-      ok: true,
-      recipientsCount: uniqueIds.length,
-      sentCount: result.sent,
-      failedCount: result.failed,
-    };
   }
 
   async getPublicEventVotings(eventId: string) {
