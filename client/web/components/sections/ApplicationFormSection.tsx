@@ -506,7 +506,17 @@ export function ApplicationFormSection() {
               </div>
 
               <Textarea
-                label="Чому хочеш долучитись? Що тебе мотивує?"
+                label="Яка твоя мотивація бути в команді Студради ФІОТ? *"
+                hint={
+                  <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 sm:p-3.5 text-xs sm:text-sm text-amber-200/90 leading-relaxed">
+                    <div className="flex items-start gap-2.5">
+                      <span className="text-base leading-none select-none">⚠️</span>
+                      <p>
+                        Опиши чому ти хочеш доєднатись до студради, розпиши якомога детальніше. Відповідь одним реченням не підходить, адже ми можемо сприйняти її не серйозною та відхилити заявку.
+                      </p>
+                    </div>
+                  </div>
+                }
                 placeholder="Розкажи, що тебе надихає, які ідеї хочеш реалізувати та чого очікуєш від Студради…"
                 error={errors.motivation?.message}
                 {...register('motivation')}
