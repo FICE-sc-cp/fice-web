@@ -36,6 +36,13 @@ export class ApplicantController {
     return this.applicantService.create(dto);
   }
 
+  @Post('sync-sheets')
+  @Admin()
+  @ApiOperation({ summary: 'Sync all applicants to Google Sheets (admin)' })
+  syncSheets() {
+    return this.applicantService.syncGoogleSheets();
+  }
+
   @Get()
   @Admin()
   @ApiOperation({ summary: 'List join applications (admin)' })

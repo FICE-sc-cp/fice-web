@@ -649,6 +649,11 @@ export const api = {
   },
   applicant: (id: string) => request<Applicant>(`/applicant/${id}`),
   deleteApplicant: (id: string) => request<unknown>(`/applicant/${id}`, { method: 'DELETE' }),
+  syncGoogleSheets: () =>
+    request<{ success: boolean; synced: number; error?: string }>(
+      '/applicant/sync-sheets',
+      { method: 'POST' },
+    ),
 
   channelStatus: () => request<ChannelStatus>('/channel/status'),
   postChannel: (body: ChannelPostInput) =>

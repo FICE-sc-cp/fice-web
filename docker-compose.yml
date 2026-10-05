@@ -83,6 +83,13 @@ services:
       COUNCIL_HEAD_TG: ${COUNCIL_HEAD_TG:-}
       # Set to "true" to open write endpoints without Telegram auth (dev only).
       AUTH_DISABLED: ${AUTH_DISABLED:-false}
+      # Google Sheets sync config
+      GOOGLE_SPREADSHEET_ID: ${GOOGLE_SPREADSHEET_ID:-}
+      GOOGLE_SHEET_NAME: ${GOOGLE_SHEET_NAME:-Заявки}
+      GOOGLE_SERVICE_ACCOUNT_EMAIL: ${GOOGLE_SERVICE_ACCOUNT_EMAIL:-}
+      GOOGLE_PRIVATE_KEY: ${GOOGLE_PRIVATE_KEY:-}
+      GOOGLE_SERVICE_ACCOUNT_KEY_FILE: ${GOOGLE_SERVICE_ACCOUNT_KEY_FILE:-}
+      GOOGLE_SHEETS_WEBHOOK_URL: ${GOOGLE_SHEETS_WEBHOOK_URL:-}
       # Where uploaded images are stored inside the container (persisted via volume).
       UPLOAD_DIR: /app/uploads
     ports:

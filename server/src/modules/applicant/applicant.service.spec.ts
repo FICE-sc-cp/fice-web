@@ -26,10 +26,15 @@ describe('ApplicantService', () => {
     bot = {
       notifyGroup: jest.fn().mockResolvedValue(undefined),
     };
+    const googleSheets = {
+      appendApplicant: jest.fn().mockResolvedValue({ success: true }),
+      syncAllApplicants: jest.fn().mockResolvedValue({ success: true, synced: 0 }),
+    };
 
     service = new ApplicantService(
       prisma as unknown as PrismaService,
       bot as unknown as BotService,
+      googleSheets as any,
     );
   });
 

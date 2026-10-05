@@ -33,9 +33,45 @@ export default function ApplicantsListPage() {
     [applicants.data],
   );
 
+  const [syncing, setSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<string | null>(null);
+
+  const handleSyncSheets = async () => {
+    setSyncing(true);
+    setSyncStatus(null);
+    try {
+      const res = await api.syncGoogleSheets();
+      if (res.success) {
+        setSyncStatus(`✅ Успішно синхронізовано ${res.synced} заявок у Google Таблицю!`);
+      } else {
+        setSyncStatus(`❌ ${res.error || 'Помилка синхронізації'}`);
+      }
+    } catch (err: any) {
+      setSyncStatus(`❌ ${err?.message || 'Не вдалося виконати синхронізацію'}`);
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   return (
     <main className="mx-auto max-w-xl px-4 py-6">
-      <PageHeader title="Заявки на вступ" />
+      <div className="mb-4 flex flex-col gap-3">
+        <PageHeader title="Заявки на вступ" />
+        <div className="flex items-center justify-end">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={syncing}
+            onClick={handleSyncSheets}
+            className="text-xs"
+          >
+            {syncing ? <Spinner /> : '📊 Синхронізувати з Google Sheets'}
+          </Button>
+        </div>
+        {syncStatus && (
+          <p className="text-xs font-medium text-muted">{syncStatus}</p>
+        )}
+      </div>
 
       <div className="mb-4">
         <Input

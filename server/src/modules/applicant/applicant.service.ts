@@ -12,6 +12,7 @@ import { paginated, skipFor } from '../../common/pagination';
 import { parseKpiGroup } from '../../common/kpi-groups';
 import { CreateApplicantDto } from './dto/create-applicant.dto';
 import { errorMessage } from '../../common/log-safe';
+import { GoogleSheetsService } from './google-sheets.service';
 
 @Injectable()
 export class ApplicantService {
@@ -20,6 +21,7 @@ export class ApplicantService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly bot: BotService,
+    private readonly googleSheets: GoogleSheetsService,
   ) {}
 
   private readonly include = {
@@ -131,7 +133,19 @@ export class ApplicantService {
       this.logger.warn('Applicant notification failed: ' + errorMessage(err)),
     );
 
+    void this.googleSheets.appendApplicant(applicant).catch((err) =>
+      this.logger.warn('Google Sheets append failed: ' + errorMessage(err)),
+    );
+
     return applicant;
+  }
+
+  async syncGoogleSheets() {
+    const applicants = await this.prisma.applicant.findMany({
+      orderBy: { createdAt: 'asc' },
+      include: this.include,
+    });
+    return this.googleSheets.syncAllApplicants(applicants);
   }
 
   private async notifyHeads(applicant: {
