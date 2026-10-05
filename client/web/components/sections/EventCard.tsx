@@ -61,7 +61,7 @@ export function EventCard({ event }: { event: EventItem }) {
             alt=""
             fill
             sizes="(min-width: 1024px) 24rem, (min-width: 640px) 50vw, 100vw"
-            className="object-cover"
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
           />
         )}
       </div>
