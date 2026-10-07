@@ -2,6 +2,7 @@ import Image from 'next/image';
 import { isRemoteImage } from '@/lib/uploads';
 import Link from 'next/link';
 import { CalendarIcon, ClockIcon, PinIcon } from '@/components/ui/icons';
+import { CoverPlaceholder } from '@/components/ui/CoverPlaceholder';
 import { cn, eventRegistrationOpen } from '@/lib/utils';
 import { mediaUrl, type EventItem } from '@/lib/api';
 
@@ -39,22 +40,15 @@ export function EventCard({ event }: { event: EventItem }) {
   ];
 
   return (
-    <article className="group relative flex flex-col gap-6 rounded-lg border border-border p-6 transition-all duration-300 hover:-translate-y-1 hover:border-brand-green/40 hover:shadow-xl hover:shadow-brand-green/10">
+    <article className="group relative isolate flex flex-col gap-6 rounded-lg border border-border p-6 transition-all duration-300 hover:-translate-y-1 hover:border-brand-green/40 hover:shadow-xl hover:shadow-brand-green/10">
       <Link
         href={`/events/${event.id}`}
         aria-label={event.name}
-        className="absolute inset-0 rounded-lg"
+        className="absolute inset-0 z-10 rounded-lg"
       />
 
-      <div
-        className="relative aspect-[4/3] w-full overflow-hidden rounded-lg"
-        style={
-          cover
-            ? undefined
-            : { backgroundImage: 'linear-gradient(135deg,#16161b,#1d1d24)' }
-        }
-      >
-        {cover && (
+      <div className="relative aspect-[4/3] w-full overflow-hidden rounded-lg bg-surface-2">
+        {cover ? (
           <Image
             src={cover}
             unoptimized={isRemoteImage(cover)}
@@ -62,6 +56,11 @@ export function EventCard({ event }: { event: EventItem }) {
             fill
             sizes="(min-width: 1024px) 24rem, (min-width: 640px) 50vw, 100vw"
             className="object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        ) : (
+          <CoverPlaceholder
+            seed={event.id}
+            className="transition-transform duration-500 group-hover:scale-105"
           />
         )}
       </div>
@@ -86,7 +85,7 @@ export function EventCard({ event }: { event: EventItem }) {
         <Link
           href={open ? `/events/${event.id}#register` : `/events/${event.id}`}
           className={cn(
-            'relative z-10 mt-auto rounded-lg px-7 py-3.5 text-center text-lg font-bold transition-opacity',
+            'relative z-20 mt-auto rounded-lg px-7 py-3.5 text-center text-lg font-bold transition-opacity',
             open
               ? 'bg-gradient-green text-black hover:opacity-90'
               : 'bg-neutral-600/60 text-white hover:opacity-80',

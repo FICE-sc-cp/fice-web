@@ -2,6 +2,7 @@ import Image from "next/image";
 import { isRemoteImage } from "@/lib/uploads";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { CoverPlaceholder } from "@/components/ui/CoverPlaceholder";
 import { mediaUrl, type Fundraiser } from "@/lib/api";
 import { formatUAH, fundraiserPct, fundraiserTheme } from "@/lib/utils";
 
@@ -31,7 +32,10 @@ export function FundraiserCard({ fundraiser }: { fundraiser: Fundraiser }) {
             className="object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
-          <div className={cn("absolute inset-0 opacity-25", fill)} />
+          <CoverPlaceholder
+            seed={fundraiser.id}
+            className="transition-transform duration-300 group-hover:scale-105"
+          />
         )}
       </div>
 
