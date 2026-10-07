@@ -47,14 +47,22 @@ const LATIN_TO_CYRILLIC: Record<string, string> = {
   x: 'х',
 };
 
+const DASHES = /[‐-―−]/g;
+
+const GROUP_FORMAT =
+  /^([А-ЯІЇЄҐ]{2})-(зп|з|п|в|о)?(0[1-9]|[1-9]\d)(мп|мн|ф)?(і|а|д)?$/;
+
 export function normalizeKpiGroup(raw: string): string {
   if (!raw) return '';
-  let res = raw.trim();
-  res = res
+  const compact = raw
+    .replace(/\s+/g, '')
+    .replace(DASHES, '-')
     .split('')
     .map((ch) => LATIN_TO_CYRILLIC[ch] ?? ch)
     .join('');
-  return res.toUpperCase();
+  const prefix = compact.slice(0, 2).toUpperCase();
+  const rest = compact.slice(2).replace(/^-/, '').toLowerCase();
+  return rest ? `${prefix}-${rest}` : prefix;
 }
 
 export interface KpiGroupParseResult {
@@ -75,14 +83,12 @@ export function parseKpiGroup(input: string): KpiGroupParseResult {
     };
   }
 
-  // Regex matching KPI group nomenclature: ЛЛ-ттЦЦррх
-  // Two cyrillic letters, dash, two digits, optional suffix letters
-  const match = normalized.match(/^([А-ЯІЇЄҐ]{2})-(\d{2})([А-ЯІЇЄҐ0-9]*)$/);
+  const match = normalized.match(GROUP_FORMAT);
   if (!match) {
     return {
       valid: false,
       normalized,
-      error: 'Невірний формат групи. Приклад: ІП-31, ІА-22, ІС-32',
+      error: 'Невірний формат групи. Приклади: ІП-51, ІП-о51, ІП-51мп',
     };
   }
 
