@@ -11,7 +11,7 @@ import {
   ApplicationsClosedSection,
   FICE_TIME_URL,
 } from "@/components/sections/ApplicationsClosedSection";
-import { TelegramIcon } from "@/components/ui/icons";
+import { LockIcon, TelegramIcon } from "@/components/ui/icons";
 import { fice, safe } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -81,9 +81,13 @@ export default async function JoinPage() {
           <Container>
             <div className="mx-auto flex max-w-3xl flex-col items-center gap-5 text-center">
               {!open && (
-                <span className="inline-flex items-center gap-2.5 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 text-sm font-bold uppercase tracking-[0.2em] text-subtle">
-                  <span className="size-2 rounded-full bg-brand-orange" />
-                  Набір закрито
+                <span className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/5 py-1.5 pl-1.5 pr-5 text-base font-semibold text-white backdrop-blur">
+                  <span className="flex size-8 items-center justify-center rounded-full bg-gradient-orange text-black shadow-[0_0_1.25rem_rgba(255,137,4,0.45)]">
+                    <span className="size-4">
+                      <LockIcon />
+                    </span>
+                  </span>
+                  Набір зараз закрито
                 </span>
               )}
               <h1 className="text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
