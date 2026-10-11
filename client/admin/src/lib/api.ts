@@ -269,6 +269,11 @@ export interface Applicant {
   applicantDepartments?: { id: string; question: string | null; department: Department }[];
 }
 
+export interface ApplicationStatus {
+  open: boolean;
+  updatedAt: string | null;
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   headers.set('x-telegram-init-data', getInitData());
@@ -654,6 +659,12 @@ export const api = {
       '/applicant/sync-sheets',
       { method: 'POST' },
     ),
+  applicationStatus: () => request<ApplicationStatus>('/applicant/status'),
+  setApplicationStatus: (open: boolean) =>
+    request<ApplicationStatus>('/applicant/status', {
+      method: 'PATCH',
+      ...json({ open }),
+    }),
 
   channelStatus: () => request<ChannelStatus>('/channel/status'),
   postChannel: (body: ChannelPostInput) =>

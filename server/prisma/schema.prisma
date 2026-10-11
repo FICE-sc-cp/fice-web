@@ -17,6 +17,12 @@ model StatOverride {
   updatedAt DateTime @default(now()) @updatedAt
 }
 
+model SiteSetting {
+  key       String   @id @db.VarChar(50)
+  value     String   @db.VarChar(200)
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
 enum NewsCategory {
   EVENTS
   EDUCATION

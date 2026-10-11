@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { ApplicantService } from './applicant.service';
 import { PrismaService } from '../../database/prisma.service';
 import { BotService } from '../../bot/bot.service';
@@ -7,8 +7,20 @@ describe('ApplicantService', () => {
   let service: ApplicantService;
   let prisma: any;
   let bot: any;
+  let siteSetting: { findUnique: jest.Mock; upsert: jest.Mock };
 
   beforeEach(() => {
+    siteSetting = {
+      findUnique: jest.fn().mockResolvedValue(null),
+      upsert: jest
+        .fn()
+        .mockImplementation(
+          ({ create }: { create: { key: string; value: string } }) => ({
+            ...create,
+            updatedAt: new Date('2026-10-11T12:00:00Z'),
+          }),
+        ),
+    };
     prisma = {
       applicant: {
         create: jest.fn().mockImplementation(({ data }) => ({
@@ -22,6 +34,7 @@ describe('ApplicantService', () => {
       department: {
         findMany: jest.fn().mockResolvedValue([]),
       },
+      siteSetting,
     };
     bot = {
       notifyGroup: jest.fn().mockResolvedValue(undefined),
@@ -96,5 +109,59 @@ describe('ApplicantService', () => {
     await expect(
       service.create({ ...validDto, telegramTag: '@abc' }),
     ).rejects.toThrow(BadRequestException);
+  });
+
+  describe('closing applications', () => {
+    const stored = (value: string) => ({
+      key: 'applicationsOpen',
+      value,
+      updatedAt: new Date('2026-10-11T12:00:00Z'),
+    });
+    const saveApplicant = () =>
+      (prisma as { applicant: { create: jest.Mock } }).applicant.create;
+
+    it('accepts applications by default, when nothing is stored', async () => {
+      await expect(service.getStatus()).resolves.toEqual({
+        open: true,
+        updatedAt: null,
+      });
+    });
+
+    it('reports closed after an admin closes them', async () => {
+      siteSetting.findUnique.mockResolvedValue(stored('false'));
+      await expect(service.getStatus()).resolves.toEqual({
+        open: false,
+        updatedAt: new Date('2026-10-11T12:00:00Z'),
+      });
+    });
+
+    it('stores the switch under one key', async () => {
+      await expect(service.setStatus(false)).resolves.toEqual({
+        open: false,
+        updatedAt: new Date('2026-10-11T12:00:00Z'),
+      });
+      expect(siteSetting.upsert).toHaveBeenCalledWith({
+        where: { key: 'applicationsOpen' },
+        create: { key: 'applicationsOpen', value: 'false' },
+        update: { value: 'false' },
+      });
+    });
+
+    it('rejects a new application while closed and saves nothing', async () => {
+      siteSetting.findUnique.mockResolvedValue(stored('false'));
+      await expect(service.create(validDto)).rejects.toThrow(
+        ForbiddenException,
+      );
+      await expect(service.create(validDto)).rejects.toThrow(
+        'Подачу заявок зараз закрито',
+      );
+      expect(saveApplicant()).not.toHaveBeenCalled();
+    });
+
+    it('accepts applications again after reopening', async () => {
+      siteSetting.findUnique.mockResolvedValue(stored('true'));
+      await expect(service.create(validDto)).resolves.toBeDefined();
+      expect(saveApplicant()).toHaveBeenCalled();
+    });
   });
 });

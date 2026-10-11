@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Query,
 } from '@nestjs/common';
@@ -20,6 +21,7 @@ import { Admin } from '../../auth/admin.decorator';
 import { ApiPaginatedResponse } from '../../common/dto/paginated.dto';
 import { ApplicantQueryDto } from './dto/applicant-query.dto';
 import { CreateApplicantDto } from './dto/create-applicant.dto';
+import { SetApplicationStatusDto } from './dto/set-application-status.dto';
 import { ApplicantEntity } from './entities/applicant.entity';
 import { ApplicantService } from './applicant.service';
 
@@ -34,6 +36,21 @@ export class ApplicantController {
   @ApiCreatedResponse({ type: ApplicantEntity })
   create(@Body() dto: CreateApplicantDto) {
     return this.applicantService.create(dto);
+  }
+
+  @Get('status')
+  @ApiOperation({
+    summary: 'Whether join applications are being accepted (public)',
+  })
+  getStatus() {
+    return this.applicantService.getStatus();
+  }
+
+  @Patch('status')
+  @Admin()
+  @ApiOperation({ summary: 'Open or close join applications (admin)' })
+  setStatus(@Body() dto: SetApplicationStatusDto) {
+    return this.applicantService.setStatus(dto.open);
   }
 
   @Post('sync-sheets')

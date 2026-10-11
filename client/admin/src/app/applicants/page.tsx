@@ -2,13 +2,122 @@
 
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from '@tanstack/react-query';
 import { api } from '@/lib/api';
+import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { FormError } from '@/components/ui/FormError';
 import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
+import { hapticNotify } from '@/lib/telegram';
 import { useDebouncedValue } from '@/lib/useDebouncedValue';
+import { cn } from '@/lib/utils';
+
+const STATUS_KEY = ['application-status'];
+
+function IntakeCard() {
+  const qc = useQueryClient();
+  const [confirm, setConfirm] = useState(false);
+  const status = useQuery({
+    queryKey: STATUS_KEY,
+    queryFn: () => api.applicationStatus(),
+  });
+  const toggle = useMutation({
+    mutationFn: (open: boolean) => api.setApplicationStatus(open),
+    onSuccess: (next) => {
+      qc.setQueryData(STATUS_KEY, next);
+      hapticNotify('success');
+      setConfirm(false);
+    },
+  });
+
+  if (status.isLoading) {
+    return (
+      <Card className="mb-4 flex justify-center">
+        <Spinner />
+      </Card>
+    );
+  }
+  if (!status.data) {
+    return (
+      <div className="mb-4">
+        <FormError
+          messages={['Не вдалося дізнатися, чи відкрито прийом заявок.']}
+        />
+      </div>
+    );
+  }
+
+  const { open, updatedAt } = status.data;
+
+  return (
+    <>
+      <Card className="mb-4 flex flex-col gap-3">
+        <div className="flex items-start gap-3">
+          <span
+            className={cn(
+              'mt-1.5 size-2.5 shrink-0 rounded-full',
+              open ? 'bg-brand-green' : 'bg-brand-red',
+            )}
+          />
+          <div className="min-w-0">
+            <p className="font-semibold">
+              {open ? 'Прийом заявок відкрито' : 'Прийом заявок закрито'}
+            </p>
+            <p className="mt-0.5 text-xs text-muted">
+              {open
+                ? 'Анкета на сторінці вступу доступна всім.'
+                : 'На сторінці вступу замість анкети — повідомлення про наступний набір.'}
+            </p>
+            {updatedAt && (
+              <p className="mt-0.5 text-xs text-subtle">
+                Змінено{' '}
+                {new Date(updatedAt).toLocaleString('uk-UA', {
+                  dateStyle: 'short',
+                  timeStyle: 'short',
+                })}
+              </p>
+            )}
+          </div>
+        </div>
+        {toggle.isError && !confirm && <FormError error={toggle.error} />}
+        <Button
+          type="button"
+          variant={open ? 'danger' : 'primary'}
+          disabled={toggle.isPending}
+          onClick={() => (open ? setConfirm(true) : toggle.mutate(true))}
+        >
+          {open
+            ? 'Закрити прийом заявок'
+            : toggle.isPending
+              ? '…'
+              : 'Відкрити прийом заявок'}
+        </Button>
+      </Card>
+
+      <ConfirmDialog
+        open={confirm}
+        title="Закрити прийом заявок?"
+        message="Анкета зникне зі сторінки вступу, і нові заявки не прийматимуться. Відкрити прийом знову можна будь-коли."
+        confirmLabel="Закрити"
+        loading={toggle.isPending}
+        error={toggle.error}
+        onCancel={() => {
+          setConfirm(false);
+          toggle.reset();
+        }}
+        onConfirm={() => toggle.mutate(false)}
+      />
+    </>
+  );
+}
 
 export default function ApplicantsListPage() {
   const [search, setSearch] = useState('');
@@ -72,6 +181,8 @@ export default function ApplicantsListPage() {
           <p className="text-xs font-medium text-muted">{syncStatus}</p>
         )}
       </div>
+
+      <IntakeCard />
 
       <div className="mb-4">
         <Input

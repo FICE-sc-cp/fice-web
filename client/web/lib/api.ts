@@ -264,6 +264,11 @@ export async function safe<T>(promise: Promise<T>, fallback: T): Promise<T> {
   }
 }
 
+export interface ApplicationStatus {
+  open: boolean;
+  updatedAt: string | null;
+}
+
 export interface CreateApplicationPayload {
   firstName: string;
   middleName: string;
@@ -403,6 +408,7 @@ export const fice = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     }),
+  applicationStatus: () => request<ApplicationStatus>('/applicant/status'),
   submitApplication: (body: unknown) =>
     request<unknown>('/applicant', {
       method: 'POST',

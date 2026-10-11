@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -13,6 +14,11 @@ import { parseKpiGroup } from '../../common/kpi-groups';
 import { CreateApplicantDto } from './dto/create-applicant.dto';
 import { errorMessage } from '../../common/log-safe';
 import { GoogleSheetsService } from './google-sheets.service';
+
+const APPLICATIONS_OPEN_KEY = 'applicationsOpen';
+
+export const APPLICATIONS_CLOSED_MESSAGE =
+  'Подачу заявок зараз закрито. Про наступний набір оголосимо в Telegram-каналі FICE Time (@fice_time).';
 
 @Injectable()
 export class ApplicantService {
@@ -28,7 +34,32 @@ export class ApplicantService {
     applicantDepartments: { include: { department: true } },
   };
 
+  async getStatus() {
+    const setting = await this.prisma.siteSetting.findUnique({
+      where: { key: APPLICATIONS_OPEN_KEY },
+    });
+    return {
+      open: setting?.value !== 'false',
+      updatedAt: setting?.updatedAt ?? null,
+    };
+  }
+
+  async setStatus(open: boolean) {
+    const value = String(open);
+    const setting = await this.prisma.siteSetting.upsert({
+      where: { key: APPLICATIONS_OPEN_KEY },
+      create: { key: APPLICATIONS_OPEN_KEY, value },
+      update: { value },
+    });
+    this.logger.log(`Join applications ${open ? 'opened' : 'closed'}`);
+    return { open, updatedAt: setting.updatedAt };
+  }
+
   async create(dto: CreateApplicantDto) {
+    if (!(await this.getStatus()).open) {
+      throw new ForbiddenException(APPLICATIONS_CLOSED_MESSAGE);
+    }
+
     // 1. Group validation & check FICT
     const parsedGroup = parseKpiGroup(dto.group);
     if (!parsedGroup.valid) {
