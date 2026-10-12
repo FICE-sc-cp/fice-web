@@ -2586,9 +2586,11 @@ function MiniAppContent() {
                             : 'border-border bg-bg/50 text-muted'
                         }`}
                       >
+                        Онлайн зараз
+                        <br />
                         {selectedEvent.donationAnyAmount
-                          ? `Онлайн зараз · ${ANY_AMOUNT_VALUE}`
-                          : `Онлайн зараз · ${Number(selectedEvent.feeAmount)} грн`}
+                          ? ANY_AMOUNT_VALUE
+                          : `${Number(selectedEvent.feeAmount)} грн`}
                       </button>
                       )}
                       {Number(selectedEvent.feeAtEventAmount ?? 0) > 0 && (
@@ -2601,7 +2603,9 @@ function MiniAppContent() {
                             : 'border-border bg-bg/50 text-muted'
                         }`}
                       >
-                        На вході · {Number(selectedEvent.feeAtEventAmount)} грн
+                        На вході
+                        <br />
+                        {Number(selectedEvent.feeAtEventAmount)} грн
                       </button>
                       )}
                     </div>
