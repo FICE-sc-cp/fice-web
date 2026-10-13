@@ -15,7 +15,7 @@ import { api } from '@/lib/api';
 import { useFormErrors } from '@/lib/formErrors';
 import { useMainButton } from '@/lib/telegram';
 
-const CATEGORY_OPTIONS = [
+export const CATEGORY_OPTIONS = [
   { value: '', label: '— Без категорії —' },
   { value: 'EVENTS', label: 'Події' },
   { value: 'EDUCATION', label: 'Освіта' },

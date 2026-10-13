@@ -22,7 +22,7 @@ import { AdminAccessService } from '../../auth/admin-access.service';
 import { ApiPaginatedResponse } from '../../common/dto/paginated.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { CreateNewsDto } from './dto/create-news.dto';
-import { NewsQueryDto } from './dto/news-query.dto';
+import { NewsQueryDto, NewsStatsQueryDto } from './dto/news-query.dto';
 import { UpdateNewsDto } from './dto/update-news.dto';
 import { NewsEntity } from './entities/news.entity';
 import { NewsService } from './news.service';
@@ -52,6 +52,13 @@ export class NewsController {
   ) {
     const draft = await this.adminAccess.draftsAllowed(query.draft, initData);
     return this.newsService.findAll({ ...query, draft });
+  }
+
+  @Get('stats')
+  @Admin()
+  @ApiOperation({ summary: 'Published news per category for a period (admin)' })
+  stats(@Query() query: NewsStatsQueryDto) {
+    return this.newsService.stats(query);
   }
 
   @Get(':id')

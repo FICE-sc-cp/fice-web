@@ -6,9 +6,30 @@ import {
   IsEnum,
   IsOptional,
   IsString,
+  Matches,
   MaxLength,
 } from 'class-validator';
 import { PaginationQueryDto } from '../../../common/dto/pagination-query.dto';
+
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+export class NewsStatsQueryDto {
+  @ApiPropertyOptional({
+    example: '2026-09-01',
+    description: 'Kyiv date, inclusive',
+  })
+  @IsOptional()
+  @Matches(DAY)
+  from?: string;
+
+  @ApiPropertyOptional({
+    example: '2026-09-30',
+    description: 'Kyiv date, inclusive',
+  })
+  @IsOptional()
+  @Matches(DAY)
+  to?: string;
+}
 
 export class NewsQueryDto extends PaginationQueryDto {
   @ApiPropertyOptional({

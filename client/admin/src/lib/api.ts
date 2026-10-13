@@ -30,6 +30,12 @@ export interface Facts {
   projectsDone: number;
 }
 
+export interface NewsStats {
+  total: number;
+  /** Category → count; "NONE" for news without a category. */
+  byCategory: Record<string, number>;
+}
+
 export interface StatOverride {
   key: string;
   value: string;
@@ -518,6 +524,12 @@ export const api = {
 
   news: (page = 1, limit = 20) =>
     request<Paginated<News>>(`/news?page=${page}&limit=${limit}&draft=true`),
+  newsStats: (from?: string, to?: string) => {
+    const params = new URLSearchParams();
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    return request<NewsStats>(`/news/stats?${params.toString()}`);
+  },
   newsById: (id: string) => request<News>(`/news/${id}`),
   createNews: (body: NewsInput) => request<News>('/news', { method: 'POST', ...json(body) }),
   updateNews: (id: string, body: Partial<NewsInput>) =>

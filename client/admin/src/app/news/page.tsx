@@ -6,9 +6,69 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, mediaUrl, type News } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/Button';
+import { Card } from '@/components/ui/Card';
+import { Input } from '@/components/ui/Input';
 import { Spinner } from '@/components/ui/Spinner';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
+import { CATEGORY_OPTIONS } from '@/components/forms/NewsForm';
 import { hapticNotify } from '@/lib/telegram';
+import { todayInputValue } from '@/lib/utils';
+
+/** Published news per category for a chosen period. */
+function NewsStatsCard() {
+  const [from, setFrom] = useState(() => `${todayInputValue().slice(0, 8)}01`);
+  const [to, setTo] = useState(() => todayInputValue());
+  const stats = useQuery({
+    queryKey: ['news-stats', from, to],
+    queryFn: () => api.newsStats(from || undefined, to || undefined),
+  });
+
+  return (
+    <Card className="mb-4 flex flex-col gap-3">
+      <p className="font-semibold">📊 Скільки новин опубліковано</p>
+      <div className="grid grid-cols-2 gap-2">
+        <Input
+          label="З"
+          type="date"
+          value={from}
+          max={to || undefined}
+          onChange={(e) => setFrom(e.target.value)}
+        />
+        <Input
+          label="По"
+          type="date"
+          value={to}
+          min={from || undefined}
+          onChange={(e) => setTo(e.target.value)}
+        />
+      </div>
+      {stats.isLoading ? (
+        <div className="flex justify-center py-2">
+          <Spinner />
+        </div>
+      ) : stats.isError ? (
+        <p className="text-sm text-brand-red">Не вдалося порахувати.</p>
+      ) : stats.data ? (
+        <ul className="flex flex-col gap-1.5 text-sm">
+          {CATEGORY_OPTIONS.map(({ value, label }) => (
+            <li key={value} className="flex justify-between gap-2">
+              <span className="text-muted">
+                {value ? label : 'Без категорії'}
+              </span>
+              <span className="font-semibold">
+                {stats.data.byCategory[value || 'NONE'] ?? 0}
+              </span>
+            </li>
+          ))}
+          <li className="mt-1 flex justify-between gap-2 border-t border-border pt-2 font-semibold">
+            <span>Усього</span>
+            <span>{stats.data.total}</span>
+          </li>
+        </ul>
+      ) : null}
+    </Card>
+  );
+}
 
 export default function NewsListPage() {
   const qc = useQueryClient();
@@ -37,6 +97,8 @@ export default function NewsListPage() {
           </Link>
         }
       />
+
+      <NewsStatsCard />
 
       {isLoading ? (
         <div className="flex justify-center py-12">

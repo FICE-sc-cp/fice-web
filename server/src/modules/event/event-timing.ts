@@ -51,6 +51,19 @@ export function kyivWallTime(
   return new Date(instant);
 }
 
+/** Prisma date filter for Kyiv days `from`..`to` (YYYY-MM-DD, both inclusive). */
+export function kyivDaysFilter(
+  from?: string,
+  to?: string,
+): { gte?: Date; lt?: Date } | undefined {
+  if (!from && !to) return undefined;
+  const day = (iso: string, shift = 0) => {
+    const [y, m, d] = iso.split('-').map(Number);
+    return kyivWallTime(y, m, d + shift);
+  };
+  return { ...(from && { gte: day(from) }), ...(to && { lt: day(to, 1) }) };
+}
+
 export function startOfKyivDay(at: Date): Date {
   const p = kyivParts(at);
   return kyivWallTime(p.year, p.month, p.day);
