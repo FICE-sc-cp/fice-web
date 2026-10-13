@@ -65,6 +65,7 @@ export default function EditEventPage() {
         location: v.location?.trim() || null,
         locationNote: v.locationNote?.trim() || null,
         photoAlbumUrl: v.photoAlbumUrl?.trim() || null,
+        streamUrl: v.streamUrl?.trim() || null,
         isAbitfest: v.isAbitfest ?? false,
         noRegistration: v.noRegistration ?? false,
         isDraft: v.isDraft ?? false,
@@ -148,6 +149,7 @@ export default function EditEventPage() {
                       ? String(event.maxRegistrations)
                       : '',
                   photoAlbumUrl: event.photoAlbumUrl ?? '',
+                  streamUrl: event.streamUrl ?? '',
                   feeAmount: event.feeAmount != null ? String(event.feeAmount) : '',
                   feeAtEventAmount:
                     event.feeAtEventAmount != null

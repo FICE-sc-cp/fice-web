@@ -151,6 +151,8 @@ export interface EventItem {
   registrationClosesAt?: string | null;
   isPast?: boolean;
   photoAlbumUrl: string | null;
+  /** Livestream before/during the event, recording after it. */
+  streamUrl?: string | null;
   feeAmount: string | null;
   feeAtEventAmount: string | null;
   donationAnyAmount?: boolean;

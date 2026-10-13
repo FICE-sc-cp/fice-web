@@ -21,7 +21,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Glow } from '@/components/ui/Glow';
-import { cn } from '@/lib/utils';
+import { cn, isEventPast } from '@/lib/utils';
 import { USER_BOT_USERNAME } from '@/lib/bot';
 import {
   NOT_KPI_GROUP,
@@ -2183,6 +2183,22 @@ function MiniAppContent() {
                       : 'Локація: буде повідомлено згодом'}
                   </span>
                 </div>
+                {selectedEvent.streamUrl && (
+                  <a
+                    href={selectedEvent.streamUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 flex items-center gap-1.5 text-sm font-semibold text-brand-red"
+                  >
+                    <span aria-hidden>🎥</span>
+                    <span>
+                      {isEventPast(selectedEvent)
+                        ? 'Запис заходу'
+                        : 'Трансляція заходу'}{' '}
+                      — дивитися ↗
+                    </span>
+                  </a>
+                )}
               </div>
 
               {selectedEvent.description && (

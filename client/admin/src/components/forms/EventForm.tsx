@@ -56,6 +56,11 @@ const schema = z.object({
   registrationCloseDate: z.string().optional(),
   maxRegistrations: z.string().optional(),
   photoAlbumUrl: z.string().optional(),
+  streamUrl: z
+    .string()
+    .trim()
+    .refine((v) => !v || /^https?:\/\/\S+$/i.test(v), 'Посилання має починатися з https://')
+    .optional(),
   feeAmount: z.string().optional(),
   feeAtEventAmount: z.string().optional(),
   feeRequisites: z.string().max(255, 'Максимум 255 символів').optional(),
@@ -139,6 +144,7 @@ export function eventValuesToInput(v: EventFormValues): EventInput {
       : undefined,
     maxRegistrations: v.maxRegistrations ? Number(v.maxRegistrations) : null,
     photoAlbumUrl: v.photoAlbumUrl?.trim() || undefined,
+    streamUrl: v.streamUrl?.trim() || undefined,
     feeAmount: v.donationAnyAmount
       ? 0
       : v.feeAmount
@@ -244,6 +250,7 @@ export function EventForm({
       registrationCloseDate: '',
       maxRegistrations: '',
       photoAlbumUrl: '',
+      streamUrl: '',
       feeAmount: '',
       feeAtEventAmount: '',
       feeRequisites: '',
@@ -571,6 +578,12 @@ export function EventForm({
             placeholder="https://…"
             {...register('photoAlbumUrl')}
             error={errors.photoAlbumUrl?.message}
+          />
+          <Input
+            label="Трансляція або запис заходу"
+            placeholder="https://youtube.com/…"
+            {...register('streamUrl')}
+            error={errors.streamUrl?.message}
           />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div className="min-w-0">

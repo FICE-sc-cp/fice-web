@@ -11,6 +11,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsUrl,
   IsUUID,
   MaxLength,
   Min,
@@ -135,6 +136,16 @@ export class CreateEventDto {
   @IsOptional()
   @IsString()
   photoAlbumUrl?: string;
+
+  @ApiPropertyOptional({
+    description: 'Livestream link before/during the event, recording after it',
+  })
+  @IsOptional()
+  @IsUrl(
+    { protocols: ['http', 'https'], require_protocol: true },
+    { message: 'Посилання на трансляцію має починатися з https://' },
+  )
+  streamUrl?: string;
 
   @ApiPropertyOptional({
     description: 'Online contribution amount; omit/0 for a free event',

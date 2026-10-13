@@ -145,6 +145,7 @@ export interface EventItem {
   registrationCloseDate: string | null;
   maxRegistrations?: number | null;
   photoAlbumUrl: string | null;
+  streamUrl: string | null;
   feeAmount: string | null;
   feeAtEventAmount: string | null;
   feeRequisites: string | null;
@@ -356,6 +357,7 @@ export interface EventInput {
   registrationCloseDate?: string;
   maxRegistrations?: number | null;
   photoAlbumUrl?: string | null;
+  streamUrl?: string | null;
   feeAmount?: number;
   feeAtEventAmount?: number;
   feeRequisites?: string;

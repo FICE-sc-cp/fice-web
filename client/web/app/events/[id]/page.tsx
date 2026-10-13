@@ -31,6 +31,13 @@ const fmtTime = (d: Date) =>
   }).format(d);
 
 const isUrl = (s: string) => /^https?:\/\//i.test(s.trim());
+const hostOf = (url: string) => {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
+};
 
 function Fact({
   label,
@@ -38,15 +45,22 @@ function Fact({
   note,
   color,
   href,
+  className,
 }: {
   label: string;
   value: string;
   note?: string;
   color: string;
   href?: string;
+  className?: string;
 }) {
   return (
-    <div className="flex flex-col gap-1.5 rounded-2xl border border-white/8 bg-surface/45 p-5">
+    <div
+      className={cn(
+        "flex flex-col gap-1.5 rounded-2xl border border-white/8 bg-surface/45 p-5",
+        className,
+      )}
+    >
       <span
         className="text-xs font-bold uppercase tracking-wide"
         style={{ color }}
@@ -149,6 +163,8 @@ export default async function EventDetailPage({
     }))
     .filter((p) => p.logoImage);
   const program = event.program ?? [];
+  const stream =
+    event.streamUrl && isUrl(event.streamUrl) ? event.streamUrl : null;
 
   return (
     <>
@@ -214,7 +230,12 @@ export default async function EventDetailPage({
         {/* key facts */}
         <section className="relative z-[1] pt-7">
           <Container>
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <div
+              className={cn(
+                "grid grid-cols-2 gap-4",
+                stream ? "lg:grid-cols-5" : "lg:grid-cols-4",
+              )}
+            >
               <Fact
                 label="Дата"
                 value={fmtDate(date)}
@@ -258,6 +279,16 @@ export default async function EventDetailPage({
                 note={fees.onlineRequired ? "Донат на ЗСУ" : undefined}
                 color="#ff8904"
               />
+              {stream && (
+                <Fact
+                  label={past ? "Запис" : "Трансляція"}
+                  value="Дивитися"
+                  href={stream}
+                  note={`${hostOf(stream)} ↗`}
+                  color="#fb2c36"
+                  className="col-span-2 lg:col-span-1"
+                />
+              )}
             </div>
           </Container>
         </section>

@@ -200,6 +200,8 @@ model Event {
   registrationCloseDate DateTime?
   maxRegistrations      Int?
   photoAlbumUrl         String?
+  // Livestream before/during the event, recording after it.
+  streamUrl             String?
   feeAmount             Decimal?  @db.Decimal(10, 2)
   feeAtEventAmount      Decimal?  @db.Decimal(10, 2)
   donationAnyAmount     Boolean   @default(false)
