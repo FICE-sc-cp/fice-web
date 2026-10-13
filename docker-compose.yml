@@ -67,6 +67,8 @@ services:
       USER_BOT_USERNAME: ${USER_BOT_USERNAME:-}
       USER_MINI_APP_NAME: ${USER_MINI_APP_NAME:-app}
       USER_MINI_APP_URL: ${USER_MINI_APP_URL:-}
+      # Interview booking bot; opens ${PUBLIC_WEB_URL}/interview.
+      INTERVIEW_BOT_TOKEN: ${INTERVIEW_BOT_TOKEN:-}
       # Only members of this Telegram group may change content.
       ADMIN_GROUP_CHAT_ID: ${ADMIN_GROUP_CHAT_ID:-}
       # Channel the bot posts announcements to (bot must be its admin).

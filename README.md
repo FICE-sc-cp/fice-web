@@ -185,6 +185,7 @@ is in [`.env.example`](.env.example). When the API runs on the host it reads
 | `PUBLIC_WEB_URL` | prod | `https://fice-sc.kpi.ua` |
 | `CORS_ORIGIN` | prod | `https://fice-sc.kpi.ua` |
 | `USER_MINI_APP_NAME` | no (`app`) | Short name of the student Mini App in @BotFather |
+| `INTERVIEW_BOT_TOKEN` | no | Interview booking bot (a third bot); opens `${PUBLIC_WEB_URL}/interview` |
 | `TELEGRAM_CHANNEL_ID` | no | Channel for announcements (bot must be admin) |
 | `PARTNERSHIP_CHAT_ID` | no | Chat for partner applications (`chatId/threadId` for a topic) |
 | `PARTNERSHIP_HEAD_TG`, `COUNCIL_HEAD_TG` | no | Usernames pinged on partner applications |
@@ -213,7 +214,7 @@ department linked to it by slug. It links a department that still has the
 page's default name, creates only the missing ones and never renames or deletes
 anything, so running it again is safe. It does not create «Президія»: the
 presidium is managed in the admin's «Президія» tab. `GET /health` on the API
-reports the polling state of both bots and returns 503 while one is restarting.
+reports the polling state of every bot and returns 503 while one is restarting.
 
 ### Migrations on deploy
 
@@ -279,6 +280,7 @@ is public; `POST`/`PATCH`/`PUT`/`DELETE` require admin auth unless noted.
 | Join applications | `/applicant` | Public submit via `POST /applicant`; listing is admin-only |
 | Admin users | `/user` | Admin-only |
 | Uploads | `POST /upload` | Upload an image (admin) → returns `{ url }`; files served at `/uploads/...` |
+| Interviews | `/interview` | Interview bot mini-app; auth by the interview bot's init data, roles from the DB |
 
 The **facts & results** section is computed from the database (events held,
 money raised, charity amount, visitors reached, partners, departments, members)

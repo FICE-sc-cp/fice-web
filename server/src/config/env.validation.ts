@@ -46,6 +46,10 @@ export function productionEnvErrors(env: Env): string[] {
   if (adminToken && userToken && adminToken === userToken) {
     errors.push('TELEGRAM_BOT_TOKEN and USER_BOT_TOKEN must be different bots');
   }
+  const interviewToken = str(env.INTERVIEW_BOT_TOKEN);
+  if (interviewToken && [adminToken, userToken].includes(interviewToken)) {
+    errors.push('INTERVIEW_BOT_TOKEN must be a separate bot');
+  }
 
   const groupId = str(env.ADMIN_GROUP_CHAT_ID);
   if (groupId && !/^-?\d+$/.test(groupId)) {

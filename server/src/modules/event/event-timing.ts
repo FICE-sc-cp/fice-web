@@ -37,8 +37,15 @@ function kyivOffsetMs(at: Date): number {
   return wallClockAsUtc - Math.floor(at.getTime() / 1000) * 1000;
 }
 
-function kyivMidnight(year: number, month: number, day: number): Date {
-  const wallClock = Date.UTC(year, month - 1, day);
+/** The instant when Kyiv wall clocks show the given date and time. */
+export function kyivWallTime(
+  year: number,
+  month: number,
+  day: number,
+  hour = 0,
+  minute = 0,
+): Date {
+  const wallClock = Date.UTC(year, month - 1, day, hour, minute);
   let instant = wallClock - kyivOffsetMs(new Date(wallClock));
   instant = wallClock - kyivOffsetMs(new Date(instant));
   return new Date(instant);
@@ -46,12 +53,12 @@ function kyivMidnight(year: number, month: number, day: number): Date {
 
 export function startOfKyivDay(at: Date): Date {
   const p = kyivParts(at);
-  return kyivMidnight(p.year, p.month, p.day);
+  return kyivWallTime(p.year, p.month, p.day);
 }
 
 export function endOfKyivDay(at: Date): Date {
   const p = kyivParts(at);
-  return kyivMidnight(p.year, p.month, p.day + 1);
+  return kyivWallTime(p.year, p.month, p.day + 1);
 }
 
 export interface EventTiming {

@@ -54,6 +54,12 @@ describe('validateEnv', () => {
     expect(() =>
       validateEnv({ ...PROD, USER_BOT_TOKEN: PROD.TELEGRAM_BOT_TOKEN }),
     ).toThrow('must be different bots');
+    expect(() =>
+      validateEnv({ ...PROD, INTERVIEW_BOT_TOKEN: PROD.USER_BOT_TOKEN }),
+    ).toThrow('INTERVIEW_BOT_TOKEN must be a separate bot');
+    expect(
+      productionEnvErrors({ ...PROD, INTERVIEW_BOT_TOKEN: '333:interview' }),
+    ).toEqual([]);
   });
 
   it('rejects malformed values', () => {

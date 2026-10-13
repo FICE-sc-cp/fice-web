@@ -9,6 +9,7 @@ declare global {
         ready: () => void;
         expand: () => void;
         close: () => void;
+        openTelegramLink?: (url: string) => void;
         initData: string;
         initDataUnsafe: {
           user?: {
@@ -99,7 +100,7 @@ export function useTelegram() {
           id: Number(devUserId),
           firstName: 'Тестовий',
           lastName: 'Користувач',
-          username: 'testuser',
+          username: urlParams.get('tgTag') ?? 'testuser',
         });
       }
       if (startapp) {

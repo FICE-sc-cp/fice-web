@@ -45,13 +45,15 @@ export function extractTelegramUser(initData: string): TelegramUser | null {
 
 /**
  * Validates and extracts a Telegram user from `x-telegram-init-data`.
- * Uses USER_BOT_TOKEN or TELEGRAM_BOT_TOKEN from ConfigService.
+ * Accepts init data signed by any of the bots named in `tokenKeys`
+ * (USER_BOT_TOKEN or TELEGRAM_BOT_TOKEN by default).
  * If AUTH_DISABLED is true, allows fallback parameters for local development.
  */
 export function resolveValidatedTelegramUser(
   config: ConfigService,
   initData?: string,
   fallback?: { id?: string; tag?: string },
+  tokenKeys: string[] = ['USER_BOT_TOKEN', 'TELEGRAM_BOT_TOKEN'],
 ): ResolvedTelegramUser {
   const authDisabled = config.get<string>('AUTH_DISABLED') === 'true';
 
@@ -70,23 +72,19 @@ export function resolveValidatedTelegramUser(
     throw new UnauthorizedException('Відсутні дані авторизації Telegram');
   }
 
-  const userToken = config.get<string>('USER_BOT_TOKEN');
-  const adminToken = config.get<string>('TELEGRAM_BOT_TOKEN');
+  const tokens = tokenKeys
+    .map((key) => config.get<string>(key))
+    .filter((token): token is string => !!token);
 
-  if (userToken || adminToken) {
-    let isValid = false;
-    if (userToken) {
+  if (tokens.length) {
+    const isValid = tokens.some((token) => {
       try {
-        validate(initData, userToken);
-        isValid = true;
-      } catch {}
-    }
-    if (!isValid && adminToken) {
-      try {
-        validate(initData, adminToken);
-        isValid = true;
-      } catch {}
-    }
+        validate(initData, token);
+        return true;
+      } catch {
+        return false;
+      }
+    });
     if (!isValid && !authDisabled) {
       throw new UnauthorizedException('Невалідні дані Telegram init data');
     }

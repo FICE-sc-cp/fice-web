@@ -97,6 +97,8 @@ model Department {
   // Telegram chat the bot harvests this department's people wall from.
   // "chatId" or "chatId/threadId" for a forum topic. Set from the admin panel.
   telegramChatId String? @db.VarChar(64)
+  // Length of one interview slot; set by the department head in the interview bot.
+  interviewSlotMinutes Int @default(30)
 
   headId String?         @unique @db.Uuid
   head   DepartmentHead? @relation(fields: [headId], references: [id], onDelete: SetNull)
@@ -105,6 +107,9 @@ model Department {
   departmentMemberAssignments DepartmentMemberAssignment[]
   eventDetails                EventDetails[]
   projectParticipants         ProjectParticipant[]
+  interviewRecruiters         InterviewRecruiter[]
+  interviewCandidates         InterviewCandidate[]
+  interviewSlots              InterviewSlot[]
 }
 
 enum DepartmentMemberRole {
@@ -156,6 +161,7 @@ model Applicant {
   createdAt   DateTime @default(now())
 
   applicantDepartments ApplicantDepartment[]
+  interviewCandidates  InterviewCandidate[]
 }
 
 model ApplicantDepartment {
@@ -526,4 +532,81 @@ model PublicUpload {
 
   @@index([ipHash, createdAt])
   @@index([createdAt])
+}
+
+// ---- Interview booking (separate interview bot) ---------------------------
+// Department head = Department.head.telegramTag, admins = presidium members
+// (DepartmentMember) by telegramTag. Heads add recruiters and candidates by tag;
+// telegramId is bound when the person first opens the mini-app.
+
+enum InterviewStatus {
+  PENDING
+  PASSED
+  FAILED
+  NO_SHOW
+}
+
+model InterviewRecruiter {
+  id           String   @id @default(uuid()) @db.Uuid
+  departmentId String   @db.Uuid
+  telegramTag  String   @db.VarChar(50)
+  telegramId   BigInt?
+  name         String?  @db.VarChar(120)
+  createdAt    DateTime @default(now())
+
+  department Department @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+
+  @@unique([departmentId, telegramTag])
+  @@index([telegramId])
+}
+
+model InterviewCandidate {
+  id           String          @id @default(uuid()) @db.Uuid
+  departmentId String          @db.Uuid
+  telegramTag  String          @db.VarChar(50)
+  telegramId   BigInt?
+  name         String?         @db.VarChar(120)
+  applicantId  String?         @db.Uuid
+  status       InterviewStatus @default(PENDING)
+  createdAt    DateTime        @default(now())
+
+  department Department      @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  applicant  Applicant?      @relation(fields: [applicantId], references: [id], onDelete: SetNull)
+  slot       InterviewSlot?
+  notes      InterviewNote[]
+
+  @@unique([departmentId, telegramTag])
+  @@index([telegramId])
+}
+
+model InterviewSlot {
+  id             String    @id @default(uuid()) @db.Uuid
+  departmentId   String    @db.Uuid
+  startsAt       DateTime
+  endsAt         DateTime
+  // Whoever conducts the interview (recruiter, head or presidium member).
+  hostTelegramId BigInt
+  hostName       String    @db.VarChar(120)
+  candidateId    String?   @unique @db.Uuid
+  reminderSentAt DateTime?
+  createdAt      DateTime  @default(now())
+
+  department Department          @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  candidate  InterviewCandidate? @relation(fields: [candidateId], references: [id], onDelete: SetNull)
+
+  @@index([departmentId, startsAt])
+  @@index([hostTelegramId, startsAt])
+}
+
+model InterviewNote {
+  id               String   @id @default(uuid()) @db.Uuid
+  candidateId      String   @db.Uuid
+  authorTelegramId BigInt
+  authorName       String   @db.VarChar(120)
+  text             String   @db.Text
+  createdAt        DateTime @default(now())
+
+  candidate InterviewCandidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@index([candidateId])
 }

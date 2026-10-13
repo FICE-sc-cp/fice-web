@@ -240,7 +240,7 @@ const serverGet = cache((url: string) =>
   }),
 );
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const url = `${apiBase()}${path}`;
   if (typeof window !== 'undefined') return fetchJson<T>(url, init);
   if (!init) return serverGet(url) as Promise<T>;
