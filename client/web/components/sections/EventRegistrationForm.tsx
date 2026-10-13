@@ -13,11 +13,15 @@ import {
   type RegistrationPayment,
 } from '@/lib/api';
 import { normalizeKpiGroup, parseKpiGroup } from '@/lib/kpi-groups';
-import { baseQuestionsOf, choiceOptions } from '@/lib/registrationConfig';
+import {
+  NOT_KPI_GROUP,
+  allowsNotKpi,
+  baseQuestionsOf,
+  choiceOptions,
+} from '@/lib/registrationConfig';
 import { MAX_UPLOAD_MB, RECEIPT_ACCEPT, uploadProblem } from '@/lib/uploads';
 import { ANY_AMOUNT_TITLE, ANY_AMOUNT_VALUE, feeInfo } from '@/lib/fees';
-
-const isUrl = (s: string) => /^https?:\/\//i.test(s.trim());
+import { FeeRequisites } from '@/components/ui/FeeRequisites';
 
 function TelegramIcon({ className = 'size-5' }: { className?: string }) {
   return (
@@ -46,6 +50,9 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
   const [middleName, setMiddleName] = useState('');
   const [telegram, setTelegram] = useState('');
   const [group, setGroup] = useState('');
+  const [notKpi, setNotKpi] = useState(false);
+  const canBeNotKpi = allowsNotKpi(event);
+  const outsider = notKpi && canBeNotKpi;
   const [birthDate, setBirthDate] = useState('');
   const [phone, setPhone] = useState('');
   const [payment, setPayment] = useState<'' | RegistrationPayment>('');
@@ -125,7 +132,7 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
     }
 
     const grpCfg = baseConfig.group;
-    if (grpCfg?.enabled !== false && grpCfg?.required !== false) {
+    if (grpCfg?.enabled !== false && grpCfg?.required !== false && !outsider) {
       if (!group.trim()) {
         e.group = 'Вкажи групу';
       } else {
@@ -193,7 +200,11 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
         .replace(/\s+/g, ' ')
         .trim();
 
-      const normalizedGrp = group.trim() ? normalizeKpiGroup(group.trim()) : 'ФІОТ';
+      const normalizedGrp = outsider
+        ? NOT_KPI_GROUP
+        : group.trim()
+          ? normalizeKpiGroup(group.trim())
+          : 'ФІОТ';
 
       const payload: EventRegistrationPayload = {
         fullName: fullName || 'Учасник',
@@ -217,7 +228,7 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
         // Immediate registration success
         setSubmittedData({
           fullName: fullName || firstName || 'Учасник',
-          group: group.trim(),
+          group: outsider ? NOT_KPI_GROUP : group.trim(),
           telegram: `@${telegram.trim().replace(/^@+/, '')}`,
           birthDate: birthDate || undefined,
           payment: hasFee ? payment : 'NONE',
@@ -245,7 +256,7 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
           setPendingBotSession(null);
           setSubmittedData({
             fullName: fullName || firstName || 'Учасник',
-            group: group.trim(),
+            group: outsider ? NOT_KPI_GROUP : group.trim(),
             telegram: `@${telegram.trim().replace(/^@+/, '')}`,
             birthDate: birthDate || undefined,
             payment: hasFee ? payment : 'NONE',
@@ -265,7 +276,7 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
     }, 2000);
 
     return () => clearInterval(interval);
-  }, [pendingBotSession, lastName, firstName, middleName, group, telegram, birthDate, hasFee, payment]);
+  }, [pendingBotSession, lastName, firstName, middleName, group, outsider, telegram, birthDate, hasFee, payment]);
 
   const resetForm = () => {
     setLastName('');
@@ -273,6 +284,7 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
     setMiddleName('');
     setTelegram('');
     setGroup('');
+    setNotKpi(false);
     setBirthDate('');
     setPhone('');
     setPayment('');
@@ -447,14 +459,29 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
             {/* Group & Telegram */}
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
               {baseConfig.group?.enabled !== false && (
-                <Input
-                  label={baseConfig.group?.label || 'Академічна група'}
-                  placeholder="ІП-31"
-                  maxLength={12}
-                  value={group}
-                  onChange={(e) => setGroup(e.target.value)}
-                  error={errors.group}
-                />
+                <div className="flex flex-col gap-2.5">
+                  <Input
+                    label={baseConfig.group?.label || 'Академічна група'}
+                    placeholder="ІП-31"
+                    maxLength={12}
+                    value={outsider ? '' : group}
+                    onChange={(e) => setGroup(e.target.value)}
+                    error={outsider ? undefined : errors.group}
+                    disabled={outsider}
+                    className={cn(outsider && 'cursor-not-allowed opacity-50')}
+                  />
+                  {canBeNotKpi && (
+                    <label className="flex cursor-pointer items-center gap-2.5 text-sm text-subtle">
+                      <input
+                        type="checkbox"
+                        className="size-[18px] shrink-0 accent-brand-green"
+                        checked={notKpi}
+                        onChange={(e) => setNotKpi(e.target.checked)}
+                      />
+                      <span>Я не студент КПІ</span>
+                    </label>
+                  )}
+                </div>
               )}
 
               <div className="flex w-full flex-col gap-1.5">
@@ -593,23 +620,10 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
                 {payment === 'DONATED' && (
                   <div className="flex flex-col gap-2 pt-2">
                     {event.feeRequisites && (
-                      <p className="rounded-xl border border-border bg-surface px-4 py-3 text-sm text-muted">
-                        Реквізити:{' '}
-                        {isUrl(event.feeRequisites) ? (
-                          <a
-                            href={event.feeRequisites}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="break-all font-bold text-brand-cyan underline-offset-2 hover:underline"
-                          >
-                            {event.feeRequisites}
-                          </a>
-                        ) : (
-                          <span className="break-all font-bold text-brand-green">
-                            {event.feeRequisites}
-                          </span>
-                        )}
-                      </p>
+                      <div className="flex flex-col gap-2 rounded-xl border border-border bg-surface px-4 py-3 text-sm text-muted">
+                        <span className="font-semibold">Реквізити:</span>
+                        <FeeRequisites text={event.feeRequisites} />
+                      </div>
                     )}
                     <input
                       ref={fileRef}

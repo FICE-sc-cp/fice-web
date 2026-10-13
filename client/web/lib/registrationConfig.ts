@@ -29,6 +29,12 @@ export function baseQuestionsOf(event: {
   );
 }
 
+export const NOT_KPI_GROUP = 'Не КПІ';
+
+export function allowsNotKpi(event: { allowedFaculties?: string[] }): boolean {
+  return !event.allowedFaculties?.length;
+}
+
 export const YES_NO_OPTIONS = ['Так', 'Ні'];
 
 export function choiceOptions(question: {

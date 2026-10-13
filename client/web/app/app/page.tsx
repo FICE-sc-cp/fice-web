@@ -23,8 +23,14 @@ import { Textarea } from '@/components/ui/Textarea';
 import { Glow } from '@/components/ui/Glow';
 import { cn } from '@/lib/utils';
 import { USER_BOT_USERNAME } from '@/lib/bot';
-import { baseQuestionsOf, choiceOptions } from '@/lib/registrationConfig';
+import {
+  NOT_KPI_GROUP,
+  allowsNotKpi,
+  baseQuestionsOf,
+  choiceOptions,
+} from '@/lib/registrationConfig';
 import { ANY_AMOUNT_TITLE, ANY_AMOUNT_VALUE, feeInfo } from '@/lib/fees';
+import { FeeRequisites } from '@/components/ui/FeeRequisites';
 import {
   MAX_UPLOAD_MB,
   PHOTO_ACCEPT,
@@ -162,6 +168,9 @@ function MiniAppContent() {
   // Registration Form State
   const [regFullName, setRegFullName] = useState('');
   const [regGroup, setRegGroup] = useState('');
+  const [regNotKpi, setRegNotKpi] = useState(false);
+  const regOutsider =
+    !!selectedEvent && regNotKpi && allowsNotKpi(selectedEvent);
   const [regTelegram, setRegTelegram] = useState('');
   const [regBirthDate, setRegBirthDate] = useState('');
   const [regPhone, setRegPhone] = useState('');
@@ -257,7 +266,8 @@ function MiniAppContent() {
 
           // Also set default registration values if not filled yet
           if (p.fullName && !regFullName) setRegFullName(p.fullName);
-          if (p.group && !regGroup) setRegGroup(p.group);
+          if (p.group === NOT_KPI_GROUP) setRegNotKpi(true);
+          else if (p.group && !regGroup) setRegGroup(p.group);
           if (p.birthDate && !regBirthDate)
             setRegBirthDate(p.birthDate.slice(0, 10));
           if (p.phoneNumber && !regPhone) setRegPhone(p.phoneNumber);
@@ -805,13 +815,19 @@ function MiniAppContent() {
     const askGroup = base.group?.enabled !== false;
     const askBirthDate = base.birthDate?.enabled !== false;
     const askPhone = base.phone?.enabled === true;
+    const outsider = askGroup && regOutsider;
 
     const errs: Record<string, string> = {};
     if (askName && base.fullName?.required !== false && !regFullName.trim())
       errs.fullName = 'Вкажи ПІБ';
     if (!regTelegram.trim())
       errs.telegram = 'Встанови username у налаштуваннях Telegram';
-    if (askGroup && base.group?.required !== false && !regGroup.trim())
+    if (
+      askGroup &&
+      base.group?.required !== false &&
+      !outsider &&
+      !regGroup.trim()
+    )
       errs.group = 'Вкажи академічну групу';
     if (askBirthDate && base.birthDate?.required && !regBirthDate)
       errs.birthDate = 'Вкажи дату народження';
@@ -850,7 +866,9 @@ function MiniAppContent() {
         {
           fullName: (askName && regFullName.trim()) || 'Учасник',
           telegramTag: `@${regTelegram.trim().replace(/^@+/, '')}`,
-          group: (askGroup && regGroup.trim()) || 'ФІОТ',
+          group: outsider
+            ? NOT_KPI_GROUP
+            : (askGroup && regGroup.trim()) || 'ФІОТ',
           birthDate: (askBirthDate && regBirthDate) || undefined,
           payment: hasFee ? (regPayment as RegistrationPayment) : 'NONE',
           receiptUrl: regReceiptUrl ?? undefined,
@@ -2176,6 +2194,28 @@ function MiniAppContent() {
                 />
               )}
 
+              {(selectedEvent.program?.length ?? 0) > 0 && (
+                <div className="rounded-2xl border border-border bg-bg/50 p-3.5">
+                  <h3 className="mb-1 text-sm font-black text-fg">Програма</h3>
+                  <div className="flex flex-col">
+                    {(selectedEvent.program ?? []).map((p, i, all) => (
+                      <div
+                        key={p.id}
+                        className={cn(
+                          'flex gap-3 py-2 text-sm',
+                          i < all.length - 1 && 'border-b border-border/60',
+                        )}
+                      >
+                        <span className="w-24 shrink-0 font-bold text-brand-cyan">
+                          {p.time}
+                        </span>
+                        <span className="text-gray-300">{p.title}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Fee info */}
               {feeInfo(selectedEvent).onlineRequired && (
                 <div className="rounded-2xl border border-brand-purple/30 bg-brand-purple/10 p-3.5 text-sm flex justify-between items-center">
@@ -2463,14 +2503,34 @@ function MiniAppContent() {
 
                 <div className="grid grid-cols-2 gap-2.5">
                   {baseQuestionsOf(selectedEvent).group?.enabled !== false && (
-                    <Input
-                      label={baseQuestionsOf(selectedEvent).group?.label || 'Група'}
-                      placeholder="ІП-31"
-                      value={regGroup}
-                      onChange={(e) => setRegGroup(e.target.value)}
-                      error={regErrors.group}
-                      required={baseQuestionsOf(selectedEvent).group?.required !== false}
-                    />
+                    <div className="flex flex-col gap-2">
+                      <Input
+                        label={baseQuestionsOf(selectedEvent).group?.label || 'Група'}
+                        placeholder="ІП-31"
+                        value={regOutsider ? '' : regGroup}
+                        onChange={(e) => setRegGroup(e.target.value)}
+                        error={regOutsider ? undefined : regErrors.group}
+                        disabled={regOutsider}
+                        className={cn(
+                          regOutsider && 'cursor-not-allowed opacity-50',
+                        )}
+                        required={
+                          baseQuestionsOf(selectedEvent).group?.required !== false &&
+                          !regOutsider
+                        }
+                      />
+                      {allowsNotKpi(selectedEvent) && (
+                        <label className="flex cursor-pointer select-none items-center gap-2 text-xs text-muted">
+                          <input
+                            type="checkbox"
+                            checked={regNotKpi}
+                            onChange={(e) => setRegNotKpi(e.target.checked)}
+                            className="h-4 w-4 shrink-0 cursor-pointer rounded accent-brand-cyan"
+                          />
+                          <span>Я не студент КПІ</span>
+                        </label>
+                      )}
+                    </div>
                   )}
                   <Input
                     label="Telegram"
@@ -2620,9 +2680,17 @@ function MiniAppContent() {
                         <div className="text-xs text-muted">
                           Реквізити для переказу:
                         </div>
-                        <div className="text-sm font-mono font-bold text-brand-cyan break-all">
-                          {selectedEvent.feeRequisites || 'Уточнюйте у організаторів'}
-                        </div>
+                        {selectedEvent.feeRequisites ? (
+                          <FeeRequisites
+                            text={selectedEvent.feeRequisites}
+                            onCopy={() => hapticNotify('success')}
+                            className="text-sm text-muted"
+                          />
+                        ) : (
+                          <div className="text-sm font-bold text-brand-cyan">
+                            Уточнюйте у організаторів
+                          </div>
+                        )}
                         <label className="block text-xs font-semibold text-fg pt-1">
                           Завантажити квитанцію або скриншот (JPG, PNG, WEBP, PDF, до {MAX_UPLOAD_MB} МБ):
                         </label>

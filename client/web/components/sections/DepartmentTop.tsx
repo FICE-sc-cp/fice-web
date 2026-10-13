@@ -34,6 +34,18 @@ const PERSON_OUTLINE =
 
 const PRESIDIUM_TOP_ROW = new Set(["HEAD", "FIRST_DEPUTY", "SECRETARY"]);
 
+function balancedRows<T>(items: T[], perRow: number): T[][] {
+  const rows: T[][] = [];
+  const count = Math.ceil(items.length / perRow);
+  let start = 0;
+  for (let row = 0; row < count; row++) {
+    const size = Math.ceil((items.length - start) / (count - row));
+    rows.push(items.slice(start, start + size));
+    start += size;
+  }
+  return rows;
+}
+
 async function presidiumTeam(): Promise<{ top: Member[]; rest: Member[] }> {
   const members = presidiumMembers(
     await safe(fice.members(), [] as DepartmentMember[]),
@@ -390,45 +402,42 @@ export async function DepartmentTop({ d }: { d: DepartmentData }) {
             />
             {d.slug === "presidium" ? (
               <div className="mt-12 flex flex-col gap-8 lg:gap-10">
-                {/* Рядок 1: Голова СР, перший зам, секретар */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-4xl mx-auto w-full justify-items-center">
-                  {presidium.top.map((m, i) => (
-                    <MemberCard
-                      key={m.name}
-                      name={m.name}
-                      role={m.role}
-                      telegram={m.telegram}
-                      photo={m.photo}
-                      focus={m.focus}
-                      description={m.description}
-                      featured={m.lead}
-                      accent={d.accent}
-                      gradient={d.gradient}
-                      className={cn(
-                        "w-full max-w-[270px]",
-                        i === 2 && "sm:col-span-2 sm:max-w-[270px] lg:col-span-1",
+                {[
+                  { key: "top", members: presidium.top, perRow: 3 },
+                  { key: "rest", members: presidium.rest, perRow: 4 },
+                ]
+                  .filter((group) => group.members.length > 0)
+                  .map((group) => (
+                    <div
+                      key={group.key}
+                      className="mx-auto flex w-full max-w-[42rem] flex-wrap justify-center gap-x-6 gap-y-8 lg:max-w-6xl"
+                    >
+                      {balancedRows(group.members, group.perRow).map(
+                        (row, r) => (
+                          <div
+                            key={r}
+                            className="contents lg:flex lg:w-full lg:justify-center lg:gap-6"
+                          >
+                            {row.map((m) => (
+                              <MemberCard
+                                key={m.name}
+                                name={m.name}
+                                role={m.role}
+                                telegram={m.telegram}
+                                photo={m.photo}
+                                focus={m.focus}
+                                description={m.description}
+                                featured={m.lead}
+                                accent={d.accent}
+                                gradient={d.gradient}
+                                className="w-full max-w-[270px] sm:w-[270px] lg:w-[calc((100%-4.5rem)/4)]"
+                              />
+                            ))}
+                          </div>
+                        ),
                       )}
-                    />
+                    </div>
                   ))}
-                </div>
-
-                {/* Рядок 2: заступники */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 lg:gap-6 max-w-6xl mx-auto w-full justify-items-center">
-                  {presidium.rest.map((m) => (
-                    <MemberCard
-                      key={m.name}
-                      name={m.name}
-                      role={m.role}
-                      telegram={m.telegram}
-                      photo={m.photo}
-                      focus={m.focus}
-                      description={m.description}
-                      accent={d.accent}
-                      gradient={d.gradient}
-                      className="w-full max-w-[270px]"
-                    />
-                  ))}
-                </div>
               </div>
             ) : (
               <>
