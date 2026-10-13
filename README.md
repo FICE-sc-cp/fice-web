@@ -245,6 +245,11 @@ and WebP files, as they are. Anything over 50 megapixels is rejected in both
 modes. The web app's `/_next/image` also needs sharp; without it, it serves the
 original file, so static images in `client/web/public` are kept small.
 
+Admins can also upload GIFs and MP4/WEBM videos (news covers) up to 50 MB;
+they are stored as they are. Other uploads stay limited to 5 MB. The admin's
+`/api-proxy` buffers request bodies up to `proxyClientMaxBodySize` in
+`client/admin/next.config.ts`, which must stay above that limit.
+
 To shrink uploads that were stored before this processing existed, back up the
 uploads volume and run:
 
@@ -279,7 +284,7 @@ is public; `POST`/`PATCH`/`PUT`/`DELETE` require admin auth unless noted.
 | Department members | `/department-member` | Assign via `/department-member/:id/assignments` |
 | Join applications | `/applicant` | Public submit via `POST /applicant`; listing is admin-only |
 | Admin users | `/user` | Admin-only |
-| Uploads | `POST /upload` | Upload an image (admin) → returns `{ url }`; files served at `/uploads/...` |
+| Uploads | `POST /upload` | Upload an image, GIF or MP4/WEBM video (admin) → returns `{ url }`; files served at `/uploads/...` |
 | Interviews | `/interview` | Interview bot mini-app; auth by the interview bot's init data, roles from the DB |
 
 The **facts & results** section is computed from the database (events held,

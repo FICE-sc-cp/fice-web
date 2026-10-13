@@ -32,6 +32,9 @@ export function todayInputValue(date = new Date()): string {
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
+/** News covers may be MP4/WEBM videos; everything else renders as an image. */
+export const isVideo = (url: string) => /\.(mp4|webm)(\?|$)/i.test(url);
+
 export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')

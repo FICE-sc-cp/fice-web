@@ -4,6 +4,7 @@ import { extname } from 'path';
 import {
   BadRequestException,
   Controller,
+  PayloadTooLargeException,
   Post,
   Req,
   UploadedFile,
@@ -17,6 +18,7 @@ import type { Request } from 'express';
 import { diskStorage } from 'multer';
 import { Admin } from '../auth/admin.decorator';
 import {
+  MAX_MEDIA_UPLOAD_BYTES,
   MAX_UPLOAD_BYTES,
   UPLOAD_DIR,
   UPLOAD_URL_PREFIX,
@@ -41,12 +43,21 @@ const ALLOWED_MIME_EXTENSIONS: Record<string, string[]> = {
   'application/pdf': ['.pdf'],
 };
 
+// Admins may also upload animations and short videos (news covers).
+const MEDIA_MIME_EXTENSIONS: Record<string, string[]> = {
+  'image/gif': ['.gif'],
+  'video/mp4': ['.mp4'],
+  'video/webm': ['.webm'],
+};
+const MEDIA_EXTENSIONS = Object.values(MEDIA_MIME_EXTENSIONS).flat();
+
 function getSafeExtension(
   mimetype: string,
   originalname: string,
+  allowed: Record<string, string[]> = ALLOWED_MIME_EXTENSIONS,
 ): string | null {
   const mime = mimetype.toLowerCase();
-  const allowedExts = ALLOWED_MIME_EXTENSIONS[mime];
+  const allowedExts = allowed[mime];
   if (!allowedExts) return null;
 
   const rawExt = extname(originalname).toLowerCase();
@@ -88,36 +99,57 @@ function validateMagicBytes(filePath: string, ext: string): boolean {
     if (ext === '.pdf') {
       return buf.toString('ascii', 0, 4) === '%PDF';
     }
+    if (ext === '.gif') {
+      return /^GIF8[79]a$/.test(buf.toString('ascii', 0, 6));
+    }
+    if (ext === '.mp4') {
+      return buf.toString('ascii', 4, 8) === 'ftyp';
+    }
+    if (ext === '.webm') {
+      return buf.readUInt32BE(0) === 0x1a45dfa3;
+    }
     return false;
   } catch {
     return false;
   }
 }
 
-const imageOrPdfUpload = FileInterceptor('file', {
-  storage: diskStorage({
-    destination: UPLOAD_DIR,
-    filename: (_req, file, cb) => {
-      const safeExt =
-        getSafeExtension(file.mimetype, file.originalname) ?? '.bin';
-      cb(null, `${randomUUID()}${safeExt}`);
+function uploadInterceptor(
+  allowed: Record<string, string[]>,
+  maxBytes: number,
+  rejection: string,
+) {
+  return FileInterceptor('file', {
+    storage: diskStorage({
+      destination: UPLOAD_DIR,
+      filename: (_req, file, cb) => {
+        const safeExt =
+          getSafeExtension(file.mimetype, file.originalname, allowed) ?? '.bin';
+        cb(null, `${randomUUID()}${safeExt}`);
+      },
+    }),
+    limits: { fileSize: maxBytes, files: 1, fields: 2, parts: 3 },
+    fileFilter: (_req, file, cb) => {
+      if (!getSafeExtension(file.mimetype, file.originalname, allowed)) {
+        cb(new BadRequestException(rejection), false);
+        return;
+      }
+      cb(null, true);
     },
-  }),
-  limits: { fileSize: MAX_UPLOAD_BYTES, files: 1, fields: 2, parts: 3 },
-  fileFilter: (_req, file, cb) => {
-    const safeExt = getSafeExtension(file.mimetype, file.originalname);
-    if (!safeExt) {
-      cb(
-        new BadRequestException(
-          'Дозволені тільки безпечні зображення (JPEG, PNG, WEBP) або PDF-файли. SVG та виконувані файли заборонені.',
-        ),
-        false,
-      );
-      return;
-    }
-    cb(null, true);
-  },
-});
+  });
+}
+
+const imageOrPdfUpload = uploadInterceptor(
+  ALLOWED_MIME_EXTENSIONS,
+  MAX_UPLOAD_BYTES,
+  'Дозволені тільки безпечні зображення (JPEG, PNG, WEBP) або PDF-файли. SVG та виконувані файли заборонені.',
+);
+
+const adminUpload = uploadInterceptor(
+  { ...ALLOWED_MIME_EXTENSIONS, ...MEDIA_MIME_EXTENSIONS },
+  MAX_MEDIA_UPLOAD_BYTES,
+  'Дозволені зображення (JPEG, PNG, WEBP, GIF), відео (MP4, WEBM) або PDF.',
+);
 
 function toResult(file?: Express.Multer.File) {
   if (!file) {
@@ -174,10 +206,27 @@ export class UploadController {
   @Post()
   @Admin()
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Upload an image and get its URL (admin)' })
+  @ApiOperation({
+    summary: 'Upload an image, GIF or video and get its URL (admin)',
+  })
   @ApiBody(fileBody)
-  @UseInterceptors(imageOrPdfUpload)
+  @UseInterceptors(adminUpload)
   async upload(@UploadedFile() file?: Express.Multer.File) {
+    // Videos and GIFs may be up to 50 MB; everything else keeps the 5 MB cap.
+    if (
+      file &&
+      file.size > MAX_UPLOAD_BYTES &&
+      !MEDIA_EXTENSIONS.includes(extname(file.filename).toLowerCase())
+    ) {
+      try {
+        unlinkSync(file.path);
+      } catch {
+        // already gone
+      }
+      throw new PayloadTooLargeException(
+        `Файл завеликий: зображення до ${MAX_UPLOAD_BYTES / 1024 / 1024} МБ`,
+      );
+    }
     const { filename, url } = await processUpload(ADMIN_IMAGE_PROFILE, file);
     return { filename, url };
   }

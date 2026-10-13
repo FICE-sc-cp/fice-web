@@ -1,8 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Image from 'next/image';
-import { isRemoteImage } from '@/lib/uploads';
+import { CoverMedia } from '@/components/ui/CoverMedia';
 import Link from 'next/link';
 import { mediaUrl, type News, type NewsCategory } from '@/lib/api';
 import { Container } from '@/components/ui/Container';
@@ -31,11 +30,9 @@ function CardImage({
   return (
     <div className={cn('relative overflow-hidden bg-white/5', className)}>
       {url ? (
-        <Image
+        <CoverMedia
           src={url}
-          unoptimized={isRemoteImage(url)}
           alt=""
-          fill
           sizes={sizes}
           className="object-cover transition-transform duration-500 group-hover:scale-105"
         />

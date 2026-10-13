@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Image from "next/image";
-import { isRemoteImage } from "@/lib/uploads";
+import { isVideo } from "@/lib/uploads";
+import { CoverMedia } from "@/components/ui/CoverMedia";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { IconDefs } from "@/components/ui/icons";
@@ -42,7 +42,10 @@ export async function generateMetadata({
       plainText(item.details) ||
       `Новина Студентської ради ФІОТ від ${formatNewsDate(item.publishDate)}.`,
     alternates: { canonical: `/news/${item.id}` },
-    openGraph: openGraph(`/news/${item.id}`, mediaUrl(item.image)),
+    openGraph: openGraph(
+      `/news/${item.id}`,
+      item.image && !isVideo(item.image) ? mediaUrl(item.image) : null,
+    ),
     ...(item.isDraft && { robots: NOINDEX }),
   };
 }
@@ -107,12 +110,11 @@ export default async function NewsArticlePage({
 
             {cover && (
               <div className="relative mb-10 aspect-[4/3] overflow-hidden rounded-2xl border border-white/10">
-                <Image
+                <CoverMedia
                   src={cover}
-                  unoptimized={isRemoteImage(cover)}
                   alt={item.title}
-                  fill
                   preload
+                  controls
                   sizes="(min-width: 800px) 48rem, 100vw"
                   className="object-cover"
                 />
@@ -198,11 +200,9 @@ export default async function NewsArticlePage({
                       >
                         <div className="relative aspect-[4/3] overflow-hidden">
                           {url ? (
-                            <Image
+                            <CoverMedia
                               src={url}
-                              unoptimized={isRemoteImage(url)}
                               alt=""
-                              fill
                               sizes="(min-width: 1024px) 24rem, (min-width: 640px) 50vw, 100vw"
                               className="object-cover transition-transform duration-500 group-hover:scale-105"
                             />

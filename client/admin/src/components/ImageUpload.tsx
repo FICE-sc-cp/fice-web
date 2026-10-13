@@ -3,7 +3,17 @@
 import { useState } from 'react';
 import { api, mediaUrl } from '@/lib/api';
 import { haptic } from '@/lib/telegram';
+import { isVideo } from '@/lib/utils';
 import { Spinner } from './ui/Spinner';
+
+function Preview({ src, className }: { src: string; className: string }) {
+  return isVideo(src) ? (
+    <video src={src} muted loop autoPlay playsInline className={className} />
+  ) : (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={src} alt="" className={className} />
+  );
+}
 
 export function ImageUpload({
   value,
@@ -11,12 +21,14 @@ export function ImageUpload({
   label = 'Зображення',
   aspect,
   hint,
+  accept = 'image/*',
 }: {
   value?: string | null;
   onChange: (url: string | null) => void;
   label?: string;
   aspect?: string;
   hint?: string;
+  accept?: string;
 }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -24,6 +36,13 @@ export function ImageUpload({
   async function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Mirrors the server: videos and GIFs up to 50 MB, other files up to 5 MB.
+    const limitMb = /^(video\/|image\/gif)/.test(file.type) ? 50 : 5;
+    if (file.size > limitMb * 1024 * 1024) {
+      setError(`Файл завеликий: максимум ${limitMb} МБ`);
+      e.target.value = '';
+      return;
+    }
     setUploading(true);
     setError(null);
     try {
@@ -49,9 +68,8 @@ export function ImageUpload({
           className="relative w-full max-w-sm overflow-hidden rounded-xl border border-border bg-bg-soft"
           style={{ aspectRatio: aspect }}
         >
-          <img
+          <Preview
             src={preview}
-            alt=""
             className="absolute inset-0 h-full w-full object-cover"
           />
           <button
@@ -64,8 +82,7 @@ export function ImageUpload({
         </div>
       ) : preview ? (
         <div className="relative overflow-hidden rounded-xl border border-border">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={preview} alt="" className="max-h-52 w-full object-cover" />
+          <Preview src={preview} className="max-h-52 w-full object-cover" />
           <button
             type="button"
             onClick={() => onChange(null)}
@@ -79,7 +96,7 @@ export function ImageUpload({
           {uploading ? <Spinner /> : <span>Натисни, щоб завантажити</span>}
           <input
             type="file"
-            accept="image/*"
+            accept={accept}
             className="hidden"
             onChange={handleFile}
             disabled={uploading}

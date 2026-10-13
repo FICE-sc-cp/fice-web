@@ -171,7 +171,8 @@ export function NewsForm({
       <ImageUpload
         label="Обкладинка"
         aspect="4 / 3"
-        hint="Рекомендоване співвідношення 4:3"
+        hint="Фото, GIF або відео MP4/WEBM (до 50 МБ). Рекомендоване співвідношення 4:3"
+        accept="image/*,video/mp4,video/webm"
         value={image}
         onChange={(url) => setValue('image', url, { shouldDirty: true })}
       />

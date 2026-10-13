@@ -8,6 +8,11 @@ const nextConfig: NextConfig = {
   basePath,
   env: { NEXT_PUBLIC_BASE_PATH: basePath },
   allowedDevOrigins: devOrigin ? [devOrigin] : [],
+  experimental: {
+    // Request bodies are buffered up to this size before the /api-proxy
+    // rewrite forwards them; news videos may be up to 50 MB (server limit).
+    proxyClientMaxBodySize: '55mb',
+  },
   async redirects() {
     return [
       {

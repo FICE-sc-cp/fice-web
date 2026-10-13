@@ -22,3 +22,7 @@ export function uploadProblem(
   return null;
 }
 export const isRemoteImage = (src: string) => /^https?:\/\//i.test(src);
+
+/** News covers may be MP4/WEBM videos (or GIFs, which render as images). */
+export const isVideo = (src: string) => /\.(mp4|webm)(\?|$)/i.test(src);
+export const isGif = (src: string) => /\.gif(\?|$)/i.test(src);

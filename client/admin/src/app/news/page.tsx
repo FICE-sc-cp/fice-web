@@ -12,7 +12,7 @@ import { Spinner } from '@/components/ui/Spinner';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { CATEGORY_OPTIONS } from '@/components/forms/NewsForm';
 import { hapticNotify } from '@/lib/telegram';
-import { todayInputValue } from '@/lib/utils';
+import { isVideo, todayInputValue } from '@/lib/utils';
 
 /** Published news per category for a chosen period. */
 function NewsStatsCard() {
@@ -119,7 +119,15 @@ export default function NewsListPage() {
                 key={n.id}
                 className="flex items-center gap-3 rounded-2xl border border-border bg-surface p-3"
               >
-                {img ? (
+                {img && isVideo(img) ? (
+                  <video
+                    src={img}
+                    muted
+                    playsInline
+                    preload="metadata"
+                    className="h-14 w-14 shrink-0 rounded-lg object-cover"
+                  />
+                ) : img ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={img}
