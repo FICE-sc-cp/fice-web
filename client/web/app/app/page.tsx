@@ -3112,22 +3112,6 @@ function MiniAppContent() {
                           <span className="text-[11px] font-mono font-bold text-brand-cyan tracking-wider">
                             КВИТОК #{((reg.ticketCode || reg.id).slice(0, 8)).toUpperCase()}
                           </span>
-                          {(() => {
-                            const ageInfo = getAgeInfo(reg.birthDate);
-                            if (!ageInfo) return null;
-                            return (
-                              <span
-                                className={cn(
-                                  'rounded-lg px-2 py-0.5 text-[11px] font-black uppercase tracking-wider border',
-                                  ageInfo.isAdult
-                                    ? 'border-brand-green/40 bg-brand-green/15 text-brand-green'
-                                    : 'border-brand-orange/40 bg-brand-orange/15 text-brand-orange',
-                                )}
-                              >
-                                {ageInfo.isAdult ? '🔞 18+' : '👶 <18'}
-                              </span>
-                            );
-                          })()}
                         </div>
 
                         {/* QR Code Container - MUST have white background so black QR is readable in dark themes */}

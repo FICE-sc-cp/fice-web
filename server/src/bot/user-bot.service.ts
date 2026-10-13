@@ -643,15 +643,6 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
         },
       });
 
-      let ageInfo = '';
-      if (reg.birthDate) {
-        const bd = new Date(reg.birthDate);
-        const ageDifMs = Date.now() - bd.getTime();
-        const ageDate = new Date(ageDifMs);
-        const age = Math.abs(ageDate.getUTCFullYear() - 1970);
-        const isAdult = age >= 18;
-        ageInfo = `🎂 <b>Вік:</b> ${age} (${isAdult ? '🟢 18+' : '🔴 &lt;18'})\n`;
-      }
 
       const eventDateStr = new Intl.DateTimeFormat('uk-UA', {
         day: '2-digit',
@@ -672,7 +663,6 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
         `\n` +
         `👤 <b>Гість:</b> ${escapeHtml(reg.fullName)}\n` +
         `👥 <b>Група:</b> ${escapeHtml(reg.group)}\n` +
-        ageInfo +
         `🎟 <b>Код квитка:</b> <code>${escapeHtml(reg.ticketCode.slice(0, 8))}</code>\n` +
         `✅ <b>Оплату/реєстрацію підтверджено</b>\n\n` +
         `⚠️ <b>Збережи це фото в галерею смартфона</b>, щоб показати QR-код волонтеру на вході навіть без інтернету! 🔆 Зроби яскравість екрана вищою.`;
