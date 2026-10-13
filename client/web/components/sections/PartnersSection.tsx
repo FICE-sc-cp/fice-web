@@ -15,13 +15,14 @@ import {
   type StatKey,
 } from "@/lib/api";
 
-const MAX_LOGOS = 10;
+// ponytail: one API page holds at most 100 partners; page through them if there are ever more.
+const PARTNERS_LIMIT = 100;
 
 const EMPTY_PARTNERS = {
   items: [] as Partner[],
   total: 0,
   page: 1,
-  limit: MAX_LOGOS,
+  limit: PARTNERS_LIMIT,
   totalPages: 0,
 };
 
@@ -47,7 +48,7 @@ const STAT_DEFS: { key: StatKey; label: string; gradient: string }[] = [
 export async function PartnersSection() {
   const [facts, partnersPage] = await Promise.all([
     safe(fice.facts(), EMPTY_FACTS),
-    safe(fice.partners(50), EMPTY_PARTNERS),
+    safe(fice.partners(PARTNERS_LIMIT), EMPTY_PARTNERS),
   ]);
 
   const logos = partnersPage.items
@@ -57,8 +58,7 @@ export async function PartnersSection() {
       websiteLink: p.websiteLink,
       logo: mediaUrl(p.logoImage),
     }))
-    .filter((p): p is typeof p & { logo: string } => !!p.logo)
-    .slice(0, MAX_LOGOS);
+    .filter((p): p is typeof p & { logo: string } => !!p.logo);
 
   return (
     <section
@@ -76,17 +76,17 @@ export async function PartnersSection() {
         </Reveal>
 
         {logos.length > 0 && (
-          <RevealGroup className="mt-14 flex flex-wrap items-center justify-center gap-x-12 gap-y-8">
+          <RevealGroup className="mt-14 flex flex-wrap items-center justify-center gap-x-8 gap-y-6 lg:gap-x-10">
             {logos.map((p) => {
               const logo = (
                 <Image
                   src={p.logo}
                   unoptimized={isRemoteImage(p.logo)}
                   alt={p.name}
-                  width={176}
-                  height={80}
-                  sizes="(min-width: 1024px) 176px, (min-width: 640px) 144px, 112px"
-                  className="h-14 w-28 object-contain transition-transform duration-300 hover:-translate-y-1 hover:scale-110 sm:h-16 sm:w-36 lg:h-20 lg:w-44"
+                  width={144}
+                  height={64}
+                  sizes="(min-width: 1024px) 144px, (min-width: 640px) 112px, 96px"
+                  className="h-10 w-24 object-contain transition-transform duration-300 hover:-translate-y-1 hover:scale-110 sm:h-12 sm:w-28 lg:h-16 lg:w-36"
                 />
               );
               return p.websiteLink ? (
