@@ -122,10 +122,22 @@ function IntakeCard() {
 export default function ApplicantsListPage() {
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebouncedValue(search, 300).trim();
+  const [departmentIds, setDepartmentIds] = useState<string[]>([]);
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+  const filtered = !!(debouncedSearch || departmentIds.length || from || to);
+  const departments = useQuery({
+    queryKey: ['departments'],
+    queryFn: () => api.departments(),
+  });
   const applicants = useInfiniteQuery({
-    queryKey: ['applicants', debouncedSearch],
+    queryKey: ['applicants', debouncedSearch, departmentIds, from, to],
     queryFn: ({ pageParam }) =>
-      api.applicants(pageParam, 50, debouncedSearch || undefined),
+      api.applicants(pageParam, 50, debouncedSearch || undefined, {
+        departmentIds,
+        from: from || undefined,
+        to: to || undefined,
+      }),
     initialPageParam: 1,
     getNextPageParam: (last) =>
       last.page < last.totalPages ? last.page + 1 : undefined,
@@ -184,13 +196,82 @@ export default function ApplicantsListPage() {
 
       <IntakeCard />
 
-      <div className="mb-4">
+      <div className="mb-4 flex flex-col gap-3">
         <Input
           label="Пошук"
           placeholder="Прізвище, @тег, група або телефон"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
+        {!!departments.data?.length && (
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-semibold text-muted">
+              Департаменти{' '}
+              <span className="font-normal text-subtle">
+                (подали хоча б в один з обраних)
+              </span>
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {departments.data.map((d) => {
+                const active = departmentIds.includes(d.id);
+                return (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() =>
+                      setDepartmentIds((ids) =>
+                        active ? ids.filter((id) => id !== d.id) : [...ids, d.id],
+                      )
+                    }
+                    className={cn(
+                      'rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors',
+                      active
+                        ? 'border-brand-cyan bg-brand-cyan/15 text-brand-cyan'
+                        : 'border-border text-muted hover:text-fg',
+                    )}
+                  >
+                    {d.shortName ?? d.name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+        <div className="grid grid-cols-2 gap-2">
+          <Input
+            label="Подані з"
+            type="date"
+            value={from}
+            max={to || undefined}
+            onChange={(e) => setFrom(e.target.value)}
+          />
+          <Input
+            label="по"
+            type="date"
+            value={to}
+            min={from || undefined}
+            onChange={(e) => setTo(e.target.value)}
+          />
+        </div>
+        {filtered && (
+          <div className="flex items-center justify-between gap-2 text-xs">
+            <span className="text-muted">
+              {data ? `Знайдено: ${data.total}` : ''}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setSearch('');
+                setDepartmentIds([]);
+                setFrom('');
+                setTo('');
+              }}
+              className="font-semibold text-brand-cyan"
+            >
+              Скинути фільтри
+            </button>
+          </div>
+        )}
       </div>
 
       {isLoading ? (
@@ -201,7 +282,7 @@ export default function ApplicantsListPage() {
         <p className="text-sm text-brand-red">Не вдалося завантажити.</p>
       ) : !data?.items.length ? (
         <p className="py-12 text-center text-sm text-subtle">
-          {debouncedSearch ? 'Нічого не знайдено.' : 'Заявок ще немає.'}
+          {filtered ? 'Нічого не знайдено.' : 'Заявок ще немає.'}
         </p>
       ) : (
         <ul className="flex flex-col gap-3">

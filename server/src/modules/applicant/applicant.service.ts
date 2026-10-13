@@ -14,6 +14,7 @@ import { parseKpiGroup } from '../../common/kpi-groups';
 import { CreateApplicantDto } from './dto/create-applicant.dto';
 import { errorMessage } from '../../common/log-safe';
 import { GoogleSheetsService } from './google-sheets.service';
+import { kyivDaysFilter } from '../event/event-timing';
 
 const APPLICATIONS_OPEN_KEY = 'applicationsOpen';
 
@@ -215,7 +216,15 @@ export class ApplicantService {
     await this.bot.notifyGroup(text);
   }
 
-  async findAll({ page, limit, search, departmentId }: ApplicantQueryDto) {
+  async findAll({
+    page,
+    limit,
+    search,
+    departmentIds,
+    from,
+    to,
+  }: ApplicantQueryDto) {
+    const createdAt = kyivDaysFilter(from, to);
     const text = search?.trim()
       ? { contains: search.trim(), mode: 'insensitive' as const }
       : undefined;
@@ -232,9 +241,14 @@ export class ApplicantService {
             ],
           }
         : {}),
-      ...(departmentId
-        ? { applicantDepartments: { some: { departmentId } } }
+      ...(departmentIds?.length
+        ? {
+            applicantDepartments: {
+              some: { departmentId: { in: departmentIds } },
+            },
+          }
         : {}),
+      ...(createdAt ? { createdAt } : {}),
     };
     const [items, total] = await this.prisma.$transaction([
       this.prisma.applicant.findMany({

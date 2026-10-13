@@ -36,6 +36,13 @@ export interface NewsStats {
   byCategory: Record<string, number>;
 }
 
+export interface ApplicantFilters {
+  departmentIds?: string[];
+  /** Kyiv date YYYY-MM-DD, inclusive. */
+  from?: string;
+  to?: string;
+}
+
 export interface StatOverride {
   key: string;
   value: string;
@@ -661,9 +668,17 @@ export const api = {
   unassignMember: (id: string, departmentId: string) =>
     request<unknown>(`/department-member/${id}/assignments/${departmentId}`, { method: 'DELETE' }),
 
-  applicants: (page = 1, limit = 50, search?: string) => {
+  applicants: (
+    page = 1,
+    limit = 50,
+    search?: string,
+    { departmentIds, from, to }: ApplicantFilters = {},
+  ) => {
     const params = new URLSearchParams({ page: String(page), limit: String(limit) });
     if (search) params.set('search', search);
+    if (departmentIds?.length) params.set('departmentIds', departmentIds.join(','));
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
     return request<Paginated<Applicant>>(`/applicant?${params.toString()}`);
   },
   applicant: (id: string) => request<Applicant>(`/applicant/${id}`),
