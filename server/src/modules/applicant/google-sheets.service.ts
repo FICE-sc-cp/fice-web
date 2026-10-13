@@ -58,6 +58,42 @@ export function formatApplicantRow(applicant: ApplicantLike): string[] {
   ];
 }
 
+const kyivYearMonth = new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'Europe/Kyiv',
+  year: 'numeric',
+  month: 'numeric',
+});
+
+/**
+ * One tab per academic year: applications from 1 Sep 2026 to 31 Aug 2027
+ * (Kyiv time) go to "<base> 2026-2027".
+ */
+export function academicYearSheet(base: string, createdAt: Date): string {
+  const parts = kyivYearMonth.formatToParts(new Date(createdAt));
+  const part = (type: string) =>
+    Number(parts.find((p) => p.type === type)?.value);
+  const start = part('month') >= 9 ? part('year') : part('year') - 1;
+  return `${base} ${start}-${start + 1}`;
+}
+
+/** Rows grouped by academic-year tab, oldest year first. */
+export function rowsBySheet(
+  base: string,
+  applicants: ApplicantLike[],
+): { name: string; rows: string[][] }[] {
+  const sheets = new Map<string, string[][]>();
+  for (const applicant of applicants) {
+    const name = academicYearSheet(base, applicant.createdAt);
+    sheets.set(name, [
+      ...(sheets.get(name) ?? []),
+      formatApplicantRow(applicant),
+    ]);
+  }
+  return [...sheets]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([name, rows]) => ({ name, rows }));
+}
+
 @Injectable()
 export class GoogleSheetsService {
   private readonly logger = new Logger(GoogleSheetsService.name);
@@ -144,10 +180,15 @@ export class GoogleSheetsService {
 
     if (!res.ok) {
       const errText = await res.text();
-      throw new Error(`Google token exchange failed (${res.status}): ${errText}`);
+      throw new Error(
+        `Google token exchange failed (${res.status}): ${errText}`,
+      );
     }
 
-    const data = (await res.json()) as { access_token: string; expires_in: number };
+    const data = (await res.json()) as {
+      access_token: string;
+      expires_in: number;
+    };
     this.cachedToken = {
       token: data.access_token,
       expiresAt: now + (data.expires_in || 3600),
@@ -199,6 +240,10 @@ export class GoogleSheetsService {
     }
 
     const row = formatApplicantRow(applicant);
+    const sheetName = academicYearSheet(
+      this.getCredentials().sheetName,
+      applicant.createdAt,
+    );
 
     // 1. Webhook mode
     const webhookUrl = process.env.GOOGLE_SHEETS_WEBHOOK_URL?.trim();
@@ -209,6 +254,7 @@ export class GoogleSheetsService {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             action: 'append',
+            sheetName,
             headers: APPLICANT_SHEET_HEADERS,
             row,
             applicant: {
@@ -229,7 +275,7 @@ export class GoogleSheetsService {
 
     // 2. Service Account mode
     try {
-      const { spreadsheetId, sheetName } = this.getCredentials();
+      const { spreadsheetId } = this.getCredentials();
       const token = await this.getAccessToken();
 
       await this.ensureSheetTabExists(token, spreadsheetId, sheetName);
@@ -293,7 +339,9 @@ export class GoogleSheetsService {
       };
     }
 
-    const rows = applicants.map(formatApplicantRow);
+    const { spreadsheetId, sheetName: base } = this.getCredentials();
+    const sheets = rowsBySheet(base, applicants);
+    const total = applicants.length;
 
     // 1. Webhook mode
     const webhookUrl = process.env.GOOGLE_SHEETS_WEBHOOK_URL?.trim();
@@ -305,13 +353,15 @@ export class GoogleSheetsService {
           body: JSON.stringify({
             action: 'sync_all',
             headers: APPLICANT_SHEET_HEADERS,
-            rows,
+            sheets,
+            // Flat list for scripts that predate per-year tabs.
+            rows: sheets.flatMap((sheet) => sheet.rows),
           }),
         });
         if (!res.ok) {
           throw new Error(`Webhook responded with status ${res.status}`);
         }
-        return { success: true, synced: rows.length };
+        return { success: true, synced: total };
       } catch (err: any) {
         return { success: false, synced: 0, error: err.message };
       }
@@ -319,43 +369,45 @@ export class GoogleSheetsService {
 
     // 2. Service Account mode
     try {
-      const { spreadsheetId, sheetName } = this.getCredentials();
       const token = await this.getAccessToken();
+      for (const { name: sheetName, rows } of sheets) {
+        await this.ensureSheetTabExists(token, spreadsheetId, sheetName);
 
-      await this.ensureSheetTabExists(token, spreadsheetId, sheetName);
-
-      // Clear existing content to avoid duplicates and re-populate cleanly
-      await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(sheetName)}!A:J:clear`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
+        // Clear existing content to avoid duplicates and re-populate cleanly
+        await fetch(
+          `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(sheetName)}!A:J:clear`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
           },
-        },
-      );
+        );
 
-      // Write header + all applicant rows
-      const allValues = [APPLICANT_SHEET_HEADERS, ...rows];
-      const writeRes = await fetch(
-        `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(sheetName)}!A1:J${allValues.length}?valueInputOption=USER_ENTERED`,
-        {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
+        // Write header + all applicant rows
+        const allValues = [APPLICANT_SHEET_HEADERS, ...rows];
+        const writeRes = await fetch(
+          `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${encodeURIComponent(sheetName)}!A1:J${allValues.length}?valueInputOption=USER_ENTERED`,
+          {
+            method: 'PUT',
+            headers: {
+              Authorization: `Bearer ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ values: allValues }),
           },
-          body: JSON.stringify({ values: allValues }),
-        },
-      );
+        );
 
-      if (!writeRes.ok) {
-        const errText = await writeRes.text();
-        throw new Error(`Sync write failed (${writeRes.status}): ${errText}`);
+        if (!writeRes.ok) {
+          const errText = await writeRes.text();
+          throw new Error(
+            `Sync write failed for "${sheetName}" (${writeRes.status}): ${errText}`,
+          );
+        }
       }
 
-      return { success: true, synced: rows.length };
+      return { success: true, synced: total };
     } catch (err: any) {
       return { success: false, synced: 0, error: err.message };
     }

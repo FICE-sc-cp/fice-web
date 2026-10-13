@@ -1,4 +1,5 @@
 import {
+  academicYearSheet,
   formatApplicantRow,
   GoogleSheetsService,
   APPLICANT_SHEET_HEADERS,
@@ -45,7 +46,8 @@ describe('GoogleSheetsService', () => {
   });
 
   it('detects webhook configuration', () => {
-    process.env.GOOGLE_SHEETS_WEBHOOK_URL = 'https://script.google.com/macros/s/xxx/exec';
+    process.env.GOOGLE_SHEETS_WEBHOOK_URL =
+      'https://script.google.com/macros/s/xxx/exec';
     expect(service.isConfigured()).toBe(true);
   });
 
@@ -53,6 +55,39 @@ describe('GoogleSheetsService', () => {
     const res = await service.appendApplicant(sampleApplicant);
     expect(res.success).toBe(false);
     expect(res.error).toBe('not_configured');
+  });
+
+  it('puts applications into one tab per academic year (Kyiv time)', () => {
+    const tab = (iso: string) => academicYearSheet('Заявки', new Date(iso));
+    expect(tab('2026-08-31T20:59:00Z')).toBe('Заявки 2025-2026'); // 31.08, 23:59
+    expect(tab('2026-08-31T21:00:00Z')).toBe('Заявки 2026-2027'); // 01.09, 00:00
+    expect(tab('2027-08-31T12:00:00Z')).toBe('Заявки 2026-2027');
+    expect(tab('2027-09-01T09:00:00Z')).toBe('Заявки 2027-2028');
+  });
+
+  it('sends the webhook one group of rows per academic year', async () => {
+    process.env.GOOGLE_SHEETS_WEBHOOK_URL = 'https://example.test/hook';
+    const fetchMock = jest
+      .spyOn(global, 'fetch')
+      .mockResolvedValue({ ok: true } as Response);
+    const nextYear = {
+      ...sampleApplicant,
+      createdAt: new Date('2027-09-02T10:00:00Z'),
+    };
+
+    const res = await service.syncAllApplicants([nextYear, sampleApplicant]);
+
+    expect(res).toEqual({ success: true, synced: 2 });
+    const body = JSON.parse(fetchMock.mock.calls[0][1]?.body as string) as {
+      sheets: { name: string; rows: unknown[] }[];
+      rows: unknown[];
+    };
+    expect(body.sheets.map((s) => [s.name, s.rows.length])).toEqual([
+      ['Заявки 2026-2027', 1],
+      ['Заявки 2027-2028', 1],
+    ]);
+    expect(body.rows).toHaveLength(2);
+    fetchMock.mockRestore();
   });
 
   it('fails sync if not configured', async () => {
