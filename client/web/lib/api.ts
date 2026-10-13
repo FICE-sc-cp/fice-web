@@ -27,7 +27,11 @@ export interface Facts {
   activePartners: number;
   eventsPerYear: number;
   projectsDone: number;
+  /** Caption under each number, e.g. "з вересня 2023" (set in the admin). */
+  notes?: Partial<Record<string, string>>;
 }
+
+export type StatKey = Exclude<keyof Facts, 'notes'>;
 
 export const EMPTY_FACTS: Facts = {
   eventsHeld: 0,

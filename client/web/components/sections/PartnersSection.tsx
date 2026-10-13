@@ -11,8 +11,8 @@ import {
   fice,
   mediaUrl,
   safe,
-  type Facts,
   type Partner,
+  type StatKey,
 } from "@/lib/api";
 
 const MAX_LOGOS = 10;
@@ -25,7 +25,7 @@ const EMPTY_PARTNERS = {
   totalPages: 0,
 };
 
-const STAT_DEFS: { key: keyof Facts; label: string; gradient: string }[] = [
+const STAT_DEFS: { key: StatKey; label: string; gradient: string }[] = [
   {
     key: "activeStudents",
     label: "Активних студентів",
@@ -144,6 +144,11 @@ export async function PartnersSection() {
                       <span className="text-xl font-medium text-stone-300">
                         {stat.label}
                       </span>
+                      {facts.notes?.[stat.key] && (
+                        <span className="text-sm text-subtle">
+                          {facts.notes[stat.key]}
+                        </span>
+                      )}
                     </div>
                   </div>
                 ))}

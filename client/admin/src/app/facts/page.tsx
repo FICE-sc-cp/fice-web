@@ -9,10 +9,10 @@ import { Spinner } from '@/components/ui/Spinner';
 import { FormError } from '@/components/ui/FormError';
 import { hapticNotify } from '@/lib/telegram';
 
-const STATS: { key: keyof Facts; label: string }[] = [
+const STATS: { key: Exclude<keyof Facts, 'notes'>; label: string }[] = [
   { key: 'eventsHeld', label: 'Проведено заходів' },
   { key: 'charityRaised', label: 'На благодійність, ₴' },
-  { key: 'membersCount', label: 'Учасників' },
+  { key: 'membersCount', label: 'Активних учасників наразі' },
   { key: 'closedFundraisers', label: 'Закритих зборів' },
   { key: 'activeStudents', label: 'Активних студентів (блок «Партнери»)' },
   { key: 'activePartners', label: 'Діючих партнерів (блок «Партнери»)' },
@@ -53,15 +53,24 @@ export default function FactsPage() {
       hapticNotify('success');
     },
   });
+  const saveNote = useMutation({
+    mutationFn: (p: { key: string; note: string }) =>
+      api.setFactNote(p.key, p.note),
+    onSuccess: () => {
+      invalidate();
+      hapticNotify('success');
+    },
+  });
 
-  const saving = save.isPending || reset.isPending;
+  const saving = save.isPending || reset.isPending || saveNote.isPending;
 
   return (
     <main className="mx-auto max-w-xl px-4 py-6">
       <PageHeader title="Факти та результати" />
       <p className="mb-5 text-sm text-muted">
         Значення рахуються автоматично з бази. За потреби впиши своє — воно
-        матиме пріоритет на сайті.
+        матиме пріоритет на сайті. Під числом можна показати підпис, наприклад
+        за який період зібрано дані: «з вересня 2023».
       </p>
 
       {isLoading || !facts ? (
@@ -75,6 +84,7 @@ export default function FactsPage() {
               key={s.key}
               label={s.label}
               value={facts[s.key]}
+              note={facts.notes?.[s.key] ?? ''}
               overridden={overridden.has(s.key)}
               saving={saving}
               error={
@@ -82,10 +92,13 @@ export default function FactsPage() {
                   ? save.error
                   : reset.isError && reset.variables === s.key
                     ? reset.error
-                    : null
+                    : saveNote.isError && saveNote.variables?.key === s.key
+                      ? saveNote.error
+                      : null
               }
               onSave={(v) => save.mutate({ key: s.key, value: v })}
               onReset={() => reset.mutate(s.key)}
+              onSaveNote={(note) => saveNote.mutate({ key: s.key, note })}
             />
           ))}
         </div>
@@ -97,21 +110,26 @@ export default function FactsPage() {
 function FactRow({
   label,
   value,
+  note,
   overridden,
   saving,
   error,
   onSave,
   onReset,
+  onSaveNote,
 }: {
   label: string;
   value: number;
+  note: string;
   overridden: boolean;
   saving: boolean;
   error?: unknown;
   onSave: (value: number) => void;
   onReset: () => void;
+  onSaveNote: (note: string) => void;
 }) {
   const [input, setInput] = useState('');
+  const [noteInput, setNoteInput] = useState(note);
 
   return (
     <div className="rounded-2xl border border-border bg-surface p-4">
@@ -157,6 +175,23 @@ function FactRow({
             </Button>
           )}
         </div>
+      </div>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <input
+          value={noteInput}
+          onChange={(e) => setNoteInput(e.target.value)}
+          maxLength={120}
+          placeholder="Підпис під числом, напр. «з вересня 2023»"
+          className="min-w-0 grow basis-40 rounded-xl border border-border bg-bg-soft px-3 py-2 text-sm text-fg outline-none placeholder:text-subtle"
+        />
+        <Button
+          variant="outline"
+          className="shrink-0"
+          disabled={saving || noteInput.trim() === note}
+          onClick={() => onSaveNote(noteInput)}
+        >
+          {noteInput.trim() || !note ? 'Зберегти підпис' : 'Прибрати підпис'}
+        </Button>
       </div>
     </div>
   );

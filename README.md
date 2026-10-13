@@ -267,7 +267,7 @@ is public; `POST`/`PATCH`/`PUT`/`DELETE` require admin auth unless noted.
 |----------|-----------|-------|
 | Health | `GET /health` | Liveness check plus bot polling state; 503 while a bot is restarting |
 | Auth | `GET /auth/me` | Current Telegram user + `isAdmin` flag |
-| Facts & results | `/facts` | Computed activity stats + admin overrides |
+| Facts & results | `/facts` | Computed activity stats + admin overrides and captions (`PUT /facts/notes/:key`) |
 | News | `/news` | `GET /news/stats?from&to` — published news per category (admin) |
 | Events | `/event` | Includes details & partners; partner links via `/event/:id/partners` |
 | Event details | `/event-details` | Money raised, charity, visitors |

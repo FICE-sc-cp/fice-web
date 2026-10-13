@@ -24,6 +24,9 @@ const MANUAL_DEFAULTS: Record<string, number> = {
   projectsDone: 50,
 };
 
+// Per-stat caption under the number on the site, e.g. "з вересня 2023".
+const NOTE_PREFIX = 'factNote:';
+
 @Injectable()
 export class FactsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -51,15 +54,41 @@ export class FactsService {
     };
   }
 
-  async getFacts(): Promise<Record<StatKey, number>> {
+  async getFacts() {
     const computed = await this.computeStats();
-    const overrides = await this.prisma.statOverride.findMany();
+    const [overrides, notes] = await Promise.all([
+      this.prisma.statOverride.findMany(),
+      this.prisma.siteSetting.findMany({
+        where: { key: { startsWith: NOTE_PREFIX } },
+      }),
+    ]);
     for (const override of overrides) {
       if (this.isStatKey(override.key)) {
         computed[override.key] = override.value.toNumber();
       }
     }
-    return computed;
+    return {
+      ...computed,
+      notes: Object.fromEntries(
+        notes.map((n) => [n.key.slice(NOTE_PREFIX.length), n.value]),
+      ) as Partial<Record<StatKey, string>>,
+    };
+  }
+
+  async setNote(key: string, note: string) {
+    this.assertStatKey(key);
+    const settingKey = NOTE_PREFIX + key;
+    const value = note.trim();
+    if (!value) {
+      await this.prisma.siteSetting.deleteMany({ where: { key: settingKey } });
+      return { key, note: null };
+    }
+    await this.prisma.siteSetting.upsert({
+      where: { key: settingKey },
+      create: { key: settingKey, value },
+      update: { value },
+    });
+    return { key, note: value };
   }
 
   listOverrides() {
@@ -67,11 +96,7 @@ export class FactsService {
   }
 
   setOverride(key: string, value: number) {
-    if (!this.isStatKey(key)) {
-      throw new BadRequestException(
-        `Unknown stat key "${key}". Allowed keys: ${STAT_KEYS.join(', ')}`,
-      );
-    }
+    this.assertStatKey(key);
     return this.prisma.statOverride.upsert({
       where: { key },
       create: { key, value },
@@ -82,6 +107,14 @@ export class FactsService {
   async removeOverride(key: string) {
     await this.prisma.statOverride.delete({ where: { key } });
     return { key, removed: true };
+  }
+
+  private assertStatKey(key: string) {
+    if (!this.isStatKey(key)) {
+      throw new BadRequestException(
+        `Unknown stat key "${key}". Allowed keys: ${STAT_KEYS.join(', ')}`,
+      );
+    }
   }
 
   private isStatKey(key: string): key is StatKey {

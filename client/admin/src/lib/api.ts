@@ -28,6 +28,8 @@ export interface Facts {
   activePartners: number;
   eventsPerYear: number;
   projectsDone: number;
+  /** Caption under each number on the site, e.g. "з вересня 2023". */
+  notes?: Partial<Record<string, string>>;
 }
 
 export interface NewsStats {
@@ -528,6 +530,8 @@ export const api = {
     request<StatOverride>(`/facts/overrides/${key}`, { method: 'PUT', ...json({ value }) }),
   removeFactOverride: (key: string) =>
     request<unknown>(`/facts/overrides/${key}`, { method: 'DELETE' }),
+  setFactNote: (key: string, note: string) =>
+    request<unknown>(`/facts/notes/${key}`, { method: 'PUT', ...json({ note }) }),
 
   news: (page = 1, limit = 20) =>
     request<Paginated<News>>(`/news?page=${page}&limit=${limit}&draft=true`),

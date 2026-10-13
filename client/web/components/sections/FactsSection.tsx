@@ -17,10 +17,10 @@ import {
 } from "@/components/ui/icons";
 import { Reveal, RevealGroup } from "@/components/ui/Reveal";
 import { CountUp } from "@/components/ui/CountUp";
-import { EMPTY_FACTS, fice, safe, type Facts } from "@/lib/api";
+import { EMPTY_FACTS, fice, safe, type StatKey } from "@/lib/api";
 
 const STAT_DEFS: {
-  key: keyof Facts;
+  key: StatKey;
   label: string;
   accent: Accent;
   Icon: IconComponent;
@@ -33,7 +33,7 @@ const STAT_DEFS: {
   },
   {
     key: "membersCount",
-    label: "активних учасників",
+    label: "активних учасників наразі",
     accent: "cyan",
     Icon: PeopleIcon,
   },
@@ -149,10 +149,17 @@ export async function FactsSection() {
                   <Icon gradient={accentGradient[accent]} />
                 </span>
               </div>
-              <CountUp
-                value={facts[key]}
-                className="text-4xl font-bold lg:text-5xl"
-              />
+              <div className="flex flex-col gap-1">
+                <CountUp
+                  value={facts[key]}
+                  className="text-4xl font-bold lg:text-5xl"
+                />
+                {facts.notes?.[key] && (
+                  <span className="text-sm text-subtle">
+                    {facts.notes[key]}
+                  </span>
+                )}
+              </div>
             </AccentCard>
           ))}
         </RevealGroup>
