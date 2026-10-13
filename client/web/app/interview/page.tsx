@@ -978,20 +978,16 @@ function CandidatesTab({
         Кандидати
       </SectionTitle>
       {multi && (
-        <ChipRow>
-          <Chip active={deptId === 'all'} onClick={() => setDeptId('all')}>
-            Усі
-          </Chip>
-          {me.departments.map((d) => (
-            <Chip
-              key={d.id}
-              active={deptId === d.id}
-              onClick={() => setDeptId(d.id)}
-            >
-              {deptLabel(d)}
-            </Chip>
-          ))}
-        </ChipRow>
+        <Select
+          label="Департамент"
+          placeholder="Обери департамент"
+          value={deptId}
+          onChange={(e) => setDeptId(e.target.value)}
+          options={[
+            { value: 'all', label: 'Усі департаменти' },
+            ...me.departments.map((d) => ({ value: d.id, label: d.name })),
+          ]}
+        />
       )}
       {heads.length > 0 &&
         (adding ? (
@@ -1391,17 +1387,13 @@ function TeamTab({ me, api, reload, tg }: Ctx) {
     <>
       <SectionTitle>Команда</SectionTitle>
       {heads.length > 1 && (
-        <ChipRow>
-          {heads.map((d) => (
-            <Chip
-              key={d.id}
-              active={d.id === dept.id}
-              onClick={() => setDeptId(d.id)}
-            >
-              {deptLabel(d)}
-            </Chip>
-          ))}
-        </ChipRow>
+        <Select
+          label="Департамент"
+          placeholder="Обери департамент"
+          value={dept.id}
+          onChange={(e) => setDeptId(e.target.value)}
+          options={heads.map((d) => ({ value: d.id, label: d.name }))}
+        />
       )}
 
       {botLink && (
