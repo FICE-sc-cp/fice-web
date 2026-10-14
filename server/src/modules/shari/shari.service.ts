@@ -10,7 +10,9 @@ import {
 import { ConfigService } from '@nestjs/config';
 import * as ExcelJS from 'exceljs';
 import * as QRCode from 'qrcode';
+import { inAdminGroup } from '../../auth/admin-group';
 import type { ResolvedTelegramUser } from '../../auth/init-data.util';
+import { BotService } from '../../bot/bot.service';
 import { PrismaService } from '../../database/prisma.service';
 import { telegramTagOf } from '../event/registration-identity';
 import { PRESIDIUM_ROLES, tagUsername } from '../interview/interview-rules';
@@ -31,6 +33,7 @@ import {
   parseStarostas,
   parseStudents,
   parseTeachersCsv,
+  teachesGroup,
 } from './shari-rules';
 
 type User = ResolvedTelegramUser;
@@ -46,6 +49,7 @@ const TEACHERS_CLOSED =
   'Прийом шар завершено. Якщо треба щось змінити — напишіть нам.';
 const STAROSTAS_CLOSED = 'Розподіл шар завершено';
 const TEACHER_NAME = { select: { fullName: true } };
+const TEACHER_SCHEDULE = { select: { fullName: true, courses: true } };
 
 const newToken = () => randomBytes(24).toString('base64url');
 const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
@@ -56,6 +60,7 @@ export class ShariService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
+    private readonly bot: BotService,
   ) {}
 
   // ---- Settings & shared lookups -------------------------------------------
@@ -253,7 +258,10 @@ export class ShariService {
 
   // ---- Starostas & presidium: Telegram Login Widget -------------------------
 
-  /** Admin = presidium member by tag; starosta = the group set for this tag (bound to the account on first sign-in). */
+  /**
+   * Admin = presidium member by tag who is also in the admin Telegram group;
+   * starosta = the group set for this tag (bound to the account on first sign-in).
+   */
   private async access(user: User) {
     const username = tagUsername(user.username);
     const [presidium, starosta] = await Promise.all([
@@ -278,10 +286,12 @@ export class ShariService {
         data: { telegramId: user.telegramId },
       });
     }
+    const tagged =
+      !!username &&
+      presidium.some((m) => tagUsername(m.telegramTag) === username);
     return {
       isAdmin:
-        !!username &&
-        presidium.some((m) => tagUsername(m.telegramTag) === username),
+        tagged && (await inAdminGroup(this.config, this.bot, user.telegramId)),
       group: starosta?.group ?? null,
     };
   }
@@ -325,7 +335,7 @@ export class ShariService {
       this.prisma.shara.findMany({
         where: { group },
         include: {
-          teacher: TEACHER_NAME,
+          teacher: TEACHER_SCHEDULE,
           awards: { select: { id: true, slot: true, studentName: true } },
         },
       }),
@@ -349,6 +359,10 @@ export class ShariService {
           condition: s.condition,
           quantity: s.quantity,
           awards: s.awards,
+          // For the presidium: a teacher doesn't teach this group by the
+          // schedule (a mistake, or someone else used their link).
+          outsideSchedule:
+            isAdmin && !teachesGroup(s.teacher.courses as Course[], group),
         })),
       canEdit: isAdmin || settings.starostasOpen,
       isAdmin,
@@ -405,6 +419,7 @@ export class ShariService {
     await this.requireGroup(user, award.group);
     return {
       ...award,
+      checkUrl: this.checkUrl(id),
       qr: await QRCode.toDataURL(this.checkUrl(id), {
         margin: 1,
         width: 280,
@@ -434,6 +449,7 @@ export class ShariService {
           select: {
             group: true,
             quantity: true,
+            teacher: { select: { courses: true } },
             _count: { select: { awards: true } },
           },
         }),
@@ -456,6 +472,7 @@ export class ShariService {
           students: 0,
           shari: 0,
           awarded: 0,
+          outsideSchedule: 0,
         },
       ]),
     );
@@ -469,6 +486,9 @@ export class ShariService {
       const row = rows.get(s.group)!;
       row.shari += s.quantity;
       row.awarded += s._count.awards;
+      if (!teachesGroup(s.teacher.courses as Course[], s.group)) {
+        row.outsideSchedule += s.quantity;
+      }
     }
 
     const teacherRows = teachers
@@ -486,6 +506,7 @@ export class ShariService {
         teachersWithShari: teacherRows.filter((t) => t.offers).length,
         shari: sum(shari.map((s) => s.quantity)),
         awarded: sum(shari.map((s) => s._count.awards)),
+        outsideSchedule: sum([...rows.values()].map((r) => r.outsideSchedule)),
         groups: groups.length,
         groupsWithShari: [...rows.values()].filter((r) => r.shari).length,
         starostas: starostas.length,
@@ -531,26 +552,26 @@ export class ShariService {
         })
       ).map((t) => [t.fullName, t]),
     );
-    await this.prisma.$transaction(
-      parsed.map((t) => {
-        const old = existing.get(t.fullName);
-        return old
-          ? this.prisma.shariTeacher.update({
-              where: { id: old.id },
-              data: {
-                courses: t.courses,
-                email: old.email ?? t.email,
-                telegram: old.telegram ?? t.telegram,
-              },
-            })
-          : this.prisma.shariTeacher.create({
-              data: { ...t, token: newToken() },
-            });
-      }),
-    );
-    const created = parsed.filter((t) => !existing.has(t.fullName)).length;
+    // No transaction: hundreds of writes outrun its timeout, and the import is
+    // idempotent, so running it again finishes an interrupted one.
+    const fresh = parsed.filter((t) => !existing.has(t.fullName));
+    await this.prisma.shariTeacher.createMany({
+      data: fresh.map((t) => ({ ...t, token: newToken() })),
+    });
+    for (const t of parsed) {
+      const old = existing.get(t.fullName);
+      if (!old) continue;
+      await this.prisma.shariTeacher.update({
+        where: { id: old.id },
+        data: {
+          courses: t.courses,
+          email: old.email ?? t.email,
+          telegram: old.telegram ?? t.telegram,
+        },
+      });
+    }
     return {
-      message: `Нових викладачів: ${created}, оновлено: ${parsed.length - created}`,
+      message: `Нових викладачів: ${fresh.length}, оновлено: ${parsed.length - fresh.length}`,
       skipped: [],
     };
   }
@@ -583,6 +604,18 @@ export class ShariService {
     });
   }
 
+  /** Removes a teacher without shari: a test entry or a duplicate. */
+  async removeTeacher(user: User, id: string) {
+    await this.requireAdmin(user);
+    if (await this.prisma.shara.count({ where: { teacherId: id } })) {
+      throw new BadRequestException(
+        'У викладача є шари — спершу видаліть їх (вкладка «Групи»)',
+      );
+    }
+    await this.prisma.shariTeacher.delete({ where: { id } });
+    return { ok: true };
+  }
+
   async importStarostas(user: User, text: string) {
     await this.requireAdmin(user);
     const { starostas, skipped } = parseStarostas(text);
@@ -593,21 +626,18 @@ export class ShariService {
     const removed = starostas.filter(
       (s) => !s.telegramTag && current.has(s.group),
     );
-    await this.prisma.$transaction([
-      this.prisma.shariStarosta.deleteMany({
-        where: { group: { in: removed.map((s) => s.group) } },
-      }),
-      // A new tag for a group drops the old starosta's binding.
-      ...saved
-        .filter((s) => current.get(s.group)?.telegramTag !== s.telegramTag)
-        .map(({ group, telegramTag }) =>
-          this.prisma.shariStarosta.upsert({
-            where: { group },
-            create: { group, telegramTag: telegramTag! },
-            update: { telegramTag: telegramTag!, telegramId: null },
-          }),
-        ),
-    ]);
+    await this.prisma.shariStarosta.deleteMany({
+      where: { group: { in: removed.map((s) => s.group) } },
+    });
+    // One by one like the teacher import; a new tag drops the old starosta's binding.
+    for (const { group, telegramTag } of saved) {
+      if (current.get(group)?.telegramTag === telegramTag) continue;
+      await this.prisma.shariStarosta.upsert({
+        where: { group },
+        create: { group, telegramTag: telegramTag! },
+        update: { telegramTag: telegramTag!, telegramId: null },
+      });
+    }
     return {
       message: `Старост збережено: ${saved.length}, прибрано: ${removed.length}`,
       skipped,
@@ -618,14 +648,15 @@ export class ShariService {
   async importStudents(user: User, text: string) {
     await this.requireAdmin(user);
     const { groups, skipped } = parseStudents(text);
-    await this.prisma.$transaction(
-      [...groups].flatMap(([group, names]) => [
+    // A transaction per group: a list is never left half-replaced.
+    for (const [group, names] of groups) {
+      await this.prisma.$transaction([
         this.prisma.shariStudent.deleteMany({ where: { group } }),
         this.prisma.shariStudent.createMany({
           data: [...names].map((fullName) => ({ group, fullName })),
         }),
-      ]),
-    );
+      ]);
+    }
     const count = sum([...groups.values()].map((names) => names.size));
     return {
       message: `Груп: ${groups.size}, студентів: ${count}`,
@@ -644,7 +675,7 @@ export class ShariService {
     const [shari, teachers, starostas] = await Promise.all([
       this.prisma.shara.findMany({
         include: {
-          teacher: TEACHER_NAME,
+          teacher: TEACHER_SCHEDULE,
           awards: { orderBy: { slot: 'asc' } },
         },
       }),
@@ -674,6 +705,7 @@ export class ShariService {
       ['Умова', 30],
       ['Кількість', 10],
       ['Отримувачі', 60],
+      ['Поза розкладом викладача', 14],
     ]);
     const awards = sheet('Сертифікати', [
       ['Група', 12],
@@ -693,6 +725,7 @@ export class ShariService {
         s.condition ?? '',
         s.quantity,
         s.awards.map((a) => a.studentName).join(', '),
+        teachesGroup(s.teacher.courses as Course[], s.group) ? '' : 'так',
       ]);
       for (const a of s.awards) {
         awards.addRow([
@@ -705,6 +738,43 @@ export class ShariService {
           this.checkUrl(a.id),
         ]);
       }
+    }
+
+    // Who got how many: a starosta handing everything to a few friends shows up here.
+    const perStudent = new Map<
+      string,
+      { group: string; name: string; disciplines: string[] }
+    >();
+    for (const s of shari) {
+      for (const a of s.awards) {
+        const key = `${s.group}
+${a.studentName}`;
+        const row = perStudent.get(key) ?? {
+          group: s.group,
+          name: a.studentName,
+          disciplines: [],
+        };
+        row.disciplines.push(s.discipline);
+        perStudent.set(key, row);
+      }
+    }
+    const studentSheet = sheet('Студенти', [
+      ['Група', 12],
+      ['Студент', 34],
+      ['Шар', 8],
+      ['Предмети', 70],
+    ]);
+    for (const row of [...perStudent.values()].sort(
+      (a, b) =>
+        b.disciplines.length - a.disciplines.length ||
+        compareGroups(a.group, b.group),
+    )) {
+      studentSheet.addRow([
+        row.group,
+        row.name,
+        row.disciplines.length,
+        row.disciplines.join('; '),
+      ]);
     }
 
     const teacherSheet = sheet('Викладачі', [

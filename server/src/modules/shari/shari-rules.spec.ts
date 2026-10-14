@@ -5,6 +5,7 @@ import {
   parseStarostas,
   parseStudents,
   parseTeachersCsv,
+  teachesGroup,
 } from './shari-rules';
 
 describe('normalizeGroup', () => {
@@ -112,5 +113,17 @@ describe('diffSlots', () => {
         { slot: 3, studentName: 'Д' },
       ],
     });
+  });
+});
+
+describe('teachesGroup', () => {
+  it('finds the group in any discipline of the schedule', () => {
+    const courses = [
+      { discipline: 'Linux', groups: ['ІО-51', 'ІО-52'] },
+      { discipline: 'Мережі', groups: ['ІМ-41'] },
+    ];
+    expect(teachesGroup(courses, 'ІМ-41')).toBe(true);
+    expect(teachesGroup(courses, 'ІП-61')).toBe(false);
+    expect(teachesGroup([], 'ІП-61')).toBe(false);
   });
 });

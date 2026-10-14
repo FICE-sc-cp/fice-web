@@ -49,6 +49,10 @@ export function normalizeGroup(raw: string): string | null {
 export const compareGroups = (a: string, b: string) =>
   a.localeCompare(b, 'uk', { numeric: true });
 
+/** Whether the campus schedule has the teacher in this group (any discipline). */
+export const teachesGroup = (courses: Course[], group: string) =>
+  courses.some((course) => course.groups.includes(group));
+
 /** Trims and collapses whitespace, so a pasted line break can't split a name. */
 export const oneLine = (value?: string | null) =>
   (value ?? '').replace(/\s+/g, ' ').trim();

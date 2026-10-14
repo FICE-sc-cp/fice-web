@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { GradientText } from '@/components/ui/GradientText';
 import { SHARI_METADATA, ShariShell } from '../../shell';
 import { TeacherApp } from './TeacherApp';
 
@@ -15,12 +16,16 @@ export default async function TeacherPage({
   const { token } = await params;
   return (
     <ShariShell
-      title="для студентів"
+      heading={
+        <>
+          Подаруйте студентам <GradientText>шари</GradientText>
+        </>
+      }
       lead={
         <p>
-          На день народження ФІОТ викладачі дарують студентам «шари» — бонуси
-          до рейтингу, підвищення оцінки чи закриття роботи. Тут ви вказуєте,
-          які шари даєте і яким групам.
+          Традиція ФІОТ: на день народження факультету викладачі дарують
+          студентам бонуси — бали до рейтингу, підвищення оцінки чи закриття
+          роботи.
         </p>
       }
     >

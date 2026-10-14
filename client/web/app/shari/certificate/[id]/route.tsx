@@ -136,6 +136,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
           {/* eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text */}
           <img src={c.qr} width={QR.size} height={QR.size} />
           <span style={{ marginTop: 6, fontSize: 11 * PX_PER_PT }}>Перевірити шару</span>
+          {/* Teachers check the address: a fake QR can lead to a copy of the page. */}
+          <span style={{ fontSize: 9 * PX_PER_PT, fontWeight: 700 }}>{new URL(c.checkUrl).host}</span>
         </div>
       </div>
     ),

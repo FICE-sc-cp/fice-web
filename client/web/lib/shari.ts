@@ -54,6 +54,8 @@ export interface GroupShara {
   condition: string | null;
   quantity: number;
   awards: Award[];
+  /** Presidium only: the teacher doesn't teach this group by the schedule. */
+  outsideSchedule: boolean;
 }
 
 export interface GroupView {
@@ -73,6 +75,7 @@ export interface Certificate {
   bonus: string;
   condition: string | null;
   teacher: string;
+  checkUrl: string;
   /** PNG data URL of the QR code that leads to the check page. */
   qr: string;
 }
@@ -95,6 +98,8 @@ export interface AdminGroup {
   students: number;
   shari: number;
   awarded: number;
+  /** Shari of teachers who don't teach this group by the schedule. */
+  outsideSchedule: number;
 }
 
 export interface AdminView {
@@ -105,6 +110,7 @@ export interface AdminView {
     teachersWithShari: number;
     shari: number;
     awarded: number;
+    outsideSchedule: number;
     groups: number;
     groupsWithShari: number;
     starostas: number;
@@ -189,6 +195,7 @@ export function staffApi(login: string, dev = '') {
       call<{ id: string; token: string }>('POST', '/admin/teachers', body),
     reissueLink: (id: string) =>
       call<{ id: string; token: string }>('POST', `/admin/teachers/${id}/link`),
+    removeTeacher: (id: string) => call('DELETE', `/admin/teachers/${id}`),
     importStarostas: (text: string) => upload('/admin/starostas', text),
     importStudents: (text: string) => upload('/admin/students', text),
     removeShara: (id: string) => call('DELETE', `/admin/shari/${id}`),

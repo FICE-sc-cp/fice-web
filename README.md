@@ -274,6 +274,13 @@ Teachers' bonuses for students (FICE birthday). Three pages on the public site:
   group, imports data and downloads the Excel.
 - `/shari/check/<id>`: where a certificate's QR code leads.
 
+A presidium tag only counts for an account that is also in the admin group
+(`ADMIN_GROUP_CHAT_ID`, checked by Telegram id), here and in the interview bot:
+anyone could register a tag its owner renamed away from. The presidium sees a ⚠
+on shari a teacher gave a group they don't teach by the campus schedule, which
+is also what shari added through someone else's teacher link look like, and the
+Excel has a «Студенти» sheet with how many shari each student got.
+
 Teachers come from the campus CSV (`fiot_teachers.py`), starostas and student
 lists are pasted as "група ⇥ @тег" / "група ⇥ ПІБ" rows on the Імпорт tab.
 That is personal data: it lives only in the database, never in the repository.

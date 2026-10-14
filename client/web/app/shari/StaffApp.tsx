@@ -22,6 +22,7 @@ import {
 } from '@/lib/shari';
 import { AdminPanel } from './AdminPanel';
 import { GroupPanel } from './GroupPanel';
+import { Sphere } from './decor';
 import { Banner, ErrorText, Panel, Spinner } from './ui';
 
 type WidgetUser = Record<string, string | number>;
@@ -80,12 +81,17 @@ export function StaffApp() {
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-subtle">
-        <span>
-          Акаунт: <b className="text-fg">{me.user.name}</b>
-          {me.user.username && ` (@${me.user.username})`}
-          {me.isAdmin && ' · президія'}
-          {me.group && ` · староста ${me.group}`}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-[1.4rem] border border-white/10 bg-white/[0.035] p-2 pl-3 backdrop-blur-sm">
+        <span className="flex min-w-0 flex-wrap items-center gap-2">
+          <Sphere color="green" size={36} className="text-sm uppercase">
+            {me.user.name.slice(0, 1)}
+          </Sphere>
+          <span className="min-w-0 truncate font-bold">
+            {me.user.name}
+            {me.user.username && <span className="font-normal text-subtle"> @{me.user.username}</span>}
+          </span>
+          {me.isAdmin && <Role>президія</Role>}
+          {me.group && <Role>староста {me.group}</Role>}
         </span>
         <Button variant="ghost" onClick={logout}>
           Вийти
@@ -108,6 +114,12 @@ export function StaffApp() {
   );
 }
 
+const Role = ({ children }: { children: React.ReactNode }) => (
+  <span className="rounded-full border border-brand-cyan/30 bg-brand-cyan/10 px-2.5 py-0.5 text-xs font-bold text-brand-cyan">
+    {children}
+  </span>
+);
+
 function SignIn({
   onAuth,
   error,
@@ -116,8 +128,8 @@ function SignIn({
   error: string | null;
 }) {
   return (
-    <Panel title="Вхід">
-      <p className="text-muted">
+    <Panel title="Вхід" icon={<Sphere color="cyan" size={34} className="text-base">✈</Sphere>}>
+      <p className="max-w-2xl text-muted">
         Увійди через Telegram — тим акаунтом, @тег якого є у списку старост.
         Telegram запитає, чи дозволити боту Студради писати тобі, — дозволь,
         щоб ми могли звʼязатися щодо шар.

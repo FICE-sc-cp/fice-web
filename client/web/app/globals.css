@@ -331,3 +331,24 @@ body > footer {
   }
 }
 
+/* ================= ШАРИ ================= */
+.shari-float {
+  animation: float-big var(--float, 6s) ease-in-out infinite;
+  animation-delay: var(--delay, 0s);
+}
+.shari-dots {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: linear-gradient(to bottom, #000, transparent 70%);
+}
+/* Ticket notches at the stub edge (--stub), cut through the whole card. */
+.shari-ticket {
+  mask:
+    radial-gradient(circle at var(--stub) 0, transparent 11px, #000 11.5px) top / 100% 51% no-repeat,
+    radial-gradient(circle at var(--stub) 100%, transparent 11px, #000 11.5px) bottom / 100% 51% no-repeat;
+}
+@media (prefers-reduced-motion: reduce) {
+  .shari-float {
+    animation: none;
+  }
+}

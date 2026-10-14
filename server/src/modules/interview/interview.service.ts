@@ -8,8 +8,11 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InterviewSlot, InterviewStatus } from '@prisma/client';
+import { inAdminGroup } from '../../auth/admin-group';
 import type { ResolvedTelegramUser } from '../../auth/init-data.util';
+import { BotService } from '../../bot/bot.service';
 import { InterviewBotService } from '../../bot/interview-bot.service';
 import { escapeHtml } from '../../common/html';
 import { errorMessage } from '../../common/log-safe';
@@ -72,6 +75,8 @@ export class InterviewService implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly prisma: PrismaService,
     private readonly bot: InterviewBotService,
+    private readonly adminBot: BotService,
+    private readonly config: ConfigService,
   ) {}
 
   onModuleInit() {
@@ -127,7 +132,8 @@ export class InterviewService implements OnModuleInit, OnModuleDestroy {
     ]);
     const isAdmin =
       !!username &&
-      presidium.some((m) => tagUsername(m.telegramTag) === username);
+      presidium.some((m) => tagUsername(m.telegramTag) === username) &&
+      (await inAdminGroup(this.config, this.adminBot, user.telegramId));
     const roles = staffRoles(
       username,
       departments,

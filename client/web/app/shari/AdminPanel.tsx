@@ -15,9 +15,11 @@ import {
   type StaffApi,
   type StaffMe,
 } from '@/lib/shari';
+import { CountUp } from '@/components/ui/CountUp';
 import { cn, plural } from '@/lib/utils';
+import { Sphere, type SphereColor } from './decor';
 import { GroupPanel } from './GroupPanel';
-import { Banner, Chip, ErrorText, Panel, Spinner, inputClass, useAction } from './ui';
+import { Banner, Chip, ErrorText, Panel, Spinner, Switch, Tabs, inputClass, useAction } from './ui';
 
 const TABS = [
   ['overview', 'Огляд'],
@@ -37,7 +39,7 @@ const FILTERS = [
 type Filter = (typeof FILTERS)[number][0];
 
 const fileButton =
-  'inline-flex cursor-pointer items-center rounded-full border border-border px-5 py-2.5 text-sm font-semibold transition-colors hover:border-brand-cyan hover:text-brand-cyan';
+  'inline-flex cursor-pointer items-center rounded-full border border-white/15 px-5 py-2.5 text-sm font-semibold transition-colors hover:border-brand-cyan hover:text-brand-cyan';
 
 type Reload = () => Promise<void>;
 
@@ -83,18 +85,11 @@ export function AdminPanel({ api, me }: { api: StaffApi; me: StaffMe }) {
 
   return (
     <>
-      <nav className="flex flex-wrap gap-2">
-        {me.group && (
-          <Chip active={tab === 'mine'} onClick={() => open('mine')}>
-            Моя група {me.group}
-          </Chip>
-        )}
-        {TABS.map(([id, label]) => (
-          <Chip key={id} active={tab === id} onClick={() => open(id)}>
-            {label}
-          </Chip>
-        ))}
-      </nav>
+      <Tabs
+        items={me.group ? [['mine', `Моя група ${me.group}`] as const, ...TABS] : TABS}
+        value={tab}
+        onChange={open}
+      />
       {tab === 'mine' && me.group && <GroupPanel api={api} group={me.group} />}
       {tab === 'overview' && <Overview view={view} api={api} reload={reload} />}
       {tab === 'groups' && <Groups view={view} open={setGroup} />}
@@ -116,26 +111,26 @@ function Overview({ view, api, reload }: { view: AdminView; api: StaffApi; reloa
       await api.setSettings({ [key]: !view.settings[key] });
       await reload();
     });
-  const stats: [string, number, string][] = [
-    ['Викладачів у списку', t.teachers, `відкрили посилання: ${t.teachersOpened}`],
-    ['Внесли шари', t.teachersWithShari, `${percent(t.teachersWithShari, t.teachers)} викладачів`],
-    ['Шар від викладачів', t.shari, `розподілено: ${t.awarded} (${percent(t.awarded, t.shari)})`],
-    ['Груп із шарами', t.groupsWithShari, `з ${t.groups} груп`],
-    ['Старост', t.starostas, `входили на сайт: ${t.starostasSignedIn}`],
-    ['Студентів у списках', t.students, ''],
+  const stats: [SphereColor, string, number, string][] = [
+    ['cyan', 'Викладачів у списку', t.teachers, `відкрили посилання: ${t.teachersOpened}`],
+    ['green', 'Подарували шари', t.teachersWithShari, `${percent(t.teachersWithShari, t.teachers)} викладачів`],
+    ['magenta', 'Шар від викладачів', t.shari, `розподілено: ${t.awarded} (${percent(t.awarded, t.shari)})`],
+    ['purple', 'Груп із шарами', t.groupsWithShari, `з ${t.groups} груп`],
+    ['orange', 'Старост', t.starostas, `входили на сайт: ${t.starostasSignedIn}`],
+    ['cyan', 'Студентів у списках', t.students, ''],
   ];
 
   return (
     <>
       <Panel title="Етапи">
         <div className="flex flex-col gap-3">
-          <Toggle
+          <Switch
             checked={view.settings.teachersOpen}
             onChange={() => toggle('teachersOpen')}
             disabled={settings.busy}
             label="Викладачі можуть вносити й змінювати шари"
           />
-          <Toggle
+          <Switch
             checked={view.settings.starostasOpen}
             onChange={() => toggle('starostasOpen')}
             disabled={settings.busy}
@@ -148,12 +143,24 @@ function Overview({ view, api, reload }: { view: AdminView; api: StaffApi; reloa
         <ErrorText>{settings.error}</ErrorText>
       </Panel>
 
+      {t.outsideSchedule > 0 && (
+        <Banner tone="warn">
+          ⚠ {plural(t.outsideSchedule, SHARI_WORDS)} від викладачів, які не ведуть ці групи за
+          розкладом. Так буває, коли розклад неповний, але так само виглядають шари, внесені
+          через чуже посилання. Перевірте їх у вкладці «Групи» або в Excel.
+        </Banner>
+      )}
+
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-        {stats.map(([label, value, note]) => (
-          <div key={label} className="rounded-2xl border border-border bg-surface/70 p-5">
-            <div className="text-3xl font-black">{value}</div>
-            <div className="mt-1 font-semibold">{label}</div>
-            {note && <div className="mt-1 text-sm text-subtle">{note}</div>}
+        {stats.map(([color, label, value, note]) => (
+          <div
+            key={label}
+            className="relative overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035] p-5 backdrop-blur-sm"
+          >
+            <Sphere color={color} size={72} className="absolute -right-5 -top-5 opacity-80" />
+            <CountUp value={value} className="relative text-4xl font-black tracking-tight" />
+            <div className="relative mt-1 font-bold">{label}</div>
+            {note && <div className="relative mt-1 text-sm text-subtle">{note}</div>}
           </div>
         ))}
       </div>
@@ -175,31 +182,6 @@ function Overview({ view, api, reload }: { view: AdminView; api: StaffApi; reloa
   );
 }
 
-function Toggle({
-  checked,
-  onChange,
-  disabled,
-  label,
-}: {
-  checked: boolean;
-  onChange: () => void;
-  disabled: boolean;
-  label: string;
-}) {
-  return (
-    <label className="flex cursor-pointer items-center gap-3">
-      <input
-        type="checkbox"
-        className="size-5 accent-brand-cyan"
-        checked={checked}
-        onChange={onChange}
-        disabled={disabled}
-      />
-      <span>{label}</span>
-    </label>
-  );
-}
-
 function Groups({ view, open }: { view: AdminView; open: (group: string) => void }) {
   const [query, setQuery] = useState('');
   const [problems, setProblems] = useState(false);
@@ -207,7 +189,7 @@ function Groups({ view, open }: { view: AdminView; open: (group: string) => void
   const rows = view.groups.filter(
     (g) =>
       g.group.toLowerCase().includes(q) &&
-      (!problems || !g.starosta || g.awarded < g.shari),
+      (!problems || !g.starosta || g.awarded < g.shari || g.outsideSchedule > 0),
   );
 
   return (
@@ -220,7 +202,7 @@ function Groups({ view, open }: { view: AdminView; open: (group: string) => void
           placeholder="Пошук групи"
         />
         <Chip active={problems} onClick={() => setProblems(!problems)}>
-          Без старости або не все розподілено
+          Потребують уваги
         </Chip>
       </div>
       <div className="overflow-x-auto">
@@ -234,10 +216,17 @@ function Groups({ view, open }: { view: AdminView; open: (group: string) => void
               <th />
             </tr>
           </thead>
-          <tbody className="divide-y divide-border/70">
+          <tbody className="divide-y divide-white/[0.07]">
             {rows.map((g) => (
               <tr key={g.group}>
-                <td className="py-2.5 pr-4 font-bold">{g.group}</td>
+                <td className="py-2.5 pr-4 font-bold">
+                  {g.group}
+                  {g.outsideSchedule > 0 && (
+                    <span className="ml-2 text-amber-300" title="Є шари від викладачів не за розкладом">
+                      ⚠
+                    </span>
+                  )}
+                </td>
                 <td className="pr-4">
                   {g.starosta ? (
                     <span title={g.signedIn ? 'Вхід на сайт уже був' : 'Входу на сайт ще не було'}>
@@ -249,8 +238,22 @@ function Groups({ view, open }: { view: AdminView; open: (group: string) => void
                   )}
                 </td>
                 <td className="pr-4">{g.students || '—'}</td>
-                <td className={cn('pr-4', g.awarded < g.shari && 'text-amber-300')}>
-                  {g.shari ? `${g.awarded} з ${g.shari}` : '—'}
+                <td className="pr-4">
+                  {g.shari ? (
+                    <span className="flex items-center gap-3">
+                      <span className="h-2 w-24 overflow-hidden rounded-full bg-white/10">
+                        <span
+                          className="block h-full rounded-full bg-gradient-main"
+                          style={{ width: `${Math.round((g.awarded / g.shari) * 100)}%` }}
+                        />
+                      </span>
+                      <span className={cn('tabular-nums', g.awarded < g.shari ? 'text-muted' : 'text-brand-green')}>
+                        {g.awarded}/{g.shari}
+                      </span>
+                    </span>
+                  ) : (
+                    '—'
+                  )}
                 </td>
                 <td className="py-1.5 text-right">
                   <Button variant="outline" className="px-4 py-1.5" onClick={() => open(g.group)}>
@@ -311,7 +314,7 @@ function Teachers({ view, api, reload }: { view: AdminView; api: StaffApi; reloa
         ))}
         <span className="text-sm text-subtle">{rows.length}</span>
       </div>
-      <ul className="divide-y divide-border/70">
+      <ul className="divide-y divide-white/[0.07]">
         {rows.map((teacher) => (
           <TeacherRow key={teacher.id} teacher={teacher} api={api} reload={reload} />
         ))}
@@ -337,6 +340,13 @@ function TeacherRow({ teacher, api, reload }: { teacher: AdminTeacher; api: Staf
       await reload();
     });
   };
+  const remove = () => {
+    if (!window.confirm(`Видалити викладача ${teacher.fullName} зі списку?`)) return;
+    run(async () => {
+      await api.removeTeacher(teacher.id);
+      await reload();
+    });
+  };
   const status = teacher.quantity
     ? plural(teacher.quantity, SHARI_WORDS)
     : teacher.openedAt
@@ -351,8 +361,17 @@ function TeacherRow({ teacher, api, reload }: { teacher: AdminTeacher; api: Staf
           {[teacher.email, teacher.telegram].filter(Boolean).join(' · ') || 'без контактів'}
         </div>
       </div>
-      <span className={cn('text-sm', teacher.quantity ? 'text-brand-green' : 'text-subtle')}>
-        {status}
+      <span
+        className={cn(
+          'rounded-full border px-3 py-1 text-xs font-bold',
+          teacher.quantity
+            ? 'border-brand-green/40 bg-brand-green/10 text-brand-green'
+            : teacher.openedAt
+              ? 'border-brand-cyan/30 bg-brand-cyan/10 text-brand-cyan'
+              : 'border-white/10 bg-white/[0.04] text-subtle',
+        )}
+      >
+        {teacher.quantity ? `🎁 ${status}` : status}
       </span>
       <span className="flex flex-wrap gap-1">
         <Button variant="outline" className="px-4 py-1.5" onClick={copy} disabled={busy}>
@@ -369,6 +388,11 @@ function TeacherRow({ teacher, api, reload }: { teacher: AdminTeacher; api: Staf
         <Button variant="ghost" className="px-3 py-1.5" onClick={reissue} disabled={busy}>
           Нове посилання
         </Button>
+        {!teacher.offers && (
+          <Button variant="ghost" className="px-3 py-1.5 text-brand-red" onClick={remove} disabled={busy}>
+            Видалити
+          </Button>
+        )}
       </span>
       {error && (
         <span className="w-full">
@@ -399,7 +423,7 @@ function AddTeacher({ api, reload }: { api: StaffApi; reload: Reload }) {
   };
 
   return (
-    <form onSubmit={submit} className="mb-6 grid gap-3 rounded-2xl border border-border p-4 sm:grid-cols-3">
+    <form onSubmit={submit} className="mb-6 grid gap-3 rounded-3xl border border-white/10 bg-white/[0.03] p-4 sm:grid-cols-3">
       <Input label="ПІБ" value={fullName} onChange={(e) => setFullName(e.target.value)} maxLength={120} />
       <Input label="Пошта" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={255} />
       <Input label="Telegram" value={telegram} onChange={(e) => setTelegram(e.target.value)} maxLength={120} />
@@ -419,6 +443,7 @@ function Imports({ api, reload }: { api: StaffApi; reload: Reload }) {
     <>
       <ImportBox
         title="Викладачі з кампусу"
+        color="cyan"
         hint="CSV з колонками Викладач, Дисципліна, Роль, Групи, Telegram, Пошта (вигрузка fiot_teachers.py). Нових викладачів додає, у наявних оновлює предмети й групи; уже вказаних контактів не чіпає."
         accept=".csv,text/csv"
         send={api.importTeachers}
@@ -426,6 +451,7 @@ function Imports({ api, reload }: { api: StaffApi; reload: Reload }) {
       />
       <ImportBox
         title="Старости"
+        color="orange"
         hint="Рядок на групу: група і @тег (дві колонки, скопійовані з таблиці). Рядок з групою без тегу прибирає її старосту."
         placeholder={'ІП-61\t@username'}
         send={api.importStarostas}
@@ -434,6 +460,7 @@ function Imports({ api, reload }: { api: StaffApi; reload: Reload }) {
       />
       <ImportBox
         title="Списки студентів"
+        color="purple"
         hint="Рядок на студента: група і ПІБ (ПІБ можна в кількох колонках). Списки груп, які є у вставці, замінюються повністю; інші групи лишаються як були."
         placeholder={'ІП-61\tІваненко Іван Іванович'}
         accept=".txt,.tsv,.csv,text/plain"
@@ -447,6 +474,7 @@ function Imports({ api, reload }: { api: StaffApi; reload: Reload }) {
 
 function ImportBox({
   title,
+  color,
   hint,
   placeholder,
   accept,
@@ -455,6 +483,7 @@ function ImportBox({
   reload,
 }: {
   title: string;
+  color: SphereColor;
   hint: string;
   placeholder?: string;
   accept?: string;
@@ -474,7 +503,7 @@ function ImportBox({
     });
 
   return (
-    <Panel title={title}>
+    <Panel title={title} icon={<Sphere color={color} size={34} className="text-sm">⇪</Sphere>}>
       <p className="mb-4 text-sm text-subtle">{hint}</p>
       {paste && (
         <Textarea

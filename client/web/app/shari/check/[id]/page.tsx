@@ -2,13 +2,36 @@ import type { Metadata } from 'next';
 import { GradientText } from '@/components/ui/GradientText';
 import { ApiError, request } from '@/lib/api';
 import type { CheckResult } from '@/lib/shari';
+import { Sphere, Ticket, sharaColor } from '../../decor';
 import { SHARI_METADATA, ShariShell } from '../../shell';
-import { Banner, Panel } from '../../ui';
+import { Panel } from '../../ui';
 
 export const metadata: Metadata = {
   title: { absolute: 'Перевірка шари — Студрада ФІОТ' },
   ...SHARI_METADATA,
 };
+
+function Verdict({
+  ok,
+  title,
+  text,
+}: {
+  ok: boolean;
+  title: string;
+  text: string;
+}) {
+  return (
+    <div className="flex items-center gap-5">
+      <Sphere color={ok ? 'green' : 'magenta'} size={84} className="text-4xl">
+        {ok ? '✓' : '✕'}
+      </Sphere>
+      <div>
+        <h2 className="text-2xl font-black tracking-tight sm:text-3xl">{title}</h2>
+        <p className="mt-1 text-muted">{text}</p>
+      </div>
+    </div>
+  );
+}
 
 /** Where a certificate's QR code leads: the shara as the database has it. */
 export default async function CheckPage({ params }: { params: Promise<{ id: string }> }) {
@@ -29,19 +52,30 @@ export default async function CheckPage({ params }: { params: Promise<{ id: stri
       }
     >
       {result === 'missing' ? (
-        <Banner tone="warn">
-          ❌ Такої шари немає. Сертифікат недійсний: його підробили або шару вже
-          передали іншому студенту.
-        </Banner>
+        <Panel>
+          <Verdict
+            ok={false}
+            title="Такої шари немає"
+            text="Сертифікат недійсний: його підробили або шару вже передали іншому студенту."
+          />
+        </Panel>
       ) : result === 'error' ? (
-        <Banner tone="warn">Не вдалося перевірити шару. Спробуйте за хвилину.</Banner>
+        <Panel>
+          <p className="text-muted">Не вдалося перевірити шару. Спробуйте за хвилину.</p>
+        </Panel>
       ) : (
         <>
-          <Banner tone="ok">
-            ✅ Шара справжня. Звірте дані нижче з сертифікатом і студентом.
-          </Banner>
-          <Panel>
-            <dl className="grid gap-x-8 gap-y-4 sm:grid-cols-[10rem_1fr]">
+          <Verdict ok title="Шара справжня" text="Звірте дані нижче з сертифікатом і студентом." />
+          <Ticket
+            color={sharaColor(result.bonus)}
+            stub={
+              <>
+                <span className="text-3xl font-black">✓</span>
+                <span className="text-[0.6rem] font-extrabold uppercase tracking-[0.18em]">справжня</span>
+              </>
+            }
+          >
+            <dl className="grid gap-x-8 gap-y-3 sm:grid-cols-[7rem_1fr]">
               {(
                 [
                   ['Студент', result.studentName],
@@ -55,12 +89,12 @@ export default async function CheckPage({ params }: { params: Promise<{ id: stri
                 .filter(([, value]) => value)
                 .map(([label, value]) => (
                   <div key={label} className="contents">
-                    <dt className="text-subtle">{label}</dt>
-                    <dd className="text-lg font-semibold">{value}</dd>
+                    <dt className="text-xs font-extrabold uppercase tracking-[0.16em] text-subtle sm:pt-1">{label}</dt>
+                    <dd className="text-lg font-bold">{value}</dd>
                   </div>
                 ))}
             </dl>
-          </Panel>
+          </Ticket>
         </>
       )}
     </ShariShell>

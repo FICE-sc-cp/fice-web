@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
+import { GradientText } from '@/components/ui/GradientText';
 import {
   SHARI_WORDS,
   canShareFiles,
@@ -13,6 +14,7 @@ import {
   type StaffApi,
 } from '@/lib/shari';
 import { cn, plural } from '@/lib/utils';
+import { ProgressRing, Sphere, Ticket, confetti, sharaColor } from './decor';
 import { Banner, ErrorText, Panel, Spinner, inputClass, useAction } from './ui';
 
 /** An award whose certificate can be taken, and the file name for it. */
@@ -38,29 +40,42 @@ export function GroupPanel({ api, group }: { api: StaffApi; group: string }) {
 
   return (
     <>
-      <Panel
-        title={`Група ${view.group}`}
-        aside={
-          awards.length > 0 && (
-            <CertificatesButton
-              awards={awards}
-              label={`Усі сертифікати (${awards.length})`}
-              api={api}
-            />
-          )
-        }
-      >
-        <p className="text-muted">
-          {total > 0
-            ? `Від викладачів: ${plural(total, SHARI_WORDS)}, розподілено ${awards.length}.`
-            : 'Поки що викладачі не внесли шар для цієї групи.'}
-          {view.starosta && ` Староста: ${view.starosta}.`}
-        </p>
-        <p className="mt-2 text-sm text-subtle">
-          Розіграй шари в групі чесно. Щойно ти збережеш ПІБ, зʼявиться
+      <Panel>
+        <div className="flex flex-wrap items-center justify-between gap-6">
+          <div>
+            <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-subtle">Група</p>
+            <p className="text-5xl font-black tracking-tight sm:text-6xl">
+              <GradientText>{view.group}</GradientText>
+            </p>
+            <p className="mt-2 text-sm text-muted">
+              {total > 0
+                ? `Від викладачів: ${plural(total, SHARI_WORDS)}`
+                : 'Поки що викладачі не подарували шар цій групі.'}
+              {view.starosta && ` · староста ${view.starosta}`}
+            </p>
+          </div>
+          {total > 0 && (
+            <div className="flex items-center gap-4">
+              <ProgressRing value={awards.length} total={total} />
+              <div className="flex flex-col items-start gap-2">
+                <span className="text-sm font-semibold text-muted">розподілено</span>
+                {awards.length > 0 && (
+                  <CertificatesButton awards={awards} label={`Усі сертифікати (${awards.length})`} api={api} />
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+        <p className="mt-6 text-sm leading-relaxed text-subtle">
+          🎲 Розіграй шари в групі чесно. Щойно ти збережеш ПІБ, зʼявиться
           сертифікат — завантаж його і надішли студенту. Викладач перевірить
           його за QR-кодом.
         </p>
+        {total > 0 && awards.length === total && (
+          <div className="mt-4">
+            <Banner tone="ok">🎉 Усі шари розподілено! Лишилось роздати сертифікати.</Banner>
+          </div>
+        )}
         {!view.canEdit && (
           <div className="mt-4">
             <Banner tone="warn">Розподіл шар завершено — отримувачів уже не змінити.</Banner>
@@ -103,10 +118,17 @@ function SharaCard({
     (_, slot) => shara.awards.find((a) => a.slot === slot)?.studentName ?? '',
   );
   const [names, setNames] = useState(saved);
+  const saveRef = useRef<HTMLButtonElement>(null);
   const { busy, error, run } = useAction();
   const dirty = names.some((name, slot) => name.trim() !== saved[slot]);
+  const color = sharaColor(shara.bonus);
 
-  const save = () => run(async () => onChange(await api.setAwards(shara.id, names)));
+  const save = () =>
+    run(async () => {
+      const next = await api.setAwards(shara.id, names);
+      if (names.some((name) => name.trim())) confetti(saveRef.current);
+      onChange(next);
+    });
   const remove = () => {
     if (!window.confirm(`Видалити шару «${shara.bonus}» (${shara.teacher}) разом з отримувачами?`)) return;
     run(async () => {
@@ -116,26 +138,41 @@ function SharaCard({
   };
 
   return (
-    <Panel
-      title={<span className="text-lg sm:text-xl">{shara.discipline}</span>}
-      aside={<span className="text-sm text-subtle">{shara.teacher}</span>}
+    <Ticket
+      color={color}
+      stub={
+        <>
+          <span className="text-3xl font-black leading-none">×{shara.quantity}</span>
+          <span className="text-[0.6rem] font-extrabold uppercase tracking-[0.18em]">
+            {plural(shara.quantity, SHARI_WORDS).split(' ')[1]}
+          </span>
+        </>
+      }
     >
-      <p className="font-semibold">
-        {plural(shara.quantity, SHARI_WORDS)}: {shara.bonus}
-      </p>
-      {shara.condition && <p className="text-sm text-subtle">Умова: {shara.condition}</p>}
+      <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-subtle">{shara.discipline}</p>
+      <p className="mt-1 text-sm text-muted">{shara.teacher}</p>
+      {shara.outsideSchedule && (
+        <p className="mt-2 inline-block rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1 text-xs font-bold text-amber-300">
+          ⚠ Викладач не веде цю групу за розкладом — уточніть у нього
+        </p>
+      )}
+      <p className="mt-3 text-xl font-extrabold leading-snug">{shara.bonus}</p>
+      {shara.condition && <p className="mt-1 text-sm text-muted">Умова: {shara.condition}</p>}
 
-      <ol className="mt-4 flex flex-col gap-2">
+      <ol className="mt-5 flex flex-col gap-2">
         {names.map((name, slot) => {
           const award = shara.awards.find((a) => a.slot === slot);
           const value = name.trim();
+          const issued = award && award.studentName === value;
           const unknown = value && view.students.length > 0 && !view.students.includes(value);
           return (
             <li key={slot} className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
-                <span className="w-6 shrink-0 text-right text-sm text-subtle">{slot + 1}.</span>
+                <Sphere color={color} size={26} className="text-[0.7rem]">
+                  {slot + 1}
+                </Sphere>
                 <input
-                  className={inputClass}
+                  className={cn(inputClass, issued && 'border-brand-green/50 bg-brand-green/[0.06]')}
                   list={STUDENTS_LIST}
                   value={name}
                   onChange={(e) =>
@@ -146,7 +183,7 @@ function SharaCard({
                   maxLength={120}
                   aria-label={`Отримувач шари ${slot + 1}`}
                 />
-                {award && award.studentName === value && (
+                {issued && (
                   <CertificatesButton
                     awards={[{ id: award.id, name: certificateName(value, shara.discipline) }]}
                     label="Сертифікат"
@@ -156,7 +193,7 @@ function SharaCard({
                 )}
               </div>
               {unknown && (
-                <span className="pl-8 text-xs text-amber-300">
+                <span className="pl-9 text-xs font-semibold text-amber-300">
                   Немає у списку групи — перевір ПІБ
                 </span>
               )}
@@ -165,9 +202,9 @@ function SharaCard({
         })}
       </ol>
 
-      <div className="mt-4 flex flex-wrap items-center gap-2">
+      <div className="mt-5 flex flex-wrap items-center gap-2">
         {view.canEdit && (
-          <Button onClick={save} disabled={!dirty || busy}>
+          <Button ref={saveRef} onClick={save} disabled={!dirty || busy}>
             Зберегти
           </Button>
         )}
@@ -183,7 +220,7 @@ function SharaCard({
         )}
       </div>
       <ErrorText>{error}</ErrorText>
-    </Panel>
+    </Ticket>
   );
 }
 

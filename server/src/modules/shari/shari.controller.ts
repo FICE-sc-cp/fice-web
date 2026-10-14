@@ -188,6 +188,12 @@ export class ShariController {
     return this.shari.reissueLink(this.user(req), id);
   }
 
+  @Delete('admin/teachers/:id')
+  @ApiOperation({ summary: 'Remove a teacher without shari (presidium)' })
+  removeTeacher(@Req() req: Request, @Param('id', ParseUUIDPipe) id: string) {
+    return this.shari.removeTeacher(this.user(req), id);
+  }
+
   @Post('admin/starostas')
   @ApiConsumes('multipart/form-data')
   @TextFile()
