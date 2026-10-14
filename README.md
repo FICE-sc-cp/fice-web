@@ -261,6 +261,33 @@ It re-encodes oversized JPEG and PNG files in place, keeping their names and
 URLs, and keeps the original when the new file would not be smaller. Add
 `-- --dry-run` to only list the files it would change.
 
+### Шари
+
+Teachers' bonuses for students (FICE birthday). Three pages on the public site:
+
+- `/shari/t/<token>`: a teacher's personal link. The token is the login, so
+  send each link only to its teacher; the presidium can issue a new one.
+- `/shari`: starostas and the presidium sign in with the Telegram Login Widget
+  of the user bot. In @BotFather run `/setdomain` for `USER_BOT_USERNAME` and
+  set `fice-sc.kpi.ua`, or the widget shows "Bot domain invalid". The presidium
+  (department members with a presidium role and a Telegram tag) sees every
+  group, imports data and downloads the Excel.
+- `/shari/check/<id>`: where a certificate's QR code leads.
+
+Teachers come from the campus CSV (`fiot_teachers.py`), starostas and student
+lists are pasted as "група ⇥ @тег" / "група ⇥ ПІБ" rows on the Імпорт tab.
+That is personal data: it lives only in the database, never in the repository.
+
+Certificates are PNGs rendered by the web app (`/shari/certificate/<award id>`,
+`next/og`: satori and resvg in WebAssembly, so not dependent on sharp or the
+CPU) from `client/web/assets/shari/`: the council's template background
+(reduced to 16 colours to keep each file about 1 MB) and Liberation Sans, which
+has Arial's metrics and is licensed under the SIL Open Font License 1.1. With
+the fonts in the repository, every certificate looks exactly the same. Their QR
+code points to `PUBLIC_WEB_URL/shari/check/<award id>`, and the award ids are
+random. So a certificate made in an image editor, or one whose name was changed,
+fails the check, even though the template and this code are public.
+
 ---
 
 ## API Overview
@@ -286,6 +313,7 @@ is public; `POST`/`PATCH`/`PUT`/`DELETE` require admin auth unless noted.
 | Admin users | `/user` | Admin-only |
 | Uploads | `POST /upload` | Upload an image, GIF or MP4/WEBM video (admin) → returns `{ url }`; files served at `/uploads/...` |
 | Interviews | `/interview` | Interview bot mini-app; auth by the interview bot's init data, roles from the DB |
+| Шари | `/shari` | Teachers call with their personal link token (`x-shari-token`), starostas and the presidium with Telegram Login Widget data (`x-telegram-login`); `GET /shari/check/:id` is public |
 
 The **facts & results** section is computed from the database (events held,
 money raised, charity amount, visitors reached, partners, departments, members)

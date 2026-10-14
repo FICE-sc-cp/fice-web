@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
-import { cn } from '@/lib/utils';
+import { cn, plural } from '@/lib/utils';
 import {
   STATUS_LABEL,
   byDay,
@@ -62,15 +62,6 @@ const ICONS = {
 
 const errorText = (err: unknown) =>
   err instanceof Error ? err.message : 'Щось пішло не так, спробуй ще раз';
-
-function plural(n: number, [one, few, many]: [string, string, string]) {
-  const mod10 = n % 10;
-  const mod100 = n % 100;
-  if (mod100 >= 11 && mod100 <= 19) return `${n} ${many}`;
-  if (mod10 === 1) return `${n} ${one}`;
-  if (mod10 >= 2 && mod10 <= 4) return `${n} ${few}`;
-  return `${n} ${many}`;
-}
 
 const deptLabel = (d?: StaffDepartment) => d?.shortName ?? d?.name ?? '';
 

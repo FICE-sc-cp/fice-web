@@ -26,6 +26,7 @@ import { VotingModule } from './modules/voting/voting.module';
 import { BroadcastModule } from './modules/broadcast/broadcast.module';
 import { BlockedUsersModule } from './modules/blocked-users/blocked-users.module';
 import { InterviewModule } from './modules/interview/interview.module';
+import { ShariModule } from './modules/shari/shari.module';
 import { throttlerOptions } from './common/throttle';
 import { validateEnv } from './config/env.validation';
 
@@ -55,6 +56,7 @@ import { validateEnv } from './config/env.validation';
     BroadcastModule,
     BlockedUsersModule,
     InterviewModule,
+    ShariModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

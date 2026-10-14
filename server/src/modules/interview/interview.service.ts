@@ -8,11 +8,7 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
-import {
-  DepartmentMemberRole,
-  InterviewSlot,
-  InterviewStatus,
-} from '@prisma/client';
+import { InterviewSlot, InterviewStatus } from '@prisma/client';
 import type { ResolvedTelegramUser } from '../../auth/init-data.util';
 import { InterviewBotService } from '../../bot/interview-bot.service';
 import { escapeHtml } from '../../common/html';
@@ -25,6 +21,7 @@ import {
   BOOKING_LEAD_MS,
   MAX_DEPARTMENTS_PER_CANDIDATE,
   MAX_SLOTS_PER_BATCH,
+  PRESIDIUM_ROLES,
   REMINDER_BEFORE_MS,
   StaffRole,
   bookingProblem,
@@ -36,13 +33,6 @@ import {
 
 type User = ResolvedTelegramUser;
 
-const PRESIDIUM_ROLES: DepartmentMemberRole[] = [
-  'HEAD',
-  'FIRST_DEPUTY',
-  'SECRETARY',
-  'DEPUTY',
-  'HR',
-];
 const REMINDER_TICK_MS = 60_000;
 const SLOT_TAKEN = 'Цей час уже зайняли — обери інший';
 const BAD_TAG = 'Невірний Telegram-тег (наприклад, @username)';

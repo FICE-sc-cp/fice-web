@@ -1,5 +1,15 @@
+import type { DepartmentMemberRole } from '@prisma/client';
 import { kyivWallTime } from '../event/event-timing';
 import { normalizeTelegramUsername } from '../event/registration-identity';
+
+/** Presidium members (by their tag in the admin panel) are admins of the interview and shari apps. */
+export const PRESIDIUM_ROLES: DepartmentMemberRole[] = [
+  'HEAD',
+  'FIRST_DEPUTY',
+  'SECRETARY',
+  'DEPUTY',
+  'HR',
+];
 
 /** Candidates can't book, or move away from, a slot starting sooner than this. */
 export const BOOKING_LEAD_MS = 60 * 60_000;

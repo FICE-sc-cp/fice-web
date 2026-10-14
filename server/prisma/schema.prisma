@@ -612,3 +612,66 @@ model InterviewNote {
 
   @@index([candidateId])
 }
+
+// ---- Шари: teachers' bonuses for students (FICE birthday) -----------------
+// Teachers work through a personal link (token); starostas and the presidium
+// sign in with the Telegram Login Widget of the user bot. Each award's random
+// id is what its certificate's QR code checks, so it must stay unguessable.
+
+model ShariTeacher {
+  id        String    @id @default(uuid()) @db.Uuid
+  fullName  String    @unique @db.VarChar(120)
+  email     String?   @db.VarChar(255)
+  telegram  String?   @db.VarChar(120)
+  token     String    @unique @db.VarChar(64)
+  // Campus schedule: [{ discipline, groups: [...] }].
+  courses   Json      @default("[]")
+  openedAt  DateTime?
+  createdAt DateTime  @default(now())
+
+  shari Shara[]
+}
+
+model Shara {
+  id         String   @id @default(uuid()) @db.Uuid
+  teacherId  String   @db.Uuid
+  discipline String   @db.VarChar(255)
+  group      String   @db.VarChar(20)
+  bonus      String   @db.VarChar(300)
+  condition  String?  @db.VarChar(300)
+  quantity   Int
+  createdAt  DateTime @default(now())
+
+  teacher ShariTeacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  awards  ShariAward[]
+
+  @@index([group])
+  @@index([teacherId])
+}
+
+model ShariAward {
+  id          String   @id @db.Uuid
+  sharaId     String   @db.Uuid
+  // Position among the shara's `quantity` places, as the starosta fills them.
+  slot        Int
+  studentName String   @db.VarChar(120)
+  createdAt   DateTime @default(now())
+
+  shara Shara @relation(fields: [sharaId], references: [id], onDelete: Cascade)
+
+  @@unique([sharaId, slot])
+}
+
+model ShariStarosta {
+  group       String  @id @db.VarChar(20)
+  telegramTag String  @db.VarChar(50)
+  telegramId  BigInt?
+}
+
+model ShariStudent {
+  id       String @id @default(uuid()) @db.Uuid
+  group    String @db.VarChar(20)
+  fullName String @db.VarChar(120)
+
+  @@unique([group, fullName])
+}
