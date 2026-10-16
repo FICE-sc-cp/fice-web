@@ -609,10 +609,15 @@ function Publishers() {
         >
           <Input
             placeholder="@username"
+            className="w-full min-w-0"
             value={tag}
             onChange={(e) => setTag(e.target.value)}
           />
-          <Button type="submit" disabled={!tag.trim() || add.isPending}>
+          <Button
+            type="submit"
+            className="shrink-0"
+            disabled={!tag.trim() || add.isPending}
+          >
             Додати
           </Button>
         </form>
