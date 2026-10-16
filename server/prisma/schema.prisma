@@ -34,6 +34,7 @@ enum NewsCategory {
 model News {
   id          String        @id @default(uuid()) @db.Uuid
   title       String        @db.VarChar(50)
+  // A future date keeps the news off the site until then (a scheduled post).
   publishDate DateTime      @default(now())
   details     String?       @db.Text
   image       String?
@@ -44,7 +45,50 @@ model News {
   eventDate        DateTime?
   eventLocation    String?   @db.VarChar(100)
   registrationLink String?
+  // Label of the button under a news item that links somewhere other than an
+  // event registration (registrationLink without eventDate).
+  buttonText       String?   @db.VarChar(64)
   isDraft          Boolean   @default(false)
+}
+
+enum ChannelPostStatus {
+  // Asked for in the media chat by someone without access; waits for approval.
+  PENDING
+  SCHEDULED
+  PUBLISHED
+  FAILED
+}
+
+// A post for the Telegram channel, published right away or at publishAt.
+model ChannelPost {
+  id              String            @id @default(uuid()) @db.Uuid
+  // HTML for parse_mode=HTML.
+  text            String            @db.Text
+  // Picture, GIF or video from the admin panel: /uploads/… or an https URL.
+  imageUrl        String?
+  // Media of a post taken from the media chat, sent again by its file id.
+  mediaFileId     String?
+  mediaType       String?           @db.VarChar(16)
+  buttonText      String?           @db.VarChar(64)
+  buttonUrl       String?
+  publishAt       DateTime
+  status          ChannelPostStatus @default(SCHEDULED)
+  messageId       Int?
+  error           String?
+  author          String?           @db.VarChar(100)
+  // The message in MEDIA_POST_CHAT_ID it came from; the bot reports there.
+  sourceMessageId Int?
+  createdAt       DateTime          @default(now())
+
+  @@index([status, publishAt])
+}
+
+// People allowed to publish from the media chat without approval. The media
+// department head and the presidium grant it and always have it themselves.
+model Publisher {
+  telegramTag String   @id @db.VarChar(50)
+  addedBy     String?  @db.VarChar(100)
+  createdAt   DateTime @default(now())
 }
 
 enum FundraiserStatus {

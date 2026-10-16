@@ -1,6 +1,12 @@
 const escapeHtml = (s: string) =>
   s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
+const ENTITIES: Record<string, string> = { amp: '&', lt: '<', gt: '>', quot: '"' };
+
+/** The admin editor and posts from Telegram store text HTML-escaped (&amp;). */
+export const decodeBasicEntities = (s: string) =>
+  s.replace(/&(amp|lt|gt|quot);/g, (_m, name: string) => ENTITIES[name]);
+
 const LINK_ATTRS =
   'target="_blank" rel="noopener noreferrer" class="text-brand-cyan underline underline-offset-2"';
 
@@ -20,7 +26,8 @@ const linkifyBare = (html: string): string =>
  */
 export function renderRichInline(text?: string | null): string {
   if (!text || typeof text !== 'string') return '';
-  const html = escapeHtml(text)
+  // Decode first, or "&amp;" would be escaped twice and show up as text.
+  const html = escapeHtml(decodeBasicEntities(text))
     .replace(/&lt;(\/?)(b|strong|u|i|em|s|strike|del)&gt;/gi, '<$1$2>')
     .replace(/&lt;br\s*\/?&gt;/gi, '<br>')
     .replace(

@@ -51,6 +51,13 @@ const schema = z
     eventDate: z.string().optional(),
     eventLocation: z.string().optional(),
     registrationLink: z.string().optional(),
+    buttonText: z.string().max(64, 'Максимум 64 символи').optional(),
+    publishDate: z.string().optional(),
+    isDraft: z.boolean().optional(),
+  })
+  .refine((v) => !v.publishDate || !Number.isNaN(Date.parse(v.publishDate)), {
+    message: 'Невалідна дата публікації',
+    path: ['publishDate'],
   })
   .refine((v) => !v.isEvent || !!v.eventDate?.trim(), {
     message: 'Вкажи дату й час заходу',
@@ -64,7 +71,7 @@ const schema = z
     message: 'Максимум 100 символів',
     path: ['eventLocation'],
   })
-  .refine((v) => !v.isEvent || isLink(v.registrationLink?.trim()), {
+  .refine((v) => isLink(v.registrationLink?.trim()), {
     message: 'Невалідне посилання, приклад: https://example.com або /events/…',
     path: ['registrationLink'],
   });
@@ -102,6 +109,9 @@ export function NewsForm({
       eventDate: '',
       eventLocation: '',
       registrationLink: '',
+      buttonText: '',
+      publishDate: '',
+      isDraft: false,
       ...defaultValues,
     },
   });
@@ -109,6 +119,9 @@ export function NewsForm({
   const image = watch('image');
   const isEvent = watch('isEvent');
   const details = watch('details');
+  const publishDate = watch('publishDate');
+  const [now] = useState(Date.now);
+  const scheduled = !!publishDate && new Date(publishDate).getTime() > now;
   const { formRef, onInvalid, serverMessages } = useFormErrors(
     error,
     setError,
@@ -177,6 +190,32 @@ export function NewsForm({
         onChange={(url) => setValue('image', url, { shouldDirty: true })}
       />
 
+      <div className="flex min-w-0 flex-col gap-1">
+        <Input
+          label="Дата публікації"
+          type="datetime-local"
+          className="min-w-0"
+          {...register('publishDate')}
+          error={errors.publishDate?.message}
+        />
+        <p className="break-words text-xs text-subtle">
+          {scheduled
+            ? 'Новина зʼявиться на сайті в цей час, до того вона в черзі «Публікації».'
+            : 'Порожньо — зараз. Майбутня дата відкладе публікацію.'}
+        </p>
+      </div>
+
+      <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-bg-soft px-4 py-3">
+        <input
+          type="checkbox"
+          {...register('isDraft')}
+          className="size-5 shrink-0 accent-brand-cyan"
+        />
+        <span className="min-w-0 text-sm font-semibold text-muted">
+          Чернетка — не показувати на сайті
+        </span>
+      </label>
+
       <label className="flex cursor-pointer items-center gap-3 rounded-xl border border-border bg-bg-soft px-4 py-3">
         <input
           type="checkbox"
@@ -187,6 +226,23 @@ export function NewsForm({
           Це оголошення про захід
         </span>
       </label>
+
+      {!isEvent && (
+        <div className="flex min-w-0 flex-col gap-4">
+          <Input
+            label="Кнопка під новиною: посилання"
+            placeholder="https://… (необовʼязково)"
+            {...register('registrationLink')}
+            error={errors.registrationLink?.message}
+          />
+          <Input
+            label="Підпис кнопки"
+            placeholder="Перейти"
+            {...register('buttonText')}
+            error={errors.buttonText?.message}
+          />
+        </div>
+      )}
 
       {isEvent && (
         <div className="flex min-w-0 flex-col gap-4 rounded-xl border border-brand-cyan/40 bg-brand-cyan/5 p-4">

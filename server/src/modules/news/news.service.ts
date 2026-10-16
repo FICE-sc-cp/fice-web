@@ -21,6 +21,7 @@ export class NewsService {
     const where: Prisma.NewsWhereInput = {};
     if (!draft) {
       where.isDraft = false;
+      where.publishDate = { lte: new Date() };
     }
     if (category) {
       where.category = category;
@@ -47,7 +48,10 @@ export class NewsService {
   async stats({ from, to }: NewsStatsQueryDto) {
     const rows = await this.prisma.news.groupBy({
       by: ['category'],
-      where: { isDraft: false, publishDate: kyivDaysFilter(from, to) },
+      where: {
+        isDraft: false,
+        publishDate: { ...kyivDaysFilter(from, to), lte: new Date() },
+      },
       _count: { _all: true },
     });
     return {

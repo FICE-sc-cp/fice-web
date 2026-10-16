@@ -66,6 +66,15 @@ export class CreateNewsDto {
   registrationLink?: string | null;
 
   @ApiPropertyOptional({
+    maxLength: 64,
+    description: 'Label of the button under a news item that is not an event',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  buttonText?: string | null;
+
+  @ApiPropertyOptional({
     default: false,
     description: 'Is news in draft status',
   })

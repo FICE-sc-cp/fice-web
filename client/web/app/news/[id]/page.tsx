@@ -179,6 +179,19 @@ export default async function NewsArticlePage({
                 Деталі новини зʼявляться згодом.
               </p>
             )}
+
+            {!event && item.registrationLink && (
+              <a
+                href={item.registrationLink}
+                {...(/^https?:\/\//i.test(item.registrationLink) && {
+                  target: "_blank",
+                  rel: "noopener noreferrer",
+                })}
+                className="mb-6 inline-flex items-center justify-center gap-2.5 rounded-xl bg-gradient-main px-8 py-3.5 text-[17px] font-extrabold text-stone-950 transition-opacity hover:opacity-90"
+              >
+                {item.buttonText || "Перейти"} →
+              </a>
+            )}
           </article>
 
           {related.length > 0 && (

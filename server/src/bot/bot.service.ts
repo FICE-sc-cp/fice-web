@@ -22,6 +22,12 @@ import {
 } from './department-chats';
 import { PollingStatus, PollingSupervisor } from './polling';
 import { errorMessage } from '../common/log-safe';
+import {
+  CAPTION_LIMIT,
+  MediaType,
+  mediaTypeOf,
+  plainText,
+} from '../modules/channel/post-format';
 
 const DEPARTMENT_CHATS_TTL_MS = 60_000;
 const MEMBERSHIP_CACHE_MS = 2 * 60_000;
@@ -47,7 +53,10 @@ export function isUnknownMemberError(err: GrammyError): boolean {
 
 export interface ChannelPostOptions {
   text: string;
+  /** /uploads/… path or URL: a photo, GIF or video by its extension. */
   photoUrl?: string;
+  /** Media of a Telegram message, sent again by its file id. */
+  media?: { type: MediaType; fileId: string };
   button?: { text: string; url: string };
 }
 
@@ -138,6 +147,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
         'edited_message',
         'chat_member',
         'my_chat_member',
+        'callback_query',
       ],
       onStart: (botInfo) => {
         this.logger.log(`Bot started successfully as @${botInfo.username}`);
@@ -230,7 +240,11 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
         );
       }
       if (rows.length > 0) this.invalidateDepartmentChats();
-      for (const key of ['ADMIN_GROUP_CHAT_ID', 'PARTNERSHIP_CHAT_ID']) {
+      for (const key of [
+        'ADMIN_GROUP_CHAT_ID',
+        'PARTNERSHIP_CHAT_ID',
+        'MEDIA_POST_CHAT_ID',
+      ]) {
         if (
           parseChatRef(this.configService.get<string>(key))?.chatId === from
         ) {
@@ -386,19 +400,8 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       const sizes = photos.photos[0];
       if (!sizes || sizes.length === 0) return null;
       const largest = sizes[sizes.length - 1];
-      const file = await this.bot.api.getFile(largest.file_id);
-      if (!file.file_path) return null;
-
-      const token = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
-      const url = `https://api.telegram.org/file/bot${token}/${file.file_path}`;
-      const res = await fetch(url);
-      if (!res.ok) return null;
-
-      const buffer = Buffer.from(await res.arrayBuffer());
-      const filename = `${randomUUID()}.jpg`;
-      await writeFile(resolve(UPLOAD_DIR, filename), buffer);
       return {
-        photo: `${UPLOAD_URL_PREFIX}/${filename}`,
+        photo: await this.downloadToUploads(largest.file_id, '.jpg'),
         fileId: largest.file_unique_id,
       };
     } catch (err) {
@@ -407,6 +410,24 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       );
       return null;
     }
+  }
+
+  /** Saves a Telegram file (bots get up to 20 MB) to the uploads, returns its URL. */
+  async downloadToUploads(fileId: string, ext: string): Promise<string> {
+    if (!this.bot) throw new Error('TELEGRAM_BOT_TOKEN is not set');
+    const file = await this.bot.api.getFile(fileId);
+    if (!file.file_path) throw new Error('Telegram returned no file path');
+    const token = this.configService.get<string>('TELEGRAM_BOT_TOKEN');
+    const res = await fetch(
+      `https://api.telegram.org/file/bot${token}/${file.file_path}`,
+    );
+    if (!res.ok) throw new Error(`Telegram file download: HTTP ${res.status}`);
+    const filename = `${randomUUID()}${ext}`;
+    await writeFile(
+      resolve(UPLOAD_DIR, filename),
+      Buffer.from(await res.arrayBuffer()),
+    );
+    return `${UPLOAD_URL_PREFIX}/${filename}`;
   }
 
   /**
@@ -641,16 +662,31 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
           ],
         }
       : undefined;
+    const media = options.media
+      ? { type: options.media.type, file: options.media.fileId }
+      : options.photoUrl
+        ? {
+            type: mediaTypeOf(options.photoUrl),
+            file: this.resolvePhoto(options.photoUrl),
+          }
+        : undefined;
 
     // parse_mode HTML lets the composer use <b>, <u>, <a href="…">.
     try {
-      // Photo captions are limited to 1024 chars; longer posts go out as text.
-      if (options.photoUrl && options.text.length <= 1024) {
-        const msg = await this.bot.api.sendPhoto(
-          chatId,
-          this.resolvePhoto(options.photoUrl),
-          { caption: options.text, parse_mode: 'HTML', reply_markup },
-        );
+      // Captions are limited to 1024 chars; longer posts go out as text.
+      if (media && plainText(options.text).length <= CAPTION_LIMIT) {
+        const extra = {
+          caption: options.text,
+          parse_mode: 'HTML' as const,
+          reply_markup,
+        };
+        const api = this.bot.api;
+        const msg =
+          media.type === 'video'
+            ? await api.sendVideo(chatId, media.file, extra)
+            : media.type === 'animation'
+              ? await api.sendAnimation(chatId, media.file, extra)
+              : await api.sendPhoto(chatId, media.file, extra);
         return { messageId: msg.message_id };
       }
 
@@ -693,5 +729,10 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
 
   pollingStatus(): PollingStatus {
     return this.polling?.getStatus() ?? 'disabled';
+  }
+
+  /** The admin bot, for features that add their own commands (e.g. /post). */
+  get telegram(): Bot | undefined {
+    return this.bot;
   }
 }

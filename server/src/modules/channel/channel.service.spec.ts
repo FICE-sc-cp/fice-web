@@ -8,8 +8,33 @@ function makeService(
   event: { id: string; photoUrl: string | null } | null,
 ) {
   const postToChannel = jest.fn().mockResolvedValue({ messageId: 42 });
+  type Row = Record<string, unknown> & { id: string; status: string };
+  const rows = new Map<string, Row>();
+  const row = (id: string) => rows.get(id)!;
   const prisma = {
     event: { findUnique: jest.fn().mockResolvedValue(event) },
+    channelPost: {
+      create: jest.fn(({ data }: { data: object }) => {
+        const r = { id: `p${rows.size + 1}`, status: 'SCHEDULED', ...data };
+        rows.set(r.id, r);
+        return Promise.resolve(r);
+      }),
+      updateMany: jest.fn(
+        ({ where, data }: { where: { id: string }; data: object }) => {
+          const r = rows.get(where.id);
+          if (!r || r.status === 'PUBLISHED')
+            return Promise.resolve({ count: 0 });
+          Object.assign(r, data);
+          return Promise.resolve({ count: 1 });
+        },
+      ),
+      findUniqueOrThrow: ({ where }: { where: { id: string } }) =>
+        Promise.resolve(row(where.id)),
+      update: ({ where, data }: { where: { id: string }; data: object }) =>
+        Promise.resolve(Object.assign(row(where.id), data)),
+      delete: ({ where }: { where: { id: string } }) =>
+        Promise.resolve(rows.delete(where.id)),
+    },
   };
   const bot = { postToChannel };
   const userBot = { getUsername: () => cfg['USER_BOT_USERNAME'] };
@@ -20,7 +45,7 @@ function makeService(
     userBot as never,
     config as never,
   );
-  return { service, postToChannel };
+  return { service, postToChannel, rows };
 }
 
 describe('ChannelService', () => {
@@ -100,5 +125,49 @@ describe('ChannelService', () => {
     await expect(service.post({ text: 'x', eventId: 'evt-3' })).rejects.toThrow(
       ServiceUnavailableException,
     );
+  });
+
+  it('schedules a post for later without sending it', async () => {
+    const { service, postToChannel, rows } = makeService({}, null);
+    const publishAt = new Date(Date.now() + 60 * 60_000);
+
+    const res = await service.post({ text: 'later', publishAt });
+
+    expect(res).toEqual({ ok: true, id: 'p1', scheduled: true });
+    expect(postToChannel).not.toHaveBeenCalled();
+    expect(rows.get('p1')).toMatchObject({ status: 'SCHEDULED', publishAt });
+  });
+
+  it('sends a post once even when the scheduler and "now" race', async () => {
+    const { service, postToChannel } = makeService({}, null);
+    await service.post({
+      text: 'once',
+      publishAt: new Date(Date.now() + 60_000),
+    });
+
+    const results = await Promise.all([
+      service.publish('p1'),
+      service.publish('p1'),
+    ]);
+
+    expect(results.sort()).toEqual([42, null]);
+    expect(postToChannel).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves nothing in the queue when an immediate post is refused', async () => {
+    const { service, postToChannel, rows } = makeService({}, null);
+    postToChannel.mockRejectedValueOnce(new Error('Bad Request'));
+
+    await expect(service.post({ text: 'now' })).rejects.toThrow('Bad Request');
+    expect(rows.size).toBe(0);
+  });
+
+  it('refuses a caption Telegram would cut', async () => {
+    const { service, postToChannel } = makeService({}, null);
+
+    await expect(
+      service.post({ text: 'я'.repeat(1025), imageUrl: '/uploads/a.jpg' }),
+    ).rejects.toThrow(/1024/);
+    expect(postToChannel).not.toHaveBeenCalled();
   });
 });

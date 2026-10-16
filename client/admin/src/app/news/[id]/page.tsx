@@ -45,8 +45,10 @@ export default function EditNewsPage() {
       eventDate: v.isEvent && v.eventDate ? new Date(v.eventDate).toISOString() : null,
       eventLocation:
         v.isEvent && v.eventLocation?.trim() ? v.eventLocation.trim() : null,
-      registrationLink:
-        v.isEvent && v.registrationLink?.trim() ? v.registrationLink.trim() : null,
+      registrationLink: v.registrationLink?.trim() || null,
+      buttonText: !v.isEvent && v.buttonText?.trim() ? v.buttonText.trim() : null,
+      publishDate: v.publishDate ? new Date(v.publishDate).toISOString() : undefined,
+      isDraft: !!v.isDraft,
     });
   }
 
@@ -74,6 +76,9 @@ export default function EditNewsPage() {
                   eventDate: data.eventDate ? toLocalInput(data.eventDate) : '',
                   eventLocation: data.eventLocation ?? '',
                   registrationLink: data.registrationLink ?? '',
+                  buttonText: data.buttonText ?? '',
+                  publishDate: toLocalInput(data.publishDate),
+                  isDraft: data.isDraft,
                 }
               : undefined
           }

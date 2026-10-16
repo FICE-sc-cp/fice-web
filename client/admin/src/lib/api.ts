@@ -269,6 +269,9 @@ export interface News {
   eventDate: string | null;
   eventLocation: string | null;
   registrationLink: string | null;
+  /** Label of the button under a news item that is not an event. */
+  buttonText: string | null;
+  isDraft: boolean;
 }
 
 export interface Applicant {
@@ -342,6 +345,7 @@ export interface NewsInput {
   eventDate?: string | null;
   eventLocation?: string | null;
   registrationLink?: string | null;
+  buttonText?: string | null;
   isDraft?: boolean;
 }
 
@@ -482,6 +486,44 @@ export interface ChannelPostInput {
   eventId?: string;
   buttonText?: string;
   buttonUrl?: string;
+  /** ISO time; empty publishes right away. */
+  publishAt?: string;
+}
+
+/** `imageUrl: null` removes the media, `buttonUrl: null` the button. */
+export interface ChannelPostUpdate {
+  text?: string;
+  imageUrl?: string | null;
+  buttonText?: string;
+  buttonUrl?: string | null;
+  publishAt?: string;
+}
+
+export type ChannelPostStatus = 'PENDING' | 'SCHEDULED' | 'PUBLISHED' | 'FAILED';
+
+export interface ChannelPost {
+  id: string;
+  text: string;
+  imageUrl: string | null;
+  /** Photo, video or GIF taken from the media chat (no preview here). */
+  mediaFileId: string | null;
+  mediaType: 'photo' | 'video' | 'animation' | null;
+  buttonText: string | null;
+  buttonUrl: string | null;
+  publishAt: string;
+  status: ChannelPostStatus;
+  error: string | null;
+  author: string | null;
+}
+
+export type QueueItem =
+  | { kind: 'channel'; id: string; publishAt: string; post: ChannelPost }
+  | { kind: 'site'; id: string; publishAt: string; news: News };
+
+export interface Publisher {
+  telegramTag: string;
+  addedBy: string | null;
+  createdAt: string;
 }
 
 export type ProjectParticipantSource = 'HARVESTED' | 'MANUAL';
@@ -701,9 +743,27 @@ export const api = {
 
   channelStatus: () => request<ChannelStatus>('/channel/status'),
   postChannel: (body: ChannelPostInput) =>
-    request<{ ok: boolean; messageId: number }>('/channel/post', {
+    request<{ ok: boolean; id: string; messageId?: number; scheduled?: boolean }>(
+      '/channel/post',
+      { method: 'POST', ...json(body) },
+    ),
+  channelQueue: () => request<QueueItem[]>('/channel/queue'),
+  updateChannelPost: (id: string, body: ChannelPostUpdate) =>
+    request<ChannelPost>(`/channel/posts/${id}`, { method: 'PATCH', ...json(body) }),
+  publishChannelPost: (id: string) =>
+    request<{ result: string }>(`/channel/posts/${id}/publish`, { method: 'POST' }),
+  deleteChannelPost: (id: string) =>
+    request<unknown>(`/channel/posts/${id}`, { method: 'DELETE' }),
+  publishers: () =>
+    request<{ publishers: Publisher[]; canManage: boolean }>('/channel/publishers'),
+  addPublisher: (telegramTag: string) =>
+    request<Publisher>('/channel/publishers', {
       method: 'POST',
-      ...json(body),
+      ...json({ telegramTag }),
+    }),
+  removePublisher: (tag: string) =>
+    request<unknown>(`/channel/publishers/${encodeURIComponent(tag)}`, {
+      method: 'DELETE',
     }),
 
   projectParticipants: () =>

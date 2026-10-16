@@ -211,6 +211,8 @@ export interface News {
   eventDate: string | null;
   eventLocation: string | null;
   registrationLink: string | null;
+  /** Label of the button under a news item that is not an event. */
+  buttonText?: string | null;
   isDraft?: boolean;
 }
 

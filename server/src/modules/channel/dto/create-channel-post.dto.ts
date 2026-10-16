@@ -1,5 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
+  IsDate,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -9,11 +11,23 @@ import {
 } from 'class-validator';
 
 export class CreateChannelPostDto {
-  @ApiProperty({ maxLength: 4096, description: 'Текст поста' })
+  // HTML: Telegram's own 4096 / 1024 limits count the text without tags and
+  // are checked by the service.
+  @ApiProperty({ maxLength: 16000, description: 'Текст поста (HTML)' })
   @IsString()
   @IsNotEmpty()
-  @MaxLength(4096)
+  @MaxLength(16000)
   text: string;
+
+  @ApiPropertyOptional({
+    type: String,
+    format: 'date-time',
+    description: 'Коли опублікувати; порожньо або минулий час — одразу',
+  })
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  publishAt?: Date;
 
   @ApiPropertyOptional({
     description: 'Зображення (шлях /uploads/... або зовнішній URL)',

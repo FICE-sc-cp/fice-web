@@ -69,7 +69,8 @@ export class NewsController {
     @Headers('x-telegram-init-data') initData?: string,
   ) {
     const news = await this.newsService.findOne(id);
-    if (news.isDraft && !(await this.adminAccess.isAdmin(initData))) {
+    const hidden = news.isDraft || news.publishDate > new Date();
+    if (hidden && !(await this.adminAccess.isAdmin(initData))) {
       throw new NotFoundException(`News ${id} not found`);
     }
     return news;

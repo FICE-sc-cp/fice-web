@@ -77,6 +77,7 @@ export default function NewsListPage() {
     queryFn: () => api.news(1, 50),
   });
   const [pending, setPending] = useState<News | null>(null);
+  const [now] = useState(Date.now);
 
   const del = useMutation({
     mutationFn: (id: string) => api.deleteNews(id),
@@ -142,7 +143,15 @@ export default function NewsListPage() {
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-semibold">{n.title}</p>
                   <p className="truncate text-xs text-subtle">
-                    {new Date(n.publishDate).toLocaleDateString('uk-UA')}
+                    {n.isDraft && 'Чернетка · '}
+                    {new Date(n.publishDate).getTime() > now
+                      ? `Заплановано на ${new Date(n.publishDate).toLocaleString('uk-UA', {
+                          day: 'numeric',
+                          month: 'long',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}`
+                      : new Date(n.publishDate).toLocaleDateString('uk-UA')}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-3">

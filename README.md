@@ -188,6 +188,7 @@ is in [`.env.example`](.env.example). When the API runs on the host it reads
 | `INTERVIEW_BOT_TOKEN` | no | Interview booking bot (a third bot); opens `${PUBLIC_WEB_URL}/interview` |
 | `TELEGRAM_CHANNEL_ID` | no | Channel for announcements (bot must be admin) |
 | `PARTNERSHIP_CHAT_ID` | no | Chat for partner applications (`chatId/threadId` for a topic) |
+| `MEDIA_POST_CHAT_ID` | no | Media chat topic (`chatId/threadId`) for `/post`, `/site`, `/queue`; see [Публікації](#публікації) |
 | `PARTNERSHIP_HEAD_TG`, `COUNCIL_HEAD_TG` | no | Usernames pinged on partner applications |
 | `AUTH_DISABLED` | no (`false`) | `true` bypasses admin auth — **dev only**, refused in production |
 | `DATABASE_URL`, `PORT`, `UPLOAD_DIR` | host only | Set by compose in Docker; needed in `server/.env` on the host |
@@ -294,6 +295,35 @@ the fonts in the repository, every certificate looks exactly the same. Their QR
 code points to `PUBLIC_WEB_URL/shari/check/<award id>`, and the award ids are
 random. So a certificate made in an image editor, or one whose name was changed,
 fails the check, even though the template and this code are public.
+
+### Публікації
+
+Posts for the Telegram channel and the site, made from one topic of the media
+chat (`MEDIA_POST_CHAT_ID`). The admin bot must be an admin of that chat, or it
+won't see the answers people type during a dialog.
+
+- `/post` (channel) or `/site` (a news item), sent as a reply to a ready post.
+  The bot asks for a title and category (site only), when to publish (now, or
+  a Kyiv date and time) and the button: none, registration for one of our
+  upcoming events (through the student bot) or any link. It then shows a
+  summary to confirm. A post is text plus at most one photo, video or GIF;
+  albums are refused, since Telegram can't put a button under an album.
+  Formatting is kept; the site shows only bold, italic, underline,
+  strikethrough and links.
+- Access: the media department head (by the tag in Департаменти) and the
+  presidium (tag + admin group) always have it and grant it to others in the
+  admin panel → Публікації. Anyone else gets "send for approval": the bot pings
+  everyone with access, and one click there publishes or rejects the post.
+- `/queue` lists the scheduled posts. People with access change the time,
+  button or text (and title and category of a news item), publish one now or
+  take it off the queue. The admin panel → Публікації has the same queue and a
+  composer with a publish time; a news item can also be scheduled by its
+  publish date in Новини.
+- The server sends a due channel post within 30 seconds and reports the result
+  under the source post. A scheduled news item is a news item with a future
+  date: the site doesn't show it until then.
+
+Bots can only download files up to 20 MB, so `/site` refuses bigger covers.
 
 ---
 

@@ -9,4 +9,7 @@ export class NewsEntity {
   category: NewsCategory | null;
   eventDate: Date | null;
   eventLocation: string | null;
+  registrationLink: string | null;
+  buttonText: string | null;
+  isDraft: boolean;
 }
