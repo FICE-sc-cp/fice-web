@@ -15,10 +15,6 @@ const BUG = toRuns(
   ["a....a", ".a..a.", "..ww..", ".rrrr.", "rkrrkr", ".rrrr."],
   { a: "#d6d3d1", w: "#ffffff", r: "#fb2c36", k: "#1c1917" },
 );
-const CHECK = toRuns(
-  [".....gg", "....gg.", "gg.gg..", ".ggg...", "..g...."],
-  { g: "#2eff97" },
-);
 // The right pupil glances right, at the bug flying in.
 const LOOK = toRuns(["wk"], FROG_COLORS);
 const EYELIDS = toRuns(["gg....gg", "dd....dd"], FROG_COLORS);
@@ -62,11 +58,6 @@ export function DebugFrog({ className }: { className?: string }) {
       <g transform="translate(4 18)">
         <g className="dbg-bug">
           <Pixels runs={BUG} />
-        </g>
-      </g>
-      <g transform="translate(4 19)">
-        <g className="dbg-check">
-          <Pixels runs={CHECK} />
         </g>
       </g>
     </svg>

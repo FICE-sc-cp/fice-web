@@ -223,20 +223,15 @@
 /* Подвійний клік по жабці в хедері: вона ловить язиком бага (DebugFrog) */
 .dbg-look,
 .dbg-blink,
-.dbg-bug,
-.dbg-check {
+.dbg-bug {
   opacity: 0;
 }
-.dbg-gulp,
-.dbg-tongue,
-.dbg-check {
-  transform-box: fill-box;
-  transform-origin: center;
-}
 .dbg-gulp {
+  transform-box: fill-box;
   transform-origin: bottom;
 }
 .dbg-tongue {
+  transform-box: fill-box;
   transform-origin: top;
   transform: scaleY(0);
 }
@@ -246,7 +241,6 @@
   .dbg-run .dbg-blink  { animation: dbg-blink 2.4s linear both; }
   .dbg-run .dbg-tongue { animation: dbg-tongue 2.4s ease-in-out both; }
   .dbg-run .dbg-bug    { animation: dbg-bug 2.4s ease-in-out both; }
-  .dbg-run .dbg-check  { animation: dbg-check 2.4s ease-out both; }
 }
 /* The bug's pull-in (54–64%) mirrors the tongue's, so it stays on the tip. */
 @keyframes dbg-bug {
@@ -281,13 +275,6 @@
   70%       { transform: scale(1.1, 0.86); }
   78%       { transform: scale(0.96, 1.05); }
   86%, 100% { transform: none; }
-}
-@keyframes dbg-check {
-  0%, 70% { opacity: 0; transform: translateY(0) scale(0.4); }
-  76%     { opacity: 1; transform: translateY(-1px) scale(1.15); }
-  84%     { transform: translateY(-1.5px) scale(1); }
-  92%     { opacity: 1; }
-  100%    { opacity: 0; transform: translateY(-4px) scale(1); }
 }
 
 body > main {
