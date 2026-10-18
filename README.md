@@ -319,6 +319,10 @@ won't see the answers people type during a dialog.
   take it off the queue. The admin panel → Публікації has the same queue and a
   composer with a publish time; a news item can also be scheduled by its
   publish date in Новини.
+- Posts already in the channel: `/queue` → Опубліковані (and "Уже в каналі" in
+  the admin panel) list the last 10. The bot edits their text and button right
+  in the channel; media and time stay as they are. Published news items are
+  edited in Новини.
 - The server sends a due channel post within 30 seconds and reports the result
   under the source post. A scheduled news item is a news item with a future
   date: the site doesn't show it until then.

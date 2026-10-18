@@ -87,6 +87,10 @@ function buildCaption(e: EventItem): string {
 
 export default function ChannelPage() {
   const [editing, setEditing] = useState<ChannelPost | null>(null);
+  const edit = (post: ChannelPost) => {
+    setEditing(post);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <main className="mx-auto max-w-xl px-4 py-6">
@@ -96,12 +100,8 @@ export default function ChannelPage() {
         editing={editing}
         onDone={() => setEditing(null)}
       />
-      <Queue
-        onEdit={(post) => {
-          setEditing(post);
-          window.scrollTo({ top: 0, behavior: 'smooth' });
-        }}
-      />
+      <Queue onEdit={edit} />
+      <Published onEdit={edit} />
       <Publishers />
     </main>
   );
@@ -124,6 +124,8 @@ function Composer({
     queryFn: () => api.events(1, 100),
   });
 
+  // Already out in the channel: the bot can change only its text and button.
+  const published = editing?.status === 'PUBLISHED';
   const [eventId, setEventId] = useState('');
   const [text, setText] = useState(editing?.text ?? '');
   const [imageUrl, setImageUrl] = useState<string | null>(editing?.imageUrl ?? null);
@@ -149,10 +151,10 @@ function Composer({
       if (editing) {
         await api.updateChannelPost(editing.id, {
           text: text.trim(),
-          ...(chatMedia ? {} : { imageUrl }),
+          ...(chatMedia || published ? {} : { imageUrl }),
           buttonUrl: withButton && buttonUrl.trim() ? buttonUrl.trim() : null,
           buttonText: buttonText.trim() || undefined,
-          publishAt: when,
+          ...(published ? {} : { publishAt: when }),
         });
         return null;
       }
@@ -223,7 +225,9 @@ function Composer({
         <div className="flex flex-col gap-4">
           {editing ? (
             <div className="flex items-center justify-between gap-3 rounded-xl border border-brand-cyan/40 bg-brand-cyan/5 px-4 py-3 text-sm">
-              <span className="font-semibold">Редагування поста з черги</span>
+              <span className="font-semibold">
+                {published ? 'Редагування поста в каналі' : 'Редагування поста з черги'}
+              </span>
               <button type="button" onClick={onDone} className="text-muted hover:text-fg">
                 Скасувати
               </button>
@@ -235,6 +239,11 @@ function Composer({
               value={eventId}
               onChange={(e) => onPickEvent(e.target.value)}
             />
+          )}
+          {published && (
+            <p className="-mt-2 text-xs text-subtle">
+              Бот змінить текст і кнопку прямо в каналі. Фото, відео й час уже не змінити.
+            </p>
           )}
 
           <RichTextArea
@@ -250,27 +259,31 @@ function Composer({
             </p>
           )}
 
-          {chatMedia && (
-            <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-bg-soft px-4 py-3 text-sm">
-              <span>{MEDIA_NAMES[chatMedia]} з чату медіа (без перегляду)</span>
-              <button
-                type="button"
-                onClick={() => setChatMedia(null)}
-                className="text-brand-red"
-              >
-                Прибрати
-              </button>
-            </div>
+          {!published && (
+            <>
+              {chatMedia && (
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-border bg-bg-soft px-4 py-3 text-sm">
+                  <span>{MEDIA_NAMES[chatMedia]} з чату медіа (без перегляду)</span>
+                  <button
+                    type="button"
+                    onClick={() => setChatMedia(null)}
+                    className="text-brand-red"
+                  >
+                    Прибрати
+                  </button>
+                </div>
+              )}
+              <ImageUpload
+                label={chatMedia ? 'Замінити на інше' : 'Зображення'}
+                accept="image/*,video/mp4,image/gif"
+                value={imageUrl}
+                onChange={(url) => {
+                  setImageUrl(url);
+                  if (url) setChatMedia(null);
+                }}
+              />
+            </>
           )}
-          <ImageUpload
-            label={chatMedia ? 'Замінити на інше' : 'Зображення'}
-            accept="image/*,video/mp4,image/gif"
-            value={imageUrl}
-            onChange={(url) => {
-              setImageUrl(url);
-              if (url) setChatMedia(null);
-            }}
-          />
 
           <label className="flex items-center gap-2 text-sm font-medium text-muted">
             <input
@@ -344,19 +357,21 @@ function Composer({
             </>
           )}
 
-          <div className="flex flex-col gap-1">
-            <Input
-              label="Коли опублікувати (за Києвом)"
-              type="datetime-local"
-              value={publishAt}
-              onChange={(e) => setPublishAt(e.target.value)}
-            />
-            {!editing && (
-              <p className="text-xs text-subtle">
-                Порожньо — одразу. Заплановані пости зʼявляться в черзі нижче.
-              </p>
-            )}
-          </div>
+          {!published && (
+            <div className="flex flex-col gap-1">
+              <Input
+                label="Коли опублікувати (за Києвом)"
+                type="datetime-local"
+                value={publishAt}
+                onChange={(e) => setPublishAt(e.target.value)}
+              />
+              {!editing && (
+                <p className="text-xs text-subtle">
+                  Порожньо — одразу. Заплановані пости зʼявляться в черзі нижче.
+                </p>
+              )}
+            </div>
+          )}
 
           {mutation.error && (
             <p className="rounded-xl border border-brand-red/40 bg-brand-red/10 px-4 py-3 text-sm text-brand-red">
@@ -542,6 +557,51 @@ function Queue({ onEdit }: { onEdit: (post: ChannelPost) => void }) {
         }}
         onConfirm={() => pending && act.mutate(pending)}
       />
+    </section>
+  );
+}
+
+function Published({ onEdit }: { onEdit: (post: ChannelPost) => void }) {
+  // Under the queue's key: whatever refreshes the queue refreshes this list too.
+  const { data: posts } = useQuery({
+    queryKey: ['channel-queue', 'published'],
+    queryFn: () => api.channelPublished(),
+    refetchInterval: 30_000,
+  });
+  if (!posts?.length) return null;
+
+  return (
+    <section className="mt-8">
+      <h2 className="mb-1 text-lg font-bold">Уже в каналі</h2>
+      <p className="mb-3 text-xs text-subtle">
+        Останні пости: у них можна змінити текст і кнопку. У чаті медіа те саме — /queue →
+        Опубліковані.
+      </p>
+      <ul className="flex flex-col gap-3">
+        {posts.map((post) => (
+          <li
+            key={post.id}
+            className="flex flex-col gap-2 rounded-2xl border border-border bg-surface p-3"
+          >
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="font-semibold">{fmtWhen(post.publishAt)}</span>
+              {post.author && <span className="text-subtle">{post.author}</span>}
+            </div>
+            <p className="line-clamp-2 break-words text-sm">
+              {plain(post.text) || 'Без тексту'}
+            </p>
+            <div>
+              <button
+                type="button"
+                onClick={() => onEdit(post)}
+                className="rounded-lg border border-border px-3 py-1.5 text-sm text-muted transition-colors hover:text-fg"
+              >
+                Ред.
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }

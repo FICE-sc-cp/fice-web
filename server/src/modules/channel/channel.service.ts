@@ -10,7 +10,11 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { ChannelPost, News, NewsCategory } from '@prisma/client';
-import { BotService, parseChatRef } from '../../bot/bot.service';
+import {
+  BotService,
+  ChannelPostOptions,
+  parseChatRef,
+} from '../../bot/bot.service';
 import { UserBotService } from '../../bot/user-bot.service';
 import { errorMessage } from '../../common/log-safe';
 import { PrismaService } from '../../database/prisma.service';
@@ -33,6 +37,7 @@ import {
 
 const TICK_MS = 30_000;
 const GONE = 'Цього поста вже немає в черзі';
+const OUT = 'Пост уже в каналі: у ньому можна змінити лише текст і кнопку';
 export const HANDLED = 'Цей запит уже оброблено';
 
 export type PostKind = 'channel' | 'site';
@@ -178,16 +183,9 @@ export class ChannelService implements OnModuleInit, OnModuleDestroy {
       where: { id },
     });
     try {
-      const { messageId } = await this.bot.postToChannel({
-        text: post.text,
-        photoUrl: post.imageUrl ?? undefined,
-        media: post.mediaFileId
-          ? { type: post.mediaType as MediaType, fileId: post.mediaFileId }
-          : undefined,
-        button: post.buttonUrl
-          ? { text: post.buttonText || 'Перейти', url: post.buttonUrl }
-          : undefined,
-      });
+      const { messageId } = await this.bot.postToChannel(
+        this.channelOptions(post),
+      );
       await this.prisma.channelPost.update({
         where: { id },
         data: { messageId },
@@ -200,6 +198,27 @@ export class ChannelService implements OnModuleInit, OnModuleDestroy {
       });
       throw err;
     }
+  }
+
+  private channelOptions(post: ChannelPost): ChannelPostOptions {
+    return {
+      text: post.text,
+      photoUrl: post.imageUrl ?? undefined,
+      media: post.mediaFileId
+        ? { type: post.mediaType as MediaType, fileId: post.mediaFileId }
+        : undefined,
+      button: post.buttonUrl
+        ? { text: post.buttonText || 'Перейти', url: post.buttonUrl }
+        : undefined,
+    };
+  }
+
+  /** Puts a published post's new text and button into its channel message. */
+  private async editInChannel(post: ChannelPost) {
+    if (!post.messageId) {
+      throw new BadRequestException('Не знайшов цей пост у каналі');
+    }
+    await this.bot.editChannelPost(post.messageId, this.channelOptions(post));
   }
 
   /** "Publish now" right after composing: on failure the content is still at hand, so no queue entry. */
@@ -311,12 +330,20 @@ export class ChannelService implements OnModuleInit, OnModuleDestroy {
     return items.sort((a, b) => a.publishAt.getTime() - b.publishAt.getTime());
   }
 
+  /** The latest posts out in the channel, newest first: their text and button can still change. */
+  published() {
+    return this.prisma.channelPost.findMany({
+      where: { status: 'PUBLISHED', messageId: { not: null } },
+      orderBy: { publishAt: 'desc' },
+      take: 10,
+    });
+  }
+
+  /** A queued post or news item, or a channel post that is already out. */
   async item(kind: PostKind, id: string): Promise<QueueItem | null> {
     if (kind === 'channel') {
       const post = await this.prisma.channelPost.findUnique({ where: { id } });
-      return post && post.status !== 'PUBLISHED'
-        ? { kind, id, publishAt: post.publishAt, post }
-        : null;
+      return post ? { kind, id, publishAt: post.publishAt, post } : null;
     }
     const news = await this.prisma.news.findUnique({ where: { id } });
     return news && !news.isDraft && news.publishDate > new Date()
@@ -422,33 +449,33 @@ export class ChannelService implements OnModuleInit, OnModuleDestroy {
     };
   }
 
-  /** Edits a queued post (the /queue command in the media chat). */
+  /** Edits a queued post or a published one (the /queue command in the media chat). */
   async change(kind: PostKind, id: string, c: PostChanges): Promise<void> {
     if (kind === 'channel') {
       const post = await this.prisma.channelPost.findUnique({ where: { id } });
-      if (!post || post.status === 'PUBLISHED') {
-        throw new BadRequestException(GONE);
-      }
+      if (!post) throw new BadRequestException(GONE);
+      const out = post.status === 'PUBLISHED';
+      if (out && c.publishAt) throw new BadRequestException(OUT);
       const text = c.text ?? post.text;
       const problem = lengthProblem(
         text,
         !!(post.imageUrl || post.mediaFileId),
       );
       if (problem) throw new BadRequestException(problem);
-      await this.prisma.channelPost.update({
-        where: { id },
-        data: {
-          text,
-          ...(c.button !== undefined && this.channelButton(c.button)),
-          ...(c.publishAt && {
-            publishAt: c.publishAt,
-            ...(post.status === 'FAILED' && {
-              status: 'SCHEDULED' as const,
-              error: null,
-            }),
+      const data = {
+        text,
+        ...(c.button !== undefined && this.channelButton(c.button)),
+        ...(c.publishAt && {
+          publishAt: c.publishAt,
+          ...(post.status === 'FAILED' && {
+            status: 'SCHEDULED' as const,
+            error: null,
           }),
-        },
-      });
+        }),
+      };
+      // Telegram first: when it refuses, the database keeps matching the channel.
+      if (out) await this.editInChannel({ ...post, ...data });
+      await this.prisma.channelPost.update({ where: { id }, data });
       return;
     }
     if (!(await this.item('site', id))) throw new BadRequestException(GONE);
@@ -464,46 +491,47 @@ export class ChannelService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
-  /** The admin panel's edit of a channel post. */
+  /** The admin panel's edit of a queued or published channel post. */
   async updatePost(id: string, dto: UpdateChannelPostDto) {
     const post = await this.prisma.channelPost.findUnique({ where: { id } });
-    if (!post || post.status === 'PUBLISHED') {
-      throw new BadRequestException(GONE);
-    }
+    if (!post) throw new BadRequestException(GONE);
+    const out = post.status === 'PUBLISHED';
     const mediaChanged = dto.imageUrl !== undefined;
+    if (out && (mediaChanged || dto.publishAt)) {
+      throw new BadRequestException(OUT);
+    }
     const text = dto.text ?? post.text;
     const problem = lengthProblem(
       text,
       mediaChanged ? !!dto.imageUrl : !!(post.imageUrl || post.mediaFileId),
     );
     if (problem) throw new BadRequestException(problem);
-    return this.prisma.channelPost.update({
-      where: { id },
-      data: {
-        text,
-        ...(mediaChanged && {
-          imageUrl: dto.imageUrl || null,
-          mediaFileId: null,
-          mediaType: null,
+    const data = {
+      text,
+      ...(mediaChanged && {
+        imageUrl: dto.imageUrl || null,
+        mediaFileId: null,
+        mediaType: null,
+      }),
+      ...(dto.buttonUrl !== undefined &&
+        this.channelButton(
+          dto.buttonUrl
+            ? {
+                text: dto.buttonText?.trim() || 'Перейти',
+                url: dto.buttonUrl.trim(),
+              }
+            : null,
+        )),
+      ...(dto.publishAt && {
+        publishAt: dto.publishAt,
+        ...(post.status === 'FAILED' && {
+          status: 'SCHEDULED' as const,
+          error: null,
         }),
-        ...(dto.buttonUrl !== undefined &&
-          this.channelButton(
-            dto.buttonUrl
-              ? {
-                  text: dto.buttonText?.trim() || 'Перейти',
-                  url: dto.buttonUrl.trim(),
-                }
-              : null,
-          )),
-        ...(dto.publishAt && {
-          publishAt: dto.publishAt,
-          ...(post.status === 'FAILED' && {
-            status: 'SCHEDULED' as const,
-            error: null,
-          }),
-        }),
-      },
-    });
+      }),
+    };
+    if (out) await this.editInChannel({ ...post, ...data });
+    return this.prisma.channelPost.update({ where: { id }, data });
   }
 
   /** Approves a request from the media chat; returns what happened. */

@@ -58,9 +58,21 @@ export class ChannelController {
     return this.channelService.queue();
   }
 
+  @Get('published')
+  @Admin()
+  @ApiOperation({
+    summary: 'Latest published channel posts, still editable (admin)',
+  })
+  published() {
+    return this.channelService.published();
+  }
+
   @Patch('posts/:id')
   @Admin()
-  @ApiOperation({ summary: 'Edit a queued channel post (admin)' })
+  @ApiOperation({
+    summary:
+      'Edit a queued channel post, or the text and button of a published one (admin)',
+  })
   update(
     @Param('id', ParseUUIDPipe) id: string,
     @Body() dto: UpdateChannelPostDto,

@@ -748,6 +748,7 @@ export const api = {
       { method: 'POST', ...json(body) },
     ),
   channelQueue: () => request<QueueItem[]>('/channel/queue'),
+  channelPublished: () => request<ChannelPost[]>('/channel/published'),
   updateChannelPost: (id: string, body: ChannelPostUpdate) =>
     request<ChannelPost>(`/channel/posts/${id}`, { method: 'PATCH', ...json(body) }),
   publishChannelPost: (id: string) =>

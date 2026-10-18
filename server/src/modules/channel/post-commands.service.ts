@@ -173,7 +173,10 @@ export class PostCommandsService implements OnModuleInit {
         [
           { command: 'post', description: 'У канал: реплаєм на готовий пост' },
           { command: 'site', description: 'На сайт: реплаєм на готовий пост' },
-          { command: 'queue', description: 'Черга відкладених публікацій' },
+          {
+            command: 'queue',
+            description: 'Черга публікацій і вже опубліковані пости',
+          },
         ],
         { scope: { type: 'chat', chat_id: this.chat.chatId } },
       )
@@ -556,7 +559,33 @@ export class PostCommandsService implements OnModuleInit {
             `pq:open:${code(item.kind)}:${shortId(item.id)}`,
           ),
         ]),
-        [btn('Оновити', 'pq:list')],
+        [btn('Оновити', 'pq:list'), btn('Опубліковані', 'pq:pub')],
+      ],
+    };
+  }
+
+  private async publishedView(): Promise<View> {
+    const posts = await this.channel.published();
+    const lines = posts.map(
+      (p, i) =>
+        `${i + 1}. <b>${formatKyiv(p.publishAt)}</b> · ${escapeHtml(excerpt(p.text, 50) || 'без тексту')}`,
+    );
+    return {
+      text: [
+        '<b>Уже в каналі</b>',
+        '',
+        ...(lines.length
+          ? [...lines, '', 'У них можна змінити текст і кнопку.']
+          : ['Поки нічого не опубліковано.']),
+      ].join('\n'),
+      rows: [
+        ...posts.map((p, i) => [
+          btn(
+            `${i + 1}. ${formatKyiv(p.publishAt)}`,
+            `pq:open:c:${shortId(p.id)}`,
+          ),
+        ]),
+        [btn('До черги', 'pq:list')],
       ],
     };
   }
@@ -564,6 +593,8 @@ export class PostCommandsService implements OnModuleInit {
   private async cardView(kind: PostKind, id: string, note?: string) {
     const item = await this.channel.item(kind, id);
     if (!item) return this.queueView('Цього поста вже немає в черзі.');
+    // Out in the channel: only the text and the button can still change.
+    const out = item.kind === 'channel' && item.post.status === 'PUBLISHED';
     const lines = [
       ...(note ? [escapeHtml(note), ''] : []),
       `<b>${kind === 'site' ? 'Сайт' : 'Канал'} · ${formatKyiv(item.publishAt)}</b>`,
@@ -576,6 +607,9 @@ export class PostCommandsService implements OnModuleInit {
       if (p.status === 'PENDING') lines.push('Чекає схвалення');
       if (p.status === 'FAILED') {
         lines.push(`Не вдалося опублікувати: ${escapeHtml(p.error ?? '')}`);
+      }
+      if (out && p.messageId) {
+        lines.push(`Уже в каналі: ${this.channel.postLink(p.messageId)}`);
       }
       lines.push(
         `Кнопка: ${p.buttonUrl ? link(p.buttonText, p.buttonUrl) : 'немає'}`,
@@ -599,7 +633,7 @@ export class PostCommandsService implements OnModuleInit {
       text: lines.join('\n'),
       rows: [
         [
-          btn('Час', `pq:time:${ref}`),
+          ...(out ? [] : [btn('Час', `pq:time:${ref}`)]),
           btn('Кнопка', `pq:btn:${ref}`),
           btn('Текст', `pq:text:${ref}`),
         ],
@@ -614,11 +648,15 @@ export class PostCommandsService implements OnModuleInit {
         ...(item.kind === 'channel' && item.post.status === 'PENDING'
           ? [[btn('Схвалити', `pq:ok:${ref}`)]]
           : []),
-        [
-          btn('Опублікувати зараз', `pq:now:${ref}`),
-          btn('Видалити', `pq:del:${ref}`),
-        ],
-        [btn('До черги', 'pq:list')],
+        ...(out
+          ? [[btn('До опублікованих', 'pq:pub')]]
+          : [
+              [
+                btn('Опублікувати зараз', `pq:now:${ref}`),
+                btn('Видалити', `pq:del:${ref}`),
+              ],
+              [btn('До черги', 'pq:list')],
+            ]),
       ],
     };
   }
@@ -677,6 +715,9 @@ export class PostCommandsService implements OnModuleInit {
     id: string | null,
   ) {
     const promptId = ctx.callbackQuery.message!.message_id;
+    if (action === 'pub') {
+      return this.editPrompt(promptId, await this.publishedView());
+    }
     if (action === 'list' || !id) {
       return this.editPrompt(promptId, await this.queueView());
     }

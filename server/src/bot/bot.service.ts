@@ -705,6 +705,53 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  /** Puts a new text and button into a post the bot published; its media stays. */
+  async editChannelPost(
+    messageId: number,
+    options: ChannelPostOptions,
+  ): Promise<void> {
+    const chatId = this.configService.get<string>('TELEGRAM_CHANNEL_ID');
+    if (!this.bot || !chatId) {
+      throw new ServiceUnavailableException(
+        'Телеграм-канал не налаштований (TELEGRAM_BOT_TOKEN / TELEGRAM_CHANNEL_ID).',
+      );
+    }
+    const extra = {
+      parse_mode: 'HTML' as const,
+      // Sent every time: an edit without reply_markup removes the button.
+      reply_markup: options.button && {
+        inline_keyboard: [
+          [{ text: options.button.text, url: options.button.url }],
+        ],
+      },
+    };
+    try {
+      // Same rule as postToChannel: media with a short text went out as a caption.
+      if (
+        (options.media || options.photoUrl) &&
+        plainText(options.text).length <= CAPTION_LIMIT
+      ) {
+        await this.bot.api.editMessageCaption(chatId, messageId, {
+          caption: options.text,
+          ...extra,
+        });
+      } else {
+        await this.bot.api.editMessageText(
+          chatId,
+          messageId,
+          options.text,
+          extra,
+        );
+      }
+    } catch (err) {
+      if (!(err instanceof GrammyError)) throw err;
+      if (err.description.includes('message is not modified')) return;
+      throw new BadRequestException(
+        `Телеграм не дав змінити пост: ${err.description}`,
+      );
+    }
+  }
+
   private resolvePhoto(photoUrl: string): string | InputFile {
     if (/^https?:\/\//i.test(photoUrl)) return photoUrl;
     // Locally-stored upload path like "/uploads/<file>": send the bytes

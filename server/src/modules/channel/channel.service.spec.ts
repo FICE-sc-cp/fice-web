@@ -8,6 +8,7 @@ function makeService(
   event: { id: string; photoUrl: string | null } | null,
 ) {
   const postToChannel = jest.fn().mockResolvedValue({ messageId: 42 });
+  const editChannelPost = jest.fn().mockResolvedValue(undefined);
   type Row = Record<string, unknown> & { id: string; status: string };
   const rows = new Map<string, Row>();
   const row = (id: string) => rows.get(id)!;
@@ -28,6 +29,8 @@ function makeService(
           return Promise.resolve({ count: 1 });
         },
       ),
+      findUnique: ({ where }: { where: { id: string } }) =>
+        Promise.resolve(rows.get(where.id) ?? null),
       findUniqueOrThrow: ({ where }: { where: { id: string } }) =>
         Promise.resolve(row(where.id)),
       update: ({ where, data }: { where: { id: string }; data: object }) =>
@@ -36,7 +39,7 @@ function makeService(
         Promise.resolve(rows.delete(where.id)),
     },
   };
-  const bot = { postToChannel };
+  const bot = { postToChannel, editChannelPost };
   const userBot = { getUsername: () => cfg['USER_BOT_USERNAME'] };
   const config = { get: (k: string) => cfg[k] };
   const service = new ChannelService(
@@ -45,7 +48,7 @@ function makeService(
     userBot as never,
     config as never,
   );
-  return { service, postToChannel, rows };
+  return { service, postToChannel, editChannelPost, rows };
 }
 
 describe('ChannelService', () => {
@@ -169,5 +172,40 @@ describe('ChannelService', () => {
       service.post({ text: 'я'.repeat(1025), imageUrl: '/uploads/a.jpg' }),
     ).rejects.toThrow(/1024/);
     expect(postToChannel).not.toHaveBeenCalled();
+  });
+
+  it('puts a new text and button of a published post into the channel', async () => {
+    const { service, editChannelPost, rows } = makeService({}, null);
+    await service.post({ text: 'old', imageUrl: '/uploads/a.jpg' });
+
+    await service.change('channel', 'p1', {
+      text: 'new',
+      button: { text: 'Анкета', url: 'https://forms.gle/x' },
+    });
+
+    expect(editChannelPost).toHaveBeenCalledWith(42, {
+      text: 'new',
+      photoUrl: '/uploads/a.jpg',
+      media: undefined,
+      button: { text: 'Анкета', url: 'https://forms.gle/x' },
+    });
+    expect(rows.get('p1')).toMatchObject({
+      text: 'new',
+      buttonUrl: 'https://forms.gle/x',
+    });
+  });
+
+  it('keeps a published post as it was when Telegram refuses the edit', async () => {
+    const { service, editChannelPost, rows } = makeService({}, null);
+    await service.post({ text: 'old' });
+    editChannelPost.mockRejectedValueOnce(new Error('Bad Request'));
+
+    await expect(
+      service.change('channel', 'p1', { text: 'new' }),
+    ).rejects.toThrow('Bad Request');
+    await expect(
+      service.updatePost('p1', { imageUrl: '/uploads/b.jpg' }),
+    ).rejects.toThrow(/текст і кнопку/);
+    expect(rows.get('p1')).toMatchObject({ text: 'old', imageUrl: null });
   });
 });
