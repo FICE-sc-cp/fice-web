@@ -25,21 +25,46 @@ export const FROG_PIXELS = [
   "...dggddggd...",
 ];
 
-const RECTS: { x: number; y: number; w: number; fill: string }[] = [];
-FROG_PIXELS.forEach((row, y) => {
-  let x = 0;
-  while (x < row.length) {
-    const ch = row[x];
-    if (ch === ".") {
-      x += 1;
-      continue;
+export type Run = { x: number; y: number; w: number; fill?: string };
+
+/** Pixel rows ("." is empty) as horizontal runs of one colour. */
+export function toRuns(rows: string[], colors?: Record<string, string>): Run[] {
+  const runs: Run[] = [];
+  rows.forEach((row, y) => {
+    let x = 0;
+    while (x < row.length) {
+      const ch = row[x];
+      if (ch === ".") {
+        x += 1;
+        continue;
+      }
+      let w = 1;
+      while (x + w < row.length && row[x + w] === ch) w += 1;
+      runs.push({ x, y, w, fill: colors?.[ch] });
+      x += w;
     }
-    let w = 1;
-    while (x + w < row.length && row[x + w] === ch) w += 1;
-    RECTS.push({ x, y, w, fill: FROG_COLORS[ch] });
-    x += w;
-  }
-});
+  });
+  return runs;
+}
+
+export function Pixels({ runs }: { runs: Run[] }) {
+  return (
+    <>
+      {runs.map((r) => (
+        <rect
+          key={`${r.x}-${r.y}`}
+          x={r.x}
+          y={r.y}
+          width={r.w}
+          height={1}
+          fill={r.fill}
+        />
+      ))}
+    </>
+  );
+}
+
+export const FROG_RUNS = toRuns(FROG_PIXELS, FROG_COLORS);
 
 interface FrogMascotProps {
   className?: string;
@@ -55,16 +80,7 @@ export function FrogMascot({ className }: FrogMascotProps) {
       role="img"
       aria-label="Жабка-маскот"
     >
-      {RECTS.map((r) => (
-        <rect
-          key={`${r.x}-${r.y}`}
-          x={r.x}
-          y={r.y}
-          width={r.w}
-          height={1}
-          fill={r.fill}
-        />
-      ))}
+      <Pixels runs={FROG_RUNS} />
     </svg>
   );
 }
