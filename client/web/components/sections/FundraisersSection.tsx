@@ -32,11 +32,11 @@ export async function FundraisersSection() {
             Активних зборів поки немає — скоро анонсуємо 💛
           </p>
         ) : (
-          <RevealGroup className="mt-10 flex snap-x snap-mandatory gap-5 overflow-x-auto pb-4 sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 lg:grid-cols-3">
+          <RevealGroup className="mt-10 flex snap-x snap-mandatory gap-5 overflow-x-auto pb-4 lg:grid lg:grid-cols-3 lg:overflow-visible lg:pb-0">
             {fundraisers.map((item) => (
               <div
                 key={item.id}
-                className="w-[85vw] max-w-[22rem] shrink-0 snap-center sm:w-auto sm:max-w-none sm:shrink sm:[&>*]:h-full"
+                className="w-[85vw] max-w-[22rem] shrink-0 snap-center lg:w-auto lg:max-w-none lg:shrink [&>*]:h-full"
               >
                 <FundraiserCard fundraiser={item} />
               </div>

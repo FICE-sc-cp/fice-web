@@ -32,11 +32,11 @@ export async function EventsSection() {
             Незабаром анонсуємо нові заходи 👀
           </p>
         ) : (
-          <RevealGroup className="mt-10 flex snap-x snap-mandatory gap-5 overflow-x-auto pb-4 sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 lg:grid-cols-3">
+          <RevealGroup className="mt-10 flex snap-x snap-mandatory gap-5 overflow-x-auto pb-4 lg:grid lg:grid-cols-3 lg:overflow-visible lg:pb-0">
             {events.map((e) => (
               <div
                 key={e.id}
-                className="w-[85vw] max-w-[22rem] shrink-0 snap-center sm:w-auto sm:max-w-none sm:shrink sm:[&>*]:h-full"
+                className="w-[85vw] max-w-[22rem] shrink-0 snap-center lg:w-auto lg:max-w-none lg:shrink [&>*]:h-full"
               >
                 <EventCard event={e} />
               </div>

@@ -97,12 +97,12 @@ export function DepartmentsSection() {
           />
         </Reveal>
 
-        <RevealGroup className="-mt-2 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 pt-12 md:mt-10 md:grid md:grid-cols-2 md:gap-6 md:overflow-visible md:pb-0 md:pt-0 lg:grid-cols-3">
+        <RevealGroup className="-mt-2 flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 pt-12 lg:mt-10 lg:grid lg:grid-cols-3 lg:gap-6 lg:overflow-visible lg:pb-0 lg:pt-0">
           {DEPARTMENTS.map((dept) => (
             <div
               key={dept.name}
               className={cn(
-                "w-[85vw] max-w-[22rem] shrink-0 snap-center md:w-auto md:max-w-none md:shrink",
+                "w-[85vw] max-w-[22rem] shrink-0 snap-center lg:w-auto lg:max-w-none lg:shrink",
                 dept.wide && "lg:col-span-2",
               )}
             >
@@ -114,7 +114,7 @@ export function DepartmentsSection() {
               {dept.bow && (
                 <span
                   aria-hidden
-                  className="pointer-events-none absolute -top-8 left-2 h-16 w-16 -rotate-12 drop-shadow-md md:-left-4 md:-top-7"
+                  className="pointer-events-none absolute -top-8 left-2 h-16 w-16 -rotate-12 drop-shadow-md lg:-left-4 lg:-top-7"
                 >
                   <span className="block h-full w-full animate-float">
                     <PixelBow className="h-full w-full" />

@@ -3,35 +3,42 @@
 import { useEffect, useRef } from "react";
 import { PhotoCard } from "@/components/ui/PhotoCard";
 
+// Below lg the title takes the full width, so four photos sit above and
+// below it (peeking in from the edges on phones, bigger and closer to the
+// text on tablets); lg+ is the six-photo collage around it.
 const PHOTOS = [
   {
     src: "/hero-1.jpg",
-    className: "left-0 top-12 h-56 w-80 rotate-[7deg]",
+    className:
+      "-left-5 top-2 h-28 w-40 rotate-[7deg] sm:left-[4%] sm:top-[12%] sm:h-40 sm:w-56 lg:left-0 lg:top-12 lg:h-56 lg:w-80",
     speed: 0.1,
   },
   {
     src: "/hero-2.jpg",
-    className: "left-6 top-[40%] h-56 w-72 -rotate-[6deg]",
+    className: "left-6 top-[40%] hidden h-56 w-72 -rotate-[6deg] lg:block",
     speed: 0.05,
   },
   {
     src: "/hero-3.jpg",
-    className: "bottom-8 left-0 h-52 w-72 rotate-[8deg]",
+    className:
+      "-left-4 bottom-3 h-28 w-40 rotate-[8deg] sm:bottom-[12%] sm:left-[6%] sm:h-40 sm:w-56 lg:bottom-8 lg:left-0 lg:h-52 lg:w-72",
     speed: 0.14,
   },
   {
     src: "/hero-4.jpg",
-    className: "right-0 top-10 h-56 w-80 -rotate-[8deg]",
+    className:
+      "-right-5 top-10 h-28 w-40 -rotate-[8deg] sm:right-[4%] sm:top-[14%] sm:h-40 sm:w-56 lg:right-0 lg:top-10 lg:h-56 lg:w-80",
     speed: 0.12,
   },
   {
     src: "/hero-5.jpg",
-    className: "right-0 top-[42%] h-56 w-80 rotate-[4deg]",
+    className: "right-0 top-[42%] hidden h-56 w-80 rotate-[4deg] lg:block",
     speed: 0.06,
   },
   {
     src: "/hero-6.jpg",
-    className: "bottom-2 left-[78%] h-52 w-72 -translate-x-1/2 -rotate-[4deg]",
+    className:
+      "bottom-6 left-[86%] h-28 w-40 -translate-x-1/2 -rotate-[4deg] sm:bottom-[10%] sm:left-[80%] sm:h-40 sm:w-56 lg:bottom-2 lg:left-[78%] lg:h-52 lg:w-72",
     speed: 0.16,
   },
 ];
@@ -67,7 +74,7 @@ export function HeroPhotos() {
   return (
     <div
       ref={ref}
-      className="pointer-events-none absolute inset-x-0 bottom-0 top-10 hidden lg:block"
+      className="pointer-events-none absolute inset-x-0 bottom-0 top-10"
     >
       <div className="relative mx-auto h-full max-w-7xl">
         {PHOTOS.map((p, i) => (
@@ -79,6 +86,7 @@ export function HeroPhotos() {
             <PhotoCard
               src={p.src}
               alt=""
+              sizes="(min-width: 1024px) 20rem, 40vw"
               className="h-full w-full animate-fade"
               style={{ animationDelay: `${250 + i * 120}ms` }}
             />
