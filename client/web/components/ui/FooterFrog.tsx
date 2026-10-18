@@ -62,8 +62,11 @@ const TO_START = 1;
 const CACTUS_SPEED = 200;
 const SPAWN_MIN = 1.1;
 const SPAWN_MAX = 1.9;
-const GRAVITY = 1900;
-const JUMP_V = 400;
+// Floaty jump: ~0.3s above a cactus, so a thumb tap has room for error.
+const GRAVITY = 1300;
+const JUMP_V = 360;
+// A tap this early before landing still jumps right on touchdown.
+const JUMP_BUFFER = 0.15;
 
 type Mode = "idle" | "toStart" | "play";
 type Cactus = { slot: number; x: number };
@@ -80,6 +83,7 @@ export function FooterFrog() {
     facing: 1 as 1 | -1,
     y: 0,
     vy: 0,
+    jumpIn: 0,
     cacti: [] as Cactus[],
     free: Array.from({ length: POOL }, (_, i) => i),
     spawnIn: 0,
@@ -118,6 +122,7 @@ export function FooterFrog() {
       st.free = Array.from({ length: POOL }, (_, i) => i);
       st.y = 0;
       st.vy = 0;
+      st.jumpIn = 0;
       st.dir = 1;
       st.facing = 1;
       st.mode = "idle";
@@ -162,6 +167,11 @@ export function FooterFrog() {
         st.x = 0;
         st.facing = 1;
 
+        st.jumpIn -= dt;
+        if (st.jumpIn > 0 && st.y === 0) {
+          st.vy = JUMP_V;
+          st.jumpIn = 0;
+        }
         if (st.y > 0 || st.vy !== 0) {
           st.vy -= GRAVITY * dt;
           st.y += st.vy * dt;
@@ -237,30 +247,32 @@ export function FooterFrog() {
     );
     io.observe(container);
 
+    // While playing, a tap anywhere jumps (on press, not release): hitting
+    // the tiny frog itself with a thumb was the hard part on phones.
+    const jump = () => {
+      if (g.current.mode === "play") g.current.jumpIn = JUMP_BUFFER;
+    };
     const onKey = (e: KeyboardEvent) => {
       if (g.current.mode !== "play") return;
       if (e.code === "Space" || e.code === "ArrowUp") {
         e.preventDefault();
-        if (g.current.y === 0) g.current.vy = JUMP_V;
+        jump();
       }
     };
     window.addEventListener("keydown", onKey);
+    window.addEventListener("pointerdown", jump);
 
     return () => {
       stop();
       io.disconnect();
       window.removeEventListener("resize", measure);
       window.removeEventListener("keydown", onKey);
+      window.removeEventListener("pointerdown", jump);
     };
   }, []);
 
   const onFrogClick = () => {
-    const st = g.current;
-    if (st.mode === "idle") {
-      st.mode = "toStart";
-    } else if (st.mode === "play" && st.y === 0) {
-      st.vy = JUMP_V;
-    }
+    if (g.current.mode === "idle") g.current.mode = "toStart";
   };
 
   return (
@@ -272,7 +284,7 @@ export function FooterFrog() {
       <div
         ref={frogRef}
         onClick={onFrogClick}
-        className="pointer-events-auto absolute bottom-0 left-0 block h-9 w-9 cursor-pointer drop-shadow-md"
+        className="pointer-events-auto absolute bottom-0 left-0 block h-9 w-9 cursor-pointer drop-shadow-md before:absolute before:-inset-2"
       >
         <FrogRunner className="h-full w-full" />
       </div>

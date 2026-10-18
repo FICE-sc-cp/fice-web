@@ -103,7 +103,7 @@ function LinkColumn({ title, items }: { title: string; items: FooterLink[] }) {
 
 export function Footer() {
   return (
-    <footer className="relative isolate overflow-hidden bg-neutral-700/20">
+    <footer className="relative isolate touch-manipulation overflow-hidden bg-neutral-700/20">
       <Container className="pt-16">
         <div className="grid grid-cols-1 gap-12 sm:grid-cols-2 lg:grid-cols-[auto_1fr_1fr_1fr_auto] lg:items-start lg:gap-8">
           <div className="flex max-w-[18rem] flex-col gap-4">
