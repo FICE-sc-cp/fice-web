@@ -53,6 +53,14 @@ describe('VotingService', () => {
           .fn()
           .mockResolvedValue({ id: 'evt-1', noRegistration: false }),
       },
+      eventPartner: {
+        findFirst: jest.fn(),
+      },
+      votingPartnerAward: {
+        findUnique: jest.fn(),
+        create: jest.fn(),
+        update: jest.fn(),
+      },
     };
     userBot = {
       getMiniAppUrl: jest.fn().mockReturnValue('https://t.me/bot/app'),
@@ -382,6 +390,7 @@ describe('VotingService', () => {
             _count: { votes: 35 },
           },
         ],
+        partnerAwards: [],
         _count: { votes: 50 },
       });
 
@@ -397,6 +406,140 @@ describe('VotingService', () => {
       expect(res.winners[0].id).toBe('c-2');
       expect(res.winners[1].place).toBe(2);
       expect(res.winners[1].id).toBe('c-1');
+    });
+  });
+
+  describe('partner awards', () => {
+    const award = (status: VotingStatus, partnerPicks = true) => ({
+      id: 'award-1',
+      title: 'Вибір партнера',
+      prize: null,
+      partnerPicks,
+      candidateId: null,
+      eventPartner: { name: 'Партнер А', logoImage: null, partner: null },
+      voting: {
+        title: 'Найкращий образ',
+        description: null,
+        status,
+        candidates: [
+          { id: 'c-1', name: 'А', description: null, photoUrl: null },
+        ],
+      },
+    });
+
+    it('saves the partner pick while the voting is open', async () => {
+      prisma.votingPartnerAward.findUnique.mockResolvedValue(
+        award(VotingStatus.ACTIVE),
+      );
+
+      const res = await service.setPartnerPick('code', 'c-1');
+
+      expect(prisma.votingPartnerAward.update).toHaveBeenCalledWith({
+        where: { id: 'award-1' },
+        data: { candidateId: 'c-1' },
+      });
+      expect(res.candidateId).toBe('c-1');
+      expect(res.partnerName).toBe('Партнер А');
+    });
+
+    it('refuses to change the pick once the voting is closed', async () => {
+      prisma.votingPartnerAward.findUnique.mockResolvedValue(
+        award(VotingStatus.CLOSED),
+      );
+
+      await expect(service.setPartnerPick('code', 'c-1')).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(prisma.votingPartnerAward.update).not.toHaveBeenCalled();
+    });
+
+    it('refuses a candidate from outside the nomination', async () => {
+      prisma.votingPartnerAward.findUnique.mockResolvedValue(
+        award(VotingStatus.ACTIVE),
+      );
+
+      await expect(service.setPartnerPick('code', 'c-other')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('drops a pick whose candidate is no longer approved', async () => {
+      prisma.votingPartnerAward.findUnique.mockResolvedValue({
+        ...award(VotingStatus.ACTIVE),
+        candidateId: 'c-rejected',
+      });
+
+      const res = await service.getPartnerPick('code');
+
+      expect(res.candidateId).toBeNull();
+    });
+
+    it('has no working link when the organizer enters the pick', async () => {
+      prisma.votingPartnerAward.findUnique.mockResolvedValue(
+        award(VotingStatus.ACTIVE, false),
+      );
+
+      await expect(service.getPartnerPick('code')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('only takes partners of the same event', async () => {
+      prisma.eventVoting.findUnique.mockResolvedValue({
+        eventId: 'evt-1',
+        partnerAwards: [],
+      });
+      prisma.eventPartner.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.createPartnerAward('voting-1', {
+          eventPartnerId: 'ep-other',
+          title: 'Вибір партнера',
+        }),
+      ).rejects.toThrow(BadRequestException);
+      expect(prisma.eventPartner.findFirst).toHaveBeenCalledWith({
+        where: { id: 'ep-other', eventId: 'evt-1' },
+        select: { id: true },
+      });
+    });
+  });
+
+  describe('screen remote', () => {
+    it('keeps the screen state and stamps one-off commands with the new rev', async () => {
+      prisma.eventVoting.findUnique.mockResolvedValue({
+        screenState: {
+          rev: 4,
+          mode: 'ceremony',
+          theme: 'hw',
+          step: 3,
+          salute: 2,
+        },
+      });
+
+      const res = await service.updateScreenState('voting-1', {
+        step: 4,
+        nav: 1,
+        salute: true,
+      });
+
+      expect(res).toEqual({
+        rev: 5,
+        mode: 'ceremony',
+        theme: 'hw',
+        step: 4,
+        nav: { rev: 5, d: 1 },
+        salute: 5,
+      });
+      expect(prisma.eventVoting.update).toHaveBeenCalledWith({
+        where: { id: 'voting-1' },
+        data: { screenState: res },
+      });
+    });
+
+    it('starts from an empty state', async () => {
+      prisma.eventVoting.findUnique.mockResolvedValue({ screenState: null });
+
+      expect(await service.getScreenState('voting-1')).toEqual({ rev: 0 });
     });
   });
 });

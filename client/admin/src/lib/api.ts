@@ -874,6 +874,36 @@ export const api = {
       status: BroadcastStatus;
       recipientsCount: number;
     }>(`/voting/${id}/notify`, { method: 'POST' }),
+  votingScreen: (id: string) => request<VotingScreenInfo>(`/voting/${id}/screen`),
+  screenState: (id: string) => request<ScreenState>(`/voting/${id}/screen-state`),
+  updateScreenState: (id: string, body: ScreenCommand) =>
+    request<ScreenState>(`/voting/${id}/screen-state`, {
+      method: 'PATCH',
+      ...json(body),
+    }),
+  createPartnerAward: (votingId: string, body: PartnerAwardInput) =>
+    request<unknown>(`/voting/${votingId}/partner-awards`, {
+      method: 'POST',
+      ...json(body),
+    }),
+  updatePartnerAward: (
+    awardId: string,
+    body: Partial<Omit<PartnerAwardInput, 'eventPartnerId' | 'prize'>> & {
+      prize?: string | null;
+      candidateId?: string | null;
+    },
+  ) =>
+    request<unknown>(`/voting/partner-awards/${awardId}`, {
+      method: 'PATCH',
+      ...json(body),
+    }),
+  deletePartnerAward: (awardId: string) =>
+    request<unknown>(`/voting/partner-awards/${awardId}`, { method: 'DELETE' }),
+  reorderPartnerAwards: (votingId: string, ids: string[]) =>
+    request<unknown>(`/voting/${votingId}/partner-awards/reorder`, {
+      method: 'POST',
+      ...json({ ids }),
+    }),
   votingSubmissions: (votingId: string, status?: string) =>
     request<VotingCandidate[]>(
       `/voting/${votingId}/submissions${status ? `?status=${status}` : ''}`,
@@ -984,6 +1014,60 @@ export interface EventVoting {
   totalVotes: number;
   screenUrl?: string;
   candidates: VotingCandidate[];
+  partnerAwards: PartnerAward[];
+}
+
+export interface PartnerAward {
+  id: string;
+  eventPartnerId: string;
+  title: string;
+  prize: string | null;
+  partnerPicks: boolean;
+  showLogo: boolean;
+  candidateId: string | null;
+  partnerName: string;
+  partnerLogo: string | null;
+  pickUrl: string;
+}
+
+export type ScreenMode = 'live' | 'closed' | 'ceremony';
+export type ScreenTheme = 'fice' | 'ny' | 'hw' | 'ball';
+export type ScreenView = 'auto' | 'grid' | 'show';
+
+/** What the stage screen shows; `nav` / `salute` are one-off commands. */
+export interface ScreenState {
+  rev: number;
+  mode?: ScreenMode;
+  theme?: ScreenTheme;
+  view?: ScreenView;
+  step?: number;
+  nav?: { rev: number; d: -1 | 1 };
+  salute?: number;
+}
+
+export interface ScreenCommand {
+  mode?: ScreenMode;
+  theme?: ScreenTheme;
+  view?: ScreenView;
+  step?: number;
+  nav?: -1 | 1;
+  salute?: boolean;
+}
+
+/** The bits of the public stage-screen data the remote needs. */
+export interface VotingScreenInfo {
+  voting: { id: string; title: string; status: VotingStatus; eventName: string };
+  candidates: { id: string }[];
+  winners: { place: number }[];
+  partnerAwards?: { id: string; partnerName: string; pick: { id: string } | null }[];
+}
+
+export interface PartnerAwardInput {
+  eventPartnerId: string;
+  title: string;
+  prize?: string;
+  partnerPicks: boolean;
+  showLogo: boolean;
 }
 
 export interface VotingResults {

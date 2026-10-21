@@ -414,6 +414,8 @@ model EventPartner {
 
   partner Partner? @relation(fields: [partnerId], references: [id], onDelete: Cascade)
   event   Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  votingAwards VotingPartnerAward[]
 }
 
 enum ProjectParticipantSource {
@@ -486,12 +488,15 @@ model EventVoting {
   allowChangeVote  Boolean           @default(false)
   allowSubmissions Boolean           @default(false)
   submissionsOpen  Boolean           @default(false)
+  // What the stage screen shows, set from the admin remote (mode, theme, step…).
+  screenState      Json?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @default(now()) @updatedAt
 
   event           Event             @relation(fields: [eventId], references: [id], onDelete: Cascade)
   candidates      VotingCandidate[]
   votes           Vote[]
+  partnerAwards   VotingPartnerAward[]
 
   @@index([eventId])
 }
@@ -512,6 +517,7 @@ model VotingCandidate {
 
   voting      EventVoting @relation(fields: [votingId], references: [id], onDelete: Cascade)
   votes       Vote[]
+  partnerAwards VotingPartnerAward[]
 
   @@unique([votingId, submittedByTelegramId])
   @@index([votingId])
@@ -534,6 +540,32 @@ model Vote {
 
   @@unique([votingId, telegramId])
   @@index([candidateId])
+}
+
+// A partner's special award in a nomination: the partner picks a winner among
+// the candidates on their own (votes play no part). Revealed as a separate
+// ceremony step after 1st place.
+model VotingPartnerAward {
+  id             String  @id @default(uuid()) @db.Uuid
+  votingId       String  @db.Uuid
+  eventPartnerId String  @db.Uuid
+  title          String  @db.VarChar(80)
+  prize          String? @db.VarChar(160)
+  // true: the partner picks via the personal /pick/<code> link;
+  // false: the organizer enters the pick the partner told them.
+  partnerPicks   Boolean @default(true)
+  // The partner's logo under the QR code on the voting screen.
+  showLogo       Boolean @default(true)
+  code           String  @unique @db.VarChar(32)
+  candidateId    String? @db.Uuid
+  order          Int     @default(0)
+  createdAt      DateTime @default(now())
+
+  voting       EventVoting      @relation(fields: [votingId], references: [id], onDelete: Cascade)
+  eventPartner EventPartner     @relation(fields: [eventPartnerId], references: [id], onDelete: Cascade)
+  candidate    VotingCandidate? @relation(fields: [candidateId], references: [id], onDelete: SetNull)
+
+  @@unique([votingId, eventPartnerId])
 }
 
 enum BroadcastTarget {
@@ -719,3 +751,4 @@ model ShariStudent {
 
   @@unique([group, fullName])
 }
+

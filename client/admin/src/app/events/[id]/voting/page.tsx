@@ -15,6 +15,7 @@ import { FormError } from '@/components/ui/FormError';
 import { saveFile } from '@/lib/download';
 import { Spinner } from '@/components/ui/Spinner';
 import { hapticNotify } from '@/lib/telegram';
+import { PartnerAwards } from '@/components/PartnerAwards';
 
 export default function EventVotingPage() {
   const { id: eventId } = useParams<{ id: string }>();
@@ -916,6 +917,8 @@ export default function EventVotingPage() {
                 </div>
               )}
 
+              <PartnerAwards eventId={eventId} voting={v} partners={event?.eventPartners ?? []} />
+
               {/* Results & Stage Screen buttons */}
               <div className="pt-2 border-t border-border flex flex-wrap justify-between items-center gap-2">
                 <div className="flex flex-wrap items-center gap-2">
@@ -948,6 +951,13 @@ export default function EventVotingPage() {
                         >
                           Екран для сцени
                         </a>
+
+                        <Link
+                          href={`/events/${eventId}/voting/${v.id}/remote`}
+                          className="text-xs px-2.5 py-1 rounded-lg border border-brand-green/40 bg-brand-green/10 text-brand-green hover:bg-brand-green/20 font-medium flex items-center transition-colors"
+                        >
+                          Пульт екрана
+                        </Link>
 
                         <button
                           type="button"

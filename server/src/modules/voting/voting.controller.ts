@@ -22,7 +22,13 @@ import { CastVoteDto } from './dto/cast-vote.dto';
 import { CreateCandidateDto } from './dto/create-candidate.dto';
 import { UpdateCandidateDto } from './dto/update-candidate.dto';
 import { CreateVotingDto } from './dto/create-voting.dto';
+import {
+  CreatePartnerAwardDto,
+  ReorderPartnerAwardsDto,
+  UpdatePartnerAwardDto,
+} from './dto/partner-award.dto';
 import { SubmitCandidateDto } from './dto/submit-candidate.dto';
+import { UpdateScreenStateDto } from './dto/screen-state.dto';
 import { UpdateVotingDto } from './dto/update-voting.dto';
 import { VotingService } from './voting.service';
 
@@ -187,7 +193,78 @@ export class VotingController {
     return this.votingService.rejectCandidate(candidateId, reason);
   }
 
+  @Post(':id/partner-awards')
+  @Admin()
+  @ApiOperation({ summary: 'Add a partner special award (admin)' })
+  createPartnerAward(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: CreatePartnerAwardDto,
+  ) {
+    return this.votingService.createPartnerAward(id, dto);
+  }
+
+  @Post(':id/partner-awards/reorder')
+  @Admin()
+  @ApiOperation({ summary: 'Reorder partner awards in the ceremony (admin)' })
+  reorderPartnerAwards(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ReorderPartnerAwardsDto,
+  ) {
+    return this.votingService.reorderPartnerAwards(id, dto.ids);
+  }
+
+  @Patch('partner-awards/:awardId')
+  @Admin()
+  @ApiOperation({
+    summary: 'Update a partner award or enter / clear its pick (admin)',
+  })
+  updatePartnerAward(
+    @Param('awardId', ParseUUIDPipe) awardId: string,
+    @Body() dto: UpdatePartnerAwardDto,
+  ) {
+    return this.votingService.updatePartnerAward(awardId, dto);
+  }
+
+  @Delete('partner-awards/:awardId')
+  @Admin()
+  @ApiOperation({ summary: 'Delete a partner award (admin)' })
+  deletePartnerAward(@Param('awardId', ParseUUIDPipe) awardId: string) {
+    return this.votingService.deletePartnerAward(awardId);
+  }
+
+  @Patch(':id/screen-state')
+  @Admin()
+  @ApiOperation({ summary: 'Control the stage screen from the admin (admin)' })
+  updateScreenState(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateScreenStateDto,
+  ) {
+    return this.votingService.updateScreenState(id, dto);
+  }
+
   // --- Client / Mini App endpoints ---
+
+  @Get(':id/screen-state')
+  @ApiOperation({
+    summary: 'What the stage screen should show, polled by the screen (public)',
+  })
+  getScreenState(@Param('id', ParseUUIDPipe) id: string) {
+    return this.votingService.getScreenState(id);
+  }
+
+  @Get('pick/:code')
+  @ApiOperation({
+    summary: "Partner's pick page by the personal link (public)",
+  })
+  getPartnerPick(@Param('code') code: string) {
+    return this.votingService.getPartnerPick(code);
+  }
+
+  @Post('pick/:code')
+  @ApiOperation({ summary: 'Partner picks the award winner (public)' })
+  setPartnerPick(@Param('code') code: string, @Body() dto: CastVoteDto) {
+    return this.votingService.setPartnerPick(code, dto.candidateId);
+  }
 
   @Get('event/:eventId/public')
   @ApiOperation({ summary: 'Get active/closed votings for an event (public)' })

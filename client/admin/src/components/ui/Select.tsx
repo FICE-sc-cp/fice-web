@@ -10,7 +10,11 @@ interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
   ({ label, error, options, className, ...props }, ref) => (
     <div className="flex w-full flex-col gap-1.5">
-      {label && <label className="text-sm font-semibold text-muted">{label}</label>}
+      {label && (
+        <label htmlFor={props.id} className="text-sm font-semibold text-muted">
+          {label}
+        </label>
+      )}
       <select
         ref={ref}
         {...props}

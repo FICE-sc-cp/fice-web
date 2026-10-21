@@ -5,7 +5,13 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { BroadcastTarget, CandidateStatus, VotingStatus } from '@prisma/client';
+import {
+  BroadcastTarget,
+  CandidateStatus,
+  Prisma,
+  VotingStatus,
+} from '@prisma/client';
+import { randomBytes } from 'crypto';
 import * as ExcelJS from 'exceljs';
 import { UserBotService } from '../../bot/user-bot.service';
 import { BroadcastService } from '../broadcast/broadcast.service';
@@ -18,6 +24,52 @@ import { UpdateCandidateDto } from './dto/update-candidate.dto';
 import { CreateVotingDto } from './dto/create-voting.dto';
 import { SubmitCandidateDto } from './dto/submit-candidate.dto';
 import { UpdateVotingDto } from './dto/update-voting.dto';
+import {
+  CreatePartnerAwardDto,
+  UpdatePartnerAwardDto,
+} from './dto/partner-award.dto';
+import { UpdateScreenStateDto } from './dto/screen-state.dto';
+
+/**
+ * What the stage screen shows. `nav` and `salute` are one-off commands: the
+ * screen acts on them when their `rev` stamp changes.
+ */
+export type ScreenState = {
+  rev: number;
+  mode?: UpdateScreenStateDto['mode'];
+  theme?: UpdateScreenStateDto['theme'];
+  view?: UpdateScreenStateDto['view'];
+  step?: number;
+  nav?: { rev: number; d: -1 | 1 };
+  salute?: number;
+};
+
+// Partner name/logo live on the event link or fall back to the partners table.
+const AWARD_PARTNER = {
+  eventPartner: {
+    select: {
+      name: true,
+      logoImage: true,
+      partner: { select: { name: true, logoImage: true } },
+    },
+  },
+} satisfies Prisma.VotingPartnerAwardInclude;
+
+type AwardPartner = Prisma.VotingPartnerAwardGetPayload<{
+  include: typeof AWARD_PARTNER;
+}>['eventPartner'];
+
+function partnerOf(ep: AwardPartner) {
+  return {
+    partnerName: ep.name ?? ep.partner?.name ?? 'Партнер',
+    partnerLogo: ep.logoImage ?? ep.partner?.logoImage ?? null,
+  };
+}
+
+const AWARD_ORDER: Prisma.VotingPartnerAwardOrderByWithRelationInput[] = [
+  { order: 'asc' },
+  { createdAt: 'asc' },
+];
 
 @Injectable()
 export class VotingService {
@@ -28,12 +80,16 @@ export class VotingService {
     private readonly broadcasts: BroadcastService,
   ) {}
 
-  private getScreenUrl(votingId: string): string {
+  private webUrl(path: string): string {
     const publicUrl = this.config.get<string>('PUBLIC_WEB_URL');
     const base = publicUrl
       ? publicUrl.replace(/\/$/, '')
       : 'http://localhost:3002';
-    return `${base}/screen/voting/${votingId}`;
+    return `${base}${path}`;
+  }
+
+  private getScreenUrl(votingId: string): string {
+    return this.webUrl(`/screen/voting/${votingId}`);
   }
 
   async getEventVotings(eventId: string) {
@@ -44,6 +100,13 @@ export class VotingService {
           orderBy: { order: 'asc' },
           include: {
             _count: { select: { votes: true } },
+          },
+        },
+        partnerAwards: {
+          orderBy: AWARD_ORDER,
+          include: {
+            ...AWARD_PARTNER,
+            candidate: { select: { status: true } },
           },
         },
         _count: { select: { votes: true } },
@@ -83,6 +146,21 @@ export class VotingService {
         rejectionReason: c.rejectionReason,
         createdAt: c.createdAt,
         votesCount: c._count.votes,
+      })),
+      partnerAwards: v.partnerAwards.map((a) => ({
+        id: a.id,
+        eventPartnerId: a.eventPartnerId,
+        title: a.title,
+        prize: a.prize,
+        partnerPicks: a.partnerPicks,
+        showLogo: a.showLogo,
+        // A pick counts only while its candidate stays approved.
+        candidateId:
+          a.candidate?.status === CandidateStatus.APPROVED
+            ? a.candidateId
+            : null,
+        ...partnerOf(a.eventPartner),
+        pickUrl: this.webUrl(`/pick/${a.code}`),
       })),
     }));
   }
@@ -725,6 +803,21 @@ export class VotingService {
           },
           orderBy: { order: 'asc' },
         },
+        partnerAwards: {
+          orderBy: AWARD_ORDER,
+          include: {
+            ...AWARD_PARTNER,
+            candidate: {
+              select: {
+                id: true,
+                name: true,
+                description: true,
+                photoUrl: true,
+                status: true,
+              },
+            },
+          },
+        },
         _count: { select: { votes: true } },
       },
     });
@@ -808,6 +901,25 @@ export class VotingService {
       },
       candidates,
       winners,
+      partnerAwards: voting.partnerAwards.map((a) => {
+        const c = a.candidate;
+        return {
+          id: a.id,
+          title: a.title,
+          prize: a.prize,
+          showLogo: a.showLogo,
+          ...partnerOf(a.eventPartner),
+          pick:
+            c && c.status === CandidateStatus.APPROVED
+              ? {
+                  id: c.id,
+                  name: c.name,
+                  description: c.description,
+                  photoUrl: c.photoUrl,
+                }
+              : null,
+        };
+      }),
     };
   }
 
@@ -932,5 +1044,211 @@ export class VotingService {
       showResultsLive: v.showResultsLive,
       totalVotes: v._count.votes,
     }));
+  }
+
+  // --- Partner special awards ---
+
+  private async assertPickable(votingId: string, candidateId: string) {
+    const candidate = await this.prisma.votingCandidate.findFirst({
+      where: { id: candidateId, votingId, status: CandidateStatus.APPROVED },
+      select: { id: true },
+    });
+    if (!candidate) {
+      throw new BadRequestException('Кандидата не знайдено в цій номінації');
+    }
+  }
+
+  async createPartnerAward(votingId: string, dto: CreatePartnerAwardDto) {
+    const voting = await this.prisma.eventVoting.findUnique({
+      where: { id: votingId },
+      select: {
+        eventId: true,
+        partnerAwards: { select: { eventPartnerId: true, order: true } },
+      },
+    });
+    if (!voting) throw new NotFoundException(`Voting ${votingId} not found`);
+
+    const partner = await this.prisma.eventPartner.findFirst({
+      where: { id: dto.eventPartnerId, eventId: voting.eventId },
+      select: { id: true },
+    });
+    if (!partner) {
+      throw new BadRequestException(
+        'Цього партнера немає серед партнерів заходу',
+      );
+    }
+    if (voting.partnerAwards.some((a) => a.eventPartnerId === partner.id)) {
+      throw new BadRequestException(
+        'У цього партнера вже є відзнака в цій номінації',
+      );
+    }
+
+    return this.prisma.votingPartnerAward.create({
+      data: {
+        votingId,
+        eventPartnerId: partner.id,
+        title: dto.title.trim() || 'Вибір партнера',
+        prize: dto.prize?.trim() || null,
+        partnerPicks: dto.partnerPicks ?? true,
+        showLogo: dto.showLogo ?? true,
+        code: randomBytes(12).toString('base64url'),
+        order: Math.max(-1, ...voting.partnerAwards.map((a) => a.order)) + 1,
+      },
+    });
+  }
+
+  async updatePartnerAward(awardId: string, dto: UpdatePartnerAwardDto) {
+    const award = await this.prisma.votingPartnerAward.findUnique({
+      where: { id: awardId },
+      select: { votingId: true },
+    });
+    if (!award) throw new NotFoundException(`Award ${awardId} not found`);
+    if (dto.candidateId) {
+      await this.assertPickable(award.votingId, dto.candidateId);
+    }
+
+    return this.prisma.votingPartnerAward.update({
+      where: { id: awardId },
+      data: {
+        title: dto.title?.trim() || undefined,
+        prize: dto.prize !== undefined ? dto.prize?.trim() || null : undefined,
+        partnerPicks: dto.partnerPicks,
+        showLogo: dto.showLogo,
+        candidateId: dto.candidateId,
+      },
+    });
+  }
+
+  deletePartnerAward(awardId: string) {
+    return this.prisma.votingPartnerAward.delete({ where: { id: awardId } });
+  }
+
+  async reorderPartnerAwards(votingId: string, ids: string[]) {
+    const awards = await this.prisma.votingPartnerAward.findMany({
+      where: { votingId },
+      select: { id: true },
+    });
+    const known = new Set(awards.map((a) => a.id));
+    if (
+      ids.length !== known.size ||
+      new Set(ids).size !== ids.length ||
+      ids.some((id) => !known.has(id))
+    ) {
+      throw new BadRequestException('Список відзнак застарів — онови сторінку');
+    }
+    await this.prisma.$transaction(
+      ids.map((id, order) =>
+        this.prisma.votingPartnerAward.update({
+          where: { id },
+          data: { order },
+        }),
+      ),
+    );
+    return { ok: true };
+  }
+
+  private async findPickAward(code: string) {
+    const award = await this.prisma.votingPartnerAward.findUnique({
+      where: { code },
+      include: {
+        ...AWARD_PARTNER,
+        voting: {
+          select: {
+            title: true,
+            description: true,
+            status: true,
+            candidates: {
+              where: { status: CandidateStatus.APPROVED },
+              orderBy: { order: 'asc' },
+              select: {
+                id: true,
+                name: true,
+                description: true,
+                photoUrl: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    // An award the organizer fills in has no working link.
+    if (!award || !award.partnerPicks) {
+      throw new NotFoundException('Посилання недійсне');
+    }
+    return award;
+  }
+
+  private pickView(award: Awaited<ReturnType<VotingService['findPickAward']>>) {
+    return {
+      title: award.title,
+      prize: award.prize,
+      ...partnerOf(award.eventPartner),
+      voting: {
+        title: award.voting.title,
+        description: award.voting.description,
+        status: award.voting.status,
+      },
+      candidates: award.voting.candidates,
+      // A pick counts only while its candidate stays approved.
+      candidateId: award.voting.candidates.some(
+        (c) => c.id === award.candidateId,
+      )
+        ? award.candidateId
+        : null,
+      // The partner can change the pick until the nomination's voting closes.
+      locked: award.voting.status === VotingStatus.CLOSED,
+    };
+  }
+
+  async getPartnerPick(code: string) {
+    return this.pickView(await this.findPickAward(code));
+  }
+
+  async setPartnerPick(code: string, candidateId: string) {
+    const award = await this.findPickAward(code);
+    if (award.voting.status === VotingStatus.CLOSED) {
+      throw new ForbiddenException(
+        'Голосування вже завершено — вибір більше не змінити',
+      );
+    }
+    if (!award.voting.candidates.some((c) => c.id === candidateId)) {
+      throw new BadRequestException('Кандидата не знайдено в цій номінації');
+    }
+    await this.prisma.votingPartnerAward.update({
+      where: { id: award.id },
+      data: { candidateId },
+    });
+    return this.pickView({ ...award, candidateId });
+  }
+
+  // --- Stage screen remote ---
+
+  async getScreenState(votingId: string): Promise<ScreenState> {
+    const voting = await this.prisma.eventVoting.findUnique({
+      where: { id: votingId },
+      select: { screenState: true },
+    });
+    if (!voting) throw new NotFoundException(`Voting ${votingId} not found`);
+    return (voting.screenState as ScreenState | null) ?? { rev: 0 };
+  }
+
+  async updateScreenState(votingId: string, dto: UpdateScreenStateDto) {
+    const prev = await this.getScreenState(votingId);
+    const rev = prev.rev + 1;
+    const next: ScreenState = {
+      ...prev,
+      rev,
+      ...(dto.mode && { mode: dto.mode }),
+      ...(dto.theme && { theme: dto.theme }),
+      ...(dto.view && { view: dto.view }),
+      ...(dto.step !== undefined && { step: dto.step }),
+      ...(dto.nav && { nav: { rev, d: dto.nav } }),
+      ...(dto.salute && { salute: rev }),
+    };
+    await this.prisma.eventVoting.update({
+      where: { id: votingId },
+      data: { screenState: next },
+    });
+    return next;
   }
 }

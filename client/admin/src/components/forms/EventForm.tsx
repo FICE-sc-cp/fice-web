@@ -386,7 +386,9 @@ export function EventForm({
       allowedFaculties,
       baseQuestionsConfig: baseQuestions,
       checkInStaffTags,
-      partners,
+      // With partnersSlot the partners are saved one by one through their own
+      // endpoints; sending the (empty) local list would wipe them on save.
+      partners: partnersSlot ? undefined : partners,
     });
   }, onInvalid);
 

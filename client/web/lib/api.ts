@@ -526,6 +526,16 @@ export const fice = {
     ),
   votingScreen: (votingId: string) =>
     request<VotingScreenData>(`/voting/${votingId}/screen`),
+  screenState: (votingId: string) =>
+    request<ScreenState>(`/voting/${votingId}/screen-state`),
+  partnerPick: (code: string) =>
+    request<PartnerPickData>(`/voting/pick/${encodeURIComponent(code)}`),
+  setPartnerPick: (code: string, candidateId: string) =>
+    request<PartnerPickData>(`/voting/pick/${encodeURIComponent(code)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ candidateId }),
+    }),
   getCheckInEvents: (initData?: string, tgUserId?: string, tgTag?: string) => {
     const params = new URLSearchParams();
     if (tgUserId) params.set('tgUserId', tgUserId);
@@ -806,5 +816,50 @@ export interface VotingScreenData {
     votesCount: number;
     percentage: number;
   }[];
+  partnerAwards: {
+    id: string;
+    title: string;
+    prize: string | null;
+    showLogo: boolean;
+    partnerName: string;
+    partnerLogo: string | null;
+    pick: PartnerPickCandidate | null;
+  }[];
+}
+
+/** What the stage screen should show, set from the admin remote. */
+export interface ScreenState {
+  rev: number;
+  mode?: 'live' | 'closed' | 'ceremony';
+  theme?: 'fice' | 'ny' | 'hw' | 'ball';
+  view?: 'auto' | 'grid' | 'show';
+  step?: number;
+  /** One-off commands: act on them when their stamp changes. */
+  nav?: { rev: number; d: -1 | 1 };
+  salute?: number;
+}
+
+export interface PartnerPickCandidate {
+  id: string;
+  name: string;
+  description: string | null;
+  photoUrl: string | null;
+}
+
+/** The partner's personal /pick/<code> page. */
+export interface PartnerPickData {
+  title: string;
+  prize: string | null;
+  partnerName: string;
+  partnerLogo: string | null;
+  voting: {
+    title: string;
+    description: string | null;
+    status: 'DRAFT' | 'ACTIVE' | 'CLOSED';
+  };
+  candidates: PartnerPickCandidate[];
+  candidateId: string | null;
+  /** The voting is closed: the pick can't be changed any more. */
+  locked: boolean;
 }
 
