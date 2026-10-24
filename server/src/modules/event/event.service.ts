@@ -24,7 +24,10 @@ import {
   normalizeTelegramUsername,
   telegramTagOf,
 } from './registration-identity';
-import { findActiveBlock } from '../blocked-users/blocklist';
+import {
+  findActiveBlock,
+  resolveTelegramUserId,
+} from '../blocked-users/blocklist';
 import {
   pastEventsWhere,
   registrationClosedMessage,
@@ -33,10 +36,7 @@ import {
   withRegistrationState,
 } from './event-timing';
 import { createRegistrationGuarded } from './registration-writer';
-import {
-  paymentRuleViolation,
-  pendingPaymentSubject,
-} from './payment-rules';
+import { paymentRuleViolation, pendingPaymentSubject } from './payment-rules';
 import { validateAnswers } from './registration-answers';
 import { registrationListWhere } from './registration-filters';
 import { RegistrationListQueryDto } from './dto/registration-list-query.dto';
@@ -51,6 +51,7 @@ import { ownUploadExists } from '../../upload/own-upload';
 import { AddEventPartnerDto } from './dto/add-event-partner.dto';
 import { CreateEventDto } from './dto/create-event.dto';
 import { CreateEventRegistrationDto } from './dto/create-event-registration.dto';
+import { ManualRegistrationDto } from './dto/manual-registration.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 
 import { BotService } from '../../bot/bot.service';
@@ -61,6 +62,12 @@ const PAYMENT_LABEL: Record<RegistrationPayment, string> = {
   NONE: '—',
   DONATED: 'Задонатив',
   AT_EVENT: 'На заході',
+};
+
+const SOURCE_LABEL: Record<RegistrationSource, string> = {
+  WEB: 'Сайт',
+  BOT: 'Telegram-бот',
+  ADMIN: 'Додано вручну',
 };
 
 export const SESSION_TOKEN_PATTERN = /^[0-9a-f]{32}$/;
@@ -522,6 +529,84 @@ export class EventService {
     return { username };
   }
 
+  /**
+   * An organizer registers someone by their Telegram tag. The ticket goes to
+   * their bot chat now if they have opened the bot, otherwise on their first
+   * /start (UserBotService.deliverWaitingTickets).
+   */
+  async addRegistration(eventId: string, dto: ManualRegistrationDto) {
+    const event = await this.prisma.event.findUnique({
+      where: { id: eventId },
+    });
+    if (!event) throw new NotFoundException(`Event ${eventId} not found`);
+
+    const username = normalizeTelegramUsername(dto.telegramTag);
+    if (!username) {
+      throw new BadRequestException(
+        'Вкажіть Telegram-тег людини, наприклад @username',
+      );
+    }
+    const telegramTag = telegramTagOf(username);
+    // The organizer has seen the payment, so an online one needs no receipt.
+    const paymentProblem = paymentRuleViolation(event, dto.payment, true);
+    if (paymentProblem) throw new BadRequestException(paymentProblem);
+
+    const telegramId = await resolveTelegramUserId(this.prisma, username);
+    const botUser =
+      telegramId === undefined
+        ? null
+        : await this.prisma.botUser.findUnique({ where: { telegramId } });
+    if (await findActiveBlock(this.prisma, telegramTag, botUser?.telegramId)) {
+      throw new BadRequestException(
+        `${telegramTag} заблоковано для реєстрації на заходи`,
+      );
+    }
+
+    const result = await createRegistrationGuarded(
+      this.prisma,
+      {
+        eventId,
+        botUserId: botUser?.id ?? null,
+        telegramUserId: botUser?.telegramId ?? null,
+        telegramTag,
+        fullName: dto.fullName.trim(),
+        group: dto.group.trim(),
+        birthDate: null,
+        source: RegistrationSource.ADMIN,
+        payment: dto.payment,
+        paymentStatus:
+          dto.payment === RegistrationPayment.DONATED
+            ? PaymentStatus.CONFIRMED
+            : PaymentStatus.NOT_REQUIRED,
+        receiptUrl: null,
+        phoneNumber: null,
+        answers: [],
+      },
+      new Date(),
+      { ignoreLimits: true },
+    );
+    if (!result.created) {
+      throw new BadRequestException(
+        `${telegramTag} уже зареєстровано на цей захід`,
+      );
+    }
+    const ticketSent = botUser
+      ? await this.userBotService.sendTicketToUser(
+          botUser.telegramId,
+          result.created,
+          event,
+        )
+      : false;
+    const botName = this.userBotService.getUsername();
+    return {
+      id: result.created.id,
+      ticketSent,
+      // Never opened the bot: the ticket goes out on their first /start.
+      waitsForStart: !botUser,
+      botUrl: botName ? `https://t.me/${botName}` : null,
+    };
+  }
+
   private async createPendingWebRegistration(
     eventId: string,
     dto: CreateEventRegistrationDto,
@@ -684,7 +769,7 @@ export class EventService {
         reg.group,
         reg.birthDate ? reg.birthDate.toISOString().slice(0, 10) : '',
         reg.phoneNumber ?? '',
-        reg.source === 'BOT' ? 'Telegram-бот' : 'Сайт',
+        SOURCE_LABEL[reg.source],
         PAYMENT_LABEL[reg.payment],
         reg.paymentStatus === 'CONFIRMED'
           ? 'Підтверджено'

@@ -40,6 +40,7 @@ import { CreateEventDto } from './dto/create-event.dto';
 import { EventQueryDto } from './dto/event-query.dto';
 import { RegistrationListQueryDto } from './dto/registration-list-query.dto';
 import { CreateEventRegistrationDto } from './dto/create-event-registration.dto';
+import { ManualRegistrationDto } from './dto/manual-registration.dto';
 import {
   CancelRegistrationDto,
   ScanCheckInDto,
@@ -316,6 +317,19 @@ export class EventController {
   ) {
     const buffer = await this.eventService.exportRegistrations(id);
     sendXlsx(res, buffer, `event-${id}-registrations.xlsx`);
+  }
+
+  @Post(':id/registrations')
+  @Admin()
+  @ApiOperation({
+    summary:
+      'Register someone by their Telegram tag; the ticket goes to their bot chat (admin)',
+  })
+  addRegistration(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: ManualRegistrationDto,
+  ) {
+    return this.eventService.addRegistration(id, dto);
   }
 
   @Post(':id/registrations/export-link')

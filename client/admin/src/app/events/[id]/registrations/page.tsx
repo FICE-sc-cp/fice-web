@@ -16,6 +16,7 @@ import {
   type RegistrationSource,
 } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
+import { AddRegistration } from '@/components/AddRegistration';
 import { Spinner } from '@/components/ui/Spinner';
 import { Button } from '@/components/ui/Button';
 import { hapticNotify } from '@/lib/telegram';
@@ -27,6 +28,12 @@ const PAYMENT_LABEL: Record<RegistrationPayment, string> = {
   NONE: 'Без оплати',
   DONATED: 'Задонатив',
   AT_EVENT: 'На вході',
+};
+
+const SOURCE_BADGE: Record<RegistrationSource, { label: string; className: string }> = {
+  WEB: { label: '🌐 Сайт', className: 'border-brand-cyan/30 bg-brand-cyan/10 text-brand-cyan' },
+  BOT: { label: '🤖 Бот', className: 'border-white/10 bg-white/5 text-muted' },
+  ADMIN: { label: '✍️ Вручну', className: 'border-purple-500/30 bg-purple-500/10 text-purple-300' },
 };
 
 const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
@@ -300,13 +307,16 @@ export default function EventRegistrationsPage() {
         title={event ? `Реєстрації · ${event.name}` : 'Зареєстровані'}
         backHref={`/events/${id}`}
         action={
-          <Button
-            onClick={download}
-            disabled={downloading || !data?.items.length}
-            className="flex items-center gap-1.5 text-xs font-bold"
-          >
-            <span>{downloading ? 'Експорт…' : 'Експорт в Excel'}</span>
-          </Button>
+          <div className="flex shrink-0 items-center gap-2">
+            <AddRegistration eventId={id} event={event} />
+            <Button
+              onClick={download}
+              disabled={downloading || !data?.items.length}
+              className="flex items-center gap-1.5 text-xs font-bold"
+            >
+              <span>{downloading ? 'Експорт…' : 'Експорт в Excel'}</span>
+            </Button>
+          </div>
         }
       />
 
@@ -697,15 +707,11 @@ export default function EventRegistrationsPage() {
                       <h3 className="font-bold text-base text-fg truncate">
                         {r.fullName}
                       </h3>
-                      {r.source === 'WEB' ? (
-                        <span className="rounded-lg border border-brand-cyan/30 bg-brand-cyan/10 px-1.5 py-0.5 text-[10px] font-bold text-brand-cyan">
-                          🌐 Сайт
-                        </span>
-                      ) : (
-                        <span className="rounded-lg border border-white/10 bg-white/5 px-1.5 py-0.5 text-[10px] font-bold text-muted">
-                          🤖 Бот
-                        </span>
-                      )}
+                      <span
+                        className={`rounded-lg border px-1.5 py-0.5 text-[10px] font-bold ${SOURCE_BADGE[r.source ?? 'BOT'].className}`}
+                      >
+                        {SOURCE_BADGE[r.source ?? 'BOT'].label}
+                      </span>
                     </div>
                     <div className="mt-1 flex items-center gap-2 flex-wrap">
                       <span className="rounded-lg bg-surface border border-border px-2 py-0.5 text-xs font-mono font-bold text-brand-cyan">
@@ -946,15 +952,11 @@ export default function EventRegistrationsPage() {
                       </a>
                     </td>
                     <td className="px-4 py-3.5 whitespace-nowrap">
-                      {r.source === 'WEB' ? (
-                        <span className="rounded-lg border border-brand-cyan/30 bg-brand-cyan/10 px-2 py-0.5 text-xs font-bold text-brand-cyan">
-                          🌐 Сайт
-                        </span>
-                      ) : (
-                        <span className="rounded-lg border border-white/10 bg-white/5 px-2 py-0.5 text-xs font-bold text-muted">
-                          🤖 Бот
-                        </span>
-                      )}
+                      <span
+                        className={`rounded-lg border px-2 py-0.5 text-xs font-bold ${SOURCE_BADGE[r.source ?? 'BOT'].className}`}
+                      >
+                        {SOURCE_BADGE[r.source ?? 'BOT'].label}
+                      </span>
                     </td>
                     <td className="px-4 py-3.5 whitespace-nowrap">
                       {r.attended ? (

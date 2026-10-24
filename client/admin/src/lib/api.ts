@@ -187,7 +187,15 @@ export type PaymentStatus =
   | 'PENDING'
   | 'CONFIRMED'
   | 'REJECTED';
-export type RegistrationSource = 'WEB' | 'BOT';
+export type RegistrationSource = 'WEB' | 'BOT' | 'ADMIN';
+
+/** Someone an organizer registers by hand; the bot sends them the ticket. */
+export interface ManualRegistrationInput {
+  fullName: string;
+  group: string;
+  telegramTag: string;
+  payment: RegistrationPayment;
+}
 
 export interface RegistrationFilters {
   payment?: 'PENDING' | 'CONFIRMED' | 'AT_EVENT' | 'REJECTED';
@@ -621,6 +629,11 @@ export const api = {
       `/event/${id}/registrations?${params.toString()}`,
     );
   },
+  addEventRegistration: (eventId: string, body: ManualRegistrationInput) =>
+    request<{ id: string; ticketSent: boolean; waitsForStart: boolean; botUrl: string | null }>(
+      `/event/${eventId}/registrations`,
+      { method: 'POST', ...json(body) },
+    ),
   confirmRegistrationPayment: (eventId: string, registrationId: string) =>
     request<{ success: boolean; registration: EventRegistration }>(
       `/event/${eventId}/registrations/${registrationId}/confirm-payment`,

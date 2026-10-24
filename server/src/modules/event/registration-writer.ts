@@ -15,8 +15,9 @@ type Db = Pick<PrismaClient, '$transaction'>;
 
 export interface NewRegistration {
   eventId: string;
-  botUserId: string;
-  telegramUserId: bigint;
+  // Null for someone an organizer adds before they ever opened the bot.
+  botUserId: string | null;
+  telegramUserId: bigint | null;
   telegramTag: string;
   fullName: string;
   group: string;
@@ -37,6 +38,8 @@ export async function createRegistrationGuarded(
   prisma: Db,
   data: NewRegistration,
   now: Date = new Date(),
+  // An organizer may add someone past the deadline or the limit.
+  { ignoreLimits = false }: { ignoreLimits?: boolean } = {},
 ): Promise<RegistrationWriteResult> {
   return prisma.$transaction(async (tx) => {
     await tx.$queryRaw`SELECT id FROM "Event" WHERE id = ${data.eventId}::uuid FOR UPDATE`;
@@ -58,7 +61,9 @@ export async function createRegistrationGuarded(
       where: {
         eventId: data.eventId,
         OR: [
-          { telegramUserId: data.telegramUserId },
+          ...(data.telegramUserId !== null
+            ? [{ telegramUserId: data.telegramUserId }]
+            : []),
           { telegramTag: data.telegramTag },
         ],
       },
@@ -69,7 +74,10 @@ export async function createRegistrationGuarded(
       where: { eventId: data.eventId },
     });
     const reason = registrationClosedReason(event, registeredCount, now);
-    if (reason) {
+    if (
+      reason &&
+      !(ignoreLimits && (reason === 'deadline' || reason === 'capacity'))
+    ) {
       throw new BadRequestException(registrationClosedMessage(reason, event));
     }
 

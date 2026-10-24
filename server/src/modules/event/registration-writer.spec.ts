@@ -97,6 +97,33 @@ describe('createRegistrationGuarded', () => {
     }
   });
 
+  it('lets an organizer add someone past the deadline or the limit', async () => {
+    const late = new Date('2026-11-30T12:00:00Z');
+    for (const [event, count] of [
+      [{ ...EVENT, maxRegistrations: 3 }, 3],
+      [{ ...EVENT, registrationCloseDate: late }, 0],
+    ] as const) {
+      const { prisma } = db(event, count);
+      const result = await createRegistrationGuarded(prisma, DATA, NOW, {
+        ignoreLimits: true,
+      });
+      expect(result.created).toEqual({ id: 'r1' });
+    }
+  });
+
+  it('looks for a duplicate of a tag-only registration by the tag alone', async () => {
+    const { prisma, tx } = db(EVENT);
+    await createRegistrationGuarded(
+      prisma,
+      { ...DATA, botUserId: null, telegramUserId: null },
+      NOW,
+    );
+
+    expect(tx.eventRegistration.findFirst).toHaveBeenCalledWith({
+      where: { eventId: DATA.eventId, OR: [{ telegramTag: '@denys' }] },
+    });
+  });
+
   it('returns the existing registration instead of creating a duplicate', async () => {
     const { prisma, tx } = db(EVENT, 0, { id: 'old' });
     const result = await createRegistrationGuarded(prisma, DATA, NOW);

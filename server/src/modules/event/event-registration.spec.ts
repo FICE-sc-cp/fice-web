@@ -252,3 +252,107 @@ describe('EventService.register identity', () => {
     });
   });
 });
+
+describe('EventService.addRegistration', () => {
+  let prisma: any;
+  let userBot: any;
+  let service: EventService;
+
+  beforeEach(() => {
+    prisma = {
+      event: {
+        findUnique: jest.fn().mockResolvedValue({
+          ...EVENT,
+          feeAmount: '250',
+          feeAtEventAmount: '300',
+          donationAnyAmount: false,
+        }),
+      },
+      blockedUser: { findFirst: jest.fn().mockResolvedValue(null) },
+      botUser: {
+        findMany: jest.fn().mockResolvedValue([]),
+        findUnique: jest.fn(),
+      },
+      eventRegistration: {
+        count: jest.fn().mockResolvedValue(0),
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn(({ data }: any) =>
+          Promise.resolve({ id: 'r1', ticketCode: 'c0de', ...data }),
+        ),
+      },
+      $queryRaw: jest.fn().mockResolvedValue([]),
+    };
+    prisma.$transaction = jest.fn((fn: (tx: unknown) => unknown) => fn(prisma));
+    userBot = {
+      getUsername: () => 'fice_student_bot',
+      sendTicketToUser: jest.fn().mockResolvedValue(true),
+    };
+    service = new EventService(
+      prisma,
+      { get: () => undefined } as never,
+      {} as never,
+      userBot,
+    );
+  });
+
+  const body = {
+    fullName: 'Олена Коваль',
+    group: 'ІП-21',
+    telegramTag: '@Olena_K',
+    payment: 'DONATED' as const,
+  };
+
+  it('sends the ticket at once to someone who has opened the bot', async () => {
+    prisma.botUser.findMany.mockResolvedValue([{ telegramId: 777n }]);
+    prisma.botUser.findUnique.mockResolvedValue({ id: 'bu', telegramId: 777n });
+
+    const res = await service.addRegistration('e1', body);
+
+    expect(prisma.eventRegistration.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        telegramUserId: 777n,
+        botUserId: 'bu',
+        telegramTag: '@olena_k',
+        source: 'ADMIN',
+        payment: 'DONATED',
+        paymentStatus: 'CONFIRMED',
+      }),
+    });
+    expect(userBot.sendTicketToUser).toHaveBeenCalledWith(
+      777n,
+      expect.objectContaining({ id: 'r1' }),
+      expect.objectContaining({ id: 'e1' }),
+    );
+    expect(res).toEqual({
+      id: 'r1',
+      ticketSent: true,
+      waitsForStart: false,
+      botUrl: 'https://t.me/fice_student_bot',
+    });
+  });
+
+  it('keeps the ticket for someone who has not opened the bot yet', async () => {
+    const res = await service.addRegistration('e1', {
+      ...body,
+      payment: 'AT_EVENT',
+    });
+
+    expect(prisma.eventRegistration.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        telegramUserId: null,
+        botUserId: null,
+        paymentStatus: 'NOT_REQUIRED',
+      }),
+    });
+    expect(userBot.sendTicketToUser).not.toHaveBeenCalled();
+    expect(res).toMatchObject({ ticketSent: false, waitsForStart: true });
+  });
+
+  it('refuses a second registration of the same tag', async () => {
+    prisma.eventRegistration.findFirst.mockResolvedValue({ id: 'old' });
+
+    await expect(service.addRegistration('e1', body)).rejects.toThrow(
+      'уже зареєстровано',
+    );
+  });
+});

@@ -303,7 +303,7 @@ export type PaymentStatus =
   | 'PENDING'
   | 'CONFIRMED'
   | 'REJECTED';
-export type RegistrationSource = 'WEB' | 'BOT';
+export type RegistrationSource = 'WEB' | 'BOT' | 'ADMIN';
 
 export interface EventRegistrationPayload {
   fullName: string;

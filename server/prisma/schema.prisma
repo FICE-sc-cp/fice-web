@@ -335,6 +335,8 @@ model EventQuestion {
 enum RegistrationSource {
   WEB
   BOT
+  // Added by an organizer in the admin panel.
+  ADMIN
 }
 
 enum PaymentStatus {
