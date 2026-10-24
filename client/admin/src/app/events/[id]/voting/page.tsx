@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, mediaUrl, type EventVoting, type VotingCandidate, type VotingStatus } from '@/lib/api';
+import { api, mediaUrl, type EventVoting, type VotingCandidate, type VotingStatus, type VotingStage } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -16,6 +16,37 @@ import { saveFile } from '@/lib/download';
 import { Spinner } from '@/components/ui/Spinner';
 import { hapticNotify } from '@/lib/telegram';
 import { PartnerAwards } from '@/components/PartnerAwards';
+
+// A nomination goes through these in order; each one sets the status and the entries switch together.
+const STAGES: Record<
+  VotingStage,
+  { label: string; hint: string; on: string; body: { status: VotingStatus; submissionsOpen: boolean } }
+> = {
+  draft: {
+    label: 'Чернетка',
+    hint: 'Номінацію ще не видно учасникам.',
+    on: 'border-brand-cyan bg-brand-cyan/10 text-brand-cyan',
+    body: { status: 'DRAFT', submissionsOpen: false },
+  },
+  submissions: {
+    label: 'Прийом заявок',
+    hint: 'Учасники надсилають фото в боті, голосувати ще не можна.',
+    on: 'border-purple-400 bg-purple-500/15 text-purple-300',
+    body: { status: 'ACTIVE', submissionsOpen: true },
+  },
+  voting: {
+    label: 'Голосування',
+    hint: 'Заявки закрито, учасники голосують.',
+    on: 'border-brand-green bg-brand-green/10 text-brand-green',
+    body: { status: 'ACTIVE', submissionsOpen: false },
+  },
+  closed: {
+    label: 'Завершено',
+    hint: 'Голосування закрито, результати видно всім.',
+    on: 'border-red-500 bg-red-500/10 text-red-400',
+    body: { status: 'CLOSED', submissionsOpen: false },
+  },
+};
 
 export default function EventVotingPage() {
   const { id: eventId } = useParams<{ id: string }>();
@@ -39,7 +70,6 @@ export default function EventVotingPage() {
   const [showResultsLive, setShowResultsLive] = useState(false);
   const [allowChangeVote, setAllowChangeVote] = useState(false);
   const [allowSubmissions, setAllowSubmissions] = useState(false);
-  const [submissionsOpen, setSubmissionsOpen] = useState(false);
 
   // State for candidate addition & editing
   const [candidateVotingId, setCandidateVotingId] = useState<string | null>(null);
@@ -80,7 +110,6 @@ export default function EventVotingPage() {
     showResultsLive: boolean;
     allowChangeVote: boolean;
     allowSubmissions: boolean;
-    submissionsOpen: boolean;
   } | null>(null);
 
   const { data: resultsData, isLoading: isResultsLoading } = useQuery({
@@ -104,7 +133,6 @@ export default function EventVotingPage() {
         showResultsLive,
         allowChangeVote,
         allowSubmissions,
-        submissionsOpen: allowSubmissions ? submissionsOpen : false,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['event-votings', eventId] });
@@ -114,25 +142,6 @@ export default function EventVotingPage() {
       setDescription('');
       setAllowChangeVote(false);
       setAllowSubmissions(false);
-      setSubmissionsOpen(false);
-    },
-  });
-
-  const updateStatusMutation = useMutation({
-    mutationFn: ({ votingId, status }: { votingId: string; status: VotingStatus }) =>
-      api.updateVoting(votingId, { status }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['event-votings', eventId] });
-      hapticNotify('success');
-    },
-  });
-
-  const toggleSubmissionsMutation = useMutation({
-    mutationFn: ({ votingId, open }: { votingId: string; open: boolean }) =>
-      api.updateVoting(votingId, { submissionsOpen: open }),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['event-votings', eventId] });
-      hapticNotify('success');
     },
   });
 
@@ -328,26 +337,12 @@ export default function EventVotingPage() {
                 <input
                   type="checkbox"
                   checked={allowSubmissions}
-                  onChange={(e) => {
-                    setAllowSubmissions(e.target.checked);
-                    if (!e.target.checked) setSubmissionsOpen(false);
-                  }}
+                  onChange={(e) => setAllowSubmissions(e.target.checked)}
                   className="h-4 w-4 rounded accent-brand-cyan"
                 />
                 <span>Дозволити учасникам самостійно подавати заявки (конкурс костюмів)</span>
               </label>
 
-              {allowSubmissions && (
-                <label className="flex items-center gap-2 text-sm pl-6 text-muted">
-                  <input
-                    type="checkbox"
-                    checked={submissionsOpen}
-                    onChange={(e) => setSubmissionsOpen(e.target.checked)}
-                    className="h-4 w-4 rounded accent-brand-green"
-                  />
-                  <span>Одразу відкрити прийом фото від учасників</span>
-                </label>
-              )}
             </div>
           </div>
           {createMutation.error ? <FormError error={createMutation.error} /> : null}
@@ -390,19 +385,9 @@ export default function EventVotingPage() {
                   <div className="flex items-center gap-2">
                     <h3 className="font-extrabold text-lg text-fg">{v.title}</h3>
                     <span
-                      className={`text-xs px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                        v.status === 'ACTIVE'
-                          ? 'bg-brand-green/20 text-brand-green border border-brand-green/30'
-                          : v.status === 'CLOSED'
-                          ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                          : 'bg-white/10 text-muted border border-white/10'
-                      }`}
+                      className={`text-xs px-2 py-0.5 rounded-full border font-bold uppercase tracking-wider ${STAGES[v.stage].on}`}
                     >
-                      {v.status === 'ACTIVE'
-                        ? 'Активне'
-                        : v.status === 'CLOSED'
-                        ? 'Завершено'
-                        : 'Чернетка'}
+                      {STAGES[v.stage].label}
                     </span>
                   </div>
                   {v.description && (
@@ -413,11 +398,6 @@ export default function EventVotingPage() {
                     <span>Кандидатів: <b className="text-fg">{v.candidates.length}</b></span>
                     <span>{v.onlyRegistered ? 'Тільки для зареєстрованих' : 'Для всіх'}</span>
                     <span>{v.allowChangeVote ? 'Зміна голосу: так' : 'Зміна голосу: ні'}</span>
-                    {v.allowSubmissions && (
-                      <span className="text-brand-cyan font-semibold">
-                        Заявки: {v.submissionsOpen ? 'прийом відкрито' : 'прийом закрито'}
-                      </span>
-                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -432,7 +412,6 @@ export default function EventVotingPage() {
                         showResultsLive: v.showResultsLive,
                         allowChangeVote: v.allowChangeVote,
                         allowSubmissions: v.allowSubmissions,
-                        submissionsOpen: v.submissionsOpen,
                       })
                     }
                     className="rounded-xl border border-border bg-white/5 px-2.5 py-1 text-xs font-semibold text-fg hover:border-brand-cyan hover:text-brand-cyan transition-colors"
@@ -452,129 +431,37 @@ export default function EventVotingPage() {
                 </div>
               </div>
 
-              {/* Status toggles */}
-              <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-border">
-                <span className="text-xs text-muted font-bold">Статус голосування:</span>
-                <button
-                  onClick={() =>
-                    updateStatusMutation.mutate({ votingId: v.id, status: 'DRAFT' })
-                  }
-                  className={`text-xs px-2.5 py-1 rounded-lg border font-medium ${
-                    v.status === 'DRAFT'
-                      ? 'border-brand-cyan bg-brand-cyan/10 text-brand-cyan'
-                      : 'border-border text-muted hover:border-white/30'
-                  }`}
-                >
-                  Чернетка
-                </button>
-                <button
-                  onClick={() =>
-                    updateStatusMutation.mutate({ votingId: v.id, status: 'ACTIVE' })
-                  }
-                  className={`text-xs px-2.5 py-1 rounded-lg border font-medium ${
-                    v.status === 'ACTIVE'
-                      ? 'border-brand-green bg-brand-green/10 text-brand-green'
-                      : 'border-border text-muted hover:border-white/30'
-                  }`}
-                >
-                  Відкрити
-                </button>
-                <button
-                  onClick={() =>
-                    updateStatusMutation.mutate({ votingId: v.id, status: 'CLOSED' })
-                  }
-                  className={`text-xs px-2.5 py-1 rounded-lg border font-medium ${
-                    v.status === 'CLOSED'
-                      ? 'border-red-500 bg-red-500/10 text-red-400'
-                      : 'border-border text-muted hover:border-white/30'
-                  }`}
-                >
-                  Завершити
-                </button>
-              </div>
-
-              {/* Submissions (Конкурс костюмів / Заявки від людей) Quick Toggles */}
-              <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-border bg-bg/40 rounded-xl p-3">
-                <div className="space-y-0.5">
-                  <div className="text-xs font-bold text-fg flex items-center gap-1.5">
-                    <span>🎭</span>
-                    <span>Прийом заявок від учасників (конкурс)</span>
-                  </div>
-                  <div className="text-[11px] text-muted">
-                    {!v.allowSubmissions
-                      ? 'Вимкнено — учасники не можуть надсилати заявки'
-                      : v.submissionsOpen
-                      ? '🟢 Прийом відкрито — учасники можуть завантажувати фото в боті'
-                      : '⏸ Прийом закрито — нові заявки тимчасово не приймаються'}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 flex-wrap">
-                  {!v.allowSubmissions ? (
-                    <button
-                      type="button"
-                      disabled={updateVotingMutation.isPending}
-                      onClick={() =>
-                        updateVotingMutation.mutate({
-                          votingId: v.id,
-                          body: { allowSubmissions: true, submissionsOpen: true },
-                        })
-                      }
-                      className="px-3 py-1.5 rounded-xl bg-brand-cyan text-black text-xs font-black hover:bg-brand-cyan/90 transition-all shadow-sm active:scale-95"
-                    >
-                      + Увімкнути прийом заявок
-                    </button>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        disabled={updateVotingMutation.isPending}
-                        onClick={() =>
-                          updateVotingMutation.mutate({
-                            votingId: v.id,
-                            body: { submissionsOpen: !v.submissionsOpen },
-                          })
-                        }
-                        className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all ${
-                          v.submissionsOpen
-                            ? 'border-brand-orange/40 bg-brand-orange/15 text-brand-orange hover:bg-brand-orange/25'
-                            : 'border-brand-green/40 bg-brand-green/15 text-brand-green hover:bg-brand-green/25'
-                        }`}
-                      >
-                        {v.submissionsOpen ? '⏸ Призупинити прийом' : '▶ Відкрити прийом'}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setModerationVotingId(v.id)}
-                        className="px-3 py-1.5 rounded-xl bg-surface border border-white/20 text-xs font-bold text-fg hover:bg-white/10 transition-all"
-                      >
-                        📬 Модерація ({v.candidates.filter((c) => c.status === 'PENDING').length} нових)
-                      </button>
-
-                      <button
-                        type="button"
-                        disabled={updateVotingMutation.isPending}
-                        onClick={() => {
-                          if (confirm('Вимкнути прийом заявок для цієї номінації?')) {
-                            updateVotingMutation.mutate({
-                              votingId: v.id,
-                              body: { allowSubmissions: false, submissionsOpen: false },
-                            });
+              {/* Stages: entries, then the vote, then closed */}
+              <div className="pt-3 border-t border-border space-y-2">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-xs text-muted font-bold mr-1">Етап:</span>
+                  {(Object.keys(STAGES) as VotingStage[])
+                    .filter((key) => key !== 'submissions' || v.allowSubmissions)
+                    .map((key, i) => (
+                      <span key={key} className="flex items-center gap-1.5">
+                        {i > 0 && <span className="text-xs text-muted">→</span>}
+                        <button
+                          type="button"
+                          disabled={updateVotingMutation.isPending || v.stage === key}
+                          onClick={() =>
+                            updateVotingMutation.mutate({ votingId: v.id, body: STAGES[key].body })
                           }
-                        }}
-                        className="px-2 py-1.5 rounded-xl text-xs text-muted hover:text-red-400 transition-colors"
-                        title="Вимкнути подання заявок"
-                      >
-                        Вимкнути
-                      </button>
-                    </>
-                  )}
+                          className={`text-xs px-2.5 py-1 rounded-lg border font-semibold transition-colors disabled:cursor-default ${
+                            v.stage === key
+                              ? STAGES[key].on
+                              : 'border-border text-muted hover:border-white/30 hover:text-fg'
+                          }`}
+                        >
+                          {STAGES[key].label}
+                        </button>
+                      </span>
+                    ))}
                 </div>
+                <p className="text-[11px] text-muted">{STAGES[v.stage].hint}</p>
               </div>
 
               {/* Broadcast Action Bar */}
-              {v.status === 'ACTIVE' && (
+              {v.stage === 'voting' && (
                 <div className="flex items-center justify-between gap-2 rounded-xl border border-brand-green/30 bg-brand-green/10 px-3 py-2">
                   <span className="text-xs text-brand-green font-medium">
                     Голосування відкрите для учасників
@@ -691,53 +578,27 @@ export default function EventVotingPage() {
               {/* Submissions Moderation Button & Panel (for costume contests) */}
               {v.allowSubmissions && (
                 <div className="pt-3 border-t border-border space-y-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-fg">Прийом заявок:</span>
-                      <span
-                        className={`text-xs px-2.5 py-0.5 rounded-lg font-bold ${
-                          v.submissionsOpen
-                            ? 'bg-brand-green/20 text-brand-green border border-brand-green/30'
-                            : 'bg-white/10 text-muted border border-border'
-                        }`}
-                      >
-                        {v.submissionsOpen ? 'ВІДКРИТО' : 'ЗАКРИТО'}
-                      </span>
-                      <button
-                        onClick={() =>
-                          toggleSubmissionsMutation.mutate({
-                            votingId: v.id,
-                            open: !v.submissionsOpen,
-                          })
-                        }
-                        className="text-xs px-2.5 py-1 rounded-lg border border-border bg-surface hover:bg-surface/80 text-fg"
-                      >
-                        {v.submissionsOpen ? 'Призупинити' : 'Відкрити прийом'}
-                      </button>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <Link
-                        href={`/events/${eventId}/broadcast?template=costume_contest&votingId=${v.id}`}
-                        className="text-xs px-2.5 py-1 rounded-lg border border-purple-500/40 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 font-medium"
-                      >
-                        Швидка розсилка про конкурс
-                      </Link>
-                      <Button
-                        variant="outline"
-                        className="text-xs px-3 py-1"
-                        onClick={() =>
-                          setModerationVotingId(moderationVotingId === v.id ? null : v.id)
-                        }
-                      >
-                        {moderationVotingId === v.id ? 'Сховати заявки' : 'Модерація заявок'}
-                        {(v.pendingSubmissionsCount ?? 0) > 0 && (
-                          <span className="ml-1.5 px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold animate-pulse">
-                            {v.pendingSubmissionsCount}
-                          </span>
-                        )}
-                      </Button>
-                    </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Link
+                      href={`/events/${eventId}/broadcast?template=costume_contest&votingId=${v.id}`}
+                      className="text-xs px-2.5 py-1 rounded-lg border border-purple-500/40 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 font-medium"
+                    >
+                      Швидка розсилка про конкурс
+                    </Link>
+                    <Button
+                      variant="outline"
+                      className="text-xs px-3 py-1"
+                      onClick={() =>
+                        setModerationVotingId(moderationVotingId === v.id ? null : v.id)
+                      }
+                    >
+                      {moderationVotingId === v.id ? 'Сховати заявки' : 'Модерація заявок'}
+                      {(v.pendingSubmissionsCount ?? 0) > 0 && (
+                        <span className="ml-1.5 px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-bold animate-pulse">
+                          {v.pendingSubmissionsCount}
+                        </span>
+                      )}
+                    </Button>
                   </div>
 
                   {/* Moderation section */}
@@ -1321,13 +1182,7 @@ export default function EventVotingPage() {
                     checked={editVotingModal.allowSubmissions}
                     onChange={(e) =>
                       setEditVotingModal((prev) =>
-                        prev
-                          ? {
-                              ...prev,
-                              allowSubmissions: e.target.checked,
-                              submissionsOpen: e.target.checked ? prev.submissionsOpen : false,
-                            }
-                          : null,
+                        prev ? { ...prev, allowSubmissions: e.target.checked } : null,
                       )
                     }
                     className="h-4 w-4 rounded accent-brand-cyan"
@@ -1335,21 +1190,6 @@ export default function EventVotingPage() {
                   <span>Дозволити учасникам подавати власні заявки (конкурс костюмів)</span>
                 </label>
 
-                {editVotingModal.allowSubmissions && (
-                  <label className="flex items-center gap-2 text-xs pl-6 text-brand-green font-semibold cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={editVotingModal.submissionsOpen}
-                      onChange={(e) =>
-                        setEditVotingModal((prev) =>
-                          prev ? { ...prev, submissionsOpen: e.target.checked } : null,
-                        )
-                      }
-                      className="h-4 w-4 rounded accent-brand-green"
-                    />
-                    <span>Прийом заявок зараз відкритий для людей</span>
-                  </label>
-                )}
               </div>
             </div>
 
@@ -1377,9 +1217,6 @@ export default function EventVotingPage() {
                       showResultsLive: editVotingModal.showResultsLive,
                       allowChangeVote: editVotingModal.allowChangeVote,
                       allowSubmissions: editVotingModal.allowSubmissions,
-                      submissionsOpen: editVotingModal.allowSubmissions
-                        ? editVotingModal.submissionsOpen
-                        : false,
                     },
                   });
                 }}

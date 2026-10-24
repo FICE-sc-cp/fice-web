@@ -481,6 +481,7 @@ export const fice = {
         title: string;
         description: string | null;
         status: 'ACTIVE' | 'CLOSED';
+        stage: VotingStage;
         totalVotes: number;
       }[]
     >(`/voting/event/${eventId}/public`),
@@ -727,6 +728,9 @@ export interface MyEventRegistration {
   answers: { id: string; value: string; question: { label: string } }[];
 }
 
+/** Entries come in first while nobody can vote, then the vote, then closed. */
+export type VotingStage = 'draft' | 'submissions' | 'voting' | 'closed';
+
 export interface PublicVoting {
   id: string;
   eventId: string;
@@ -734,6 +738,7 @@ export interface PublicVoting {
   title: string;
   description: string | null;
   status: 'DRAFT' | 'ACTIVE' | 'CLOSED';
+  stage: VotingStage;
   onlyRegistered: boolean;
   allowChangeVote: boolean;
   allowSubmissions: boolean;

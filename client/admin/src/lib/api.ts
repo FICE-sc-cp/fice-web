@@ -976,6 +976,7 @@ export const api = {
 };
 
 export type VotingStatus = 'DRAFT' | 'ACTIVE' | 'CLOSED';
+export type VotingStage = 'draft' | 'submissions' | 'voting' | 'closed';
 
 export interface VotingCandidate {
   id: string;
@@ -999,6 +1000,7 @@ export interface EventVoting {
   title: string;
   description: string | null;
   status: VotingStatus;
+  stage: VotingStage;
   onlyRegistered: boolean;
   showResultsLive: boolean;
   allowChangeVote: boolean;

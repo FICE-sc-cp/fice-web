@@ -93,7 +93,7 @@ function MiniAppContent() {
   const [isLoadingEvents, setIsLoadingEvents] = useState(true);
   const [selectedEvent, setSelectedEvent] = useState<EventItem | null>(null);
   const [eventVotings, setEventVotings] = useState<
-    { id: string; title: string; status: string; totalVotes: number }[]
+    { id: string; title: string; status: string; stage: string; totalVotes: number }[]
   >([]);
   const [myRegistrations, setMyRegistrations] = useState<MyEventRegistration[]>([]);
   const [isLoadingMy, setIsLoadingMy] = useState(false);
@@ -1102,7 +1102,7 @@ function MiniAppContent() {
                           Ваш голос зараховано! Дякуємо за участь.
                         </span>
                       </div>
-                      {votingData.allowChangeVote && votingData.status === 'ACTIVE' && (
+                      {votingData.allowChangeVote && votingData.stage === 'voting' && (
                         <span className="text-xs text-muted shrink-0 font-medium">
                           Можна змінити
                         </span>
@@ -1147,7 +1147,7 @@ function MiniAppContent() {
 
                   {/* Costume Contest Submission Section */}
                   {votingData.allowSubmissions &&
-                    (votingData.submissionsOpen || !!votingData.userSubmission) && (
+                    (votingData.stage === 'submissions' || !!votingData.userSubmission) && (
                       <div className="rounded-2xl border border-purple-500/40 bg-purple-950/20 p-4 space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -1158,12 +1158,12 @@ function MiniAppContent() {
                         </div>
                         <span
                           className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${
-                            votingData.submissionsOpen
+                            votingData.stage === 'submissions'
                               ? 'bg-brand-green/20 text-brand-green border border-brand-green/30'
                               : 'bg-white/10 text-muted border border-white/10'
                           }`}
                         >
-                          {votingData.submissionsOpen ? 'Відкрито' : 'Закрито'}
+                          {votingData.stage === 'submissions' ? 'Відкрито' : 'Закрито'}
                         </span>
                       </div>
 
@@ -1247,7 +1247,7 @@ function MiniAppContent() {
                             </div>
                           </div>
 
-                          {votingData.submissionsOpen &&
+                          {votingData.stage === 'submissions' &&
                             votingData.userSubmission.status !== 'APPROVED' && (
                               <Button
                                 variant="outline"
@@ -1258,7 +1258,7 @@ function MiniAppContent() {
                               </Button>
                             )}
                         </div>
-                      ) : votingData.submissionsOpen ? (
+                      ) : votingData.stage === 'submissions' ? (
                         votingData.onlyRegistered && !votingData.isRegistered ? (
                           <div className="space-y-2.5">
                             <p className="text-xs text-yellow-300/90 leading-relaxed">
@@ -1297,9 +1297,15 @@ function MiniAppContent() {
                     </div>
                   )}
 
+                  {votingData.stage === 'submissions' && votingData.candidates.length > 0 && (
+                    <p className="text-xs text-muted">
+                      🗳️ Голосування почнеться, коли завершиться прийом заявок.
+                    </p>
+                  )}
+
                   {votingData.candidates.length === 0 ? (
                     <div className="rounded-2xl border border-dashed border-border p-6 text-center text-xs text-muted">
-                      {votingData.allowSubmissions && votingData.submissionsOpen
+                      {votingData.stage === 'submissions'
                         ? 'Учасники ще подають заявки. Станьте першим, завантаживши фото вище!'
                         : 'Список кандидатів наразі порожній.'}
                     </div>
@@ -1384,7 +1390,7 @@ function MiniAppContent() {
                             </div>
 
                             {!votingData.hasVoted &&
-                              votingData.status === 'ACTIVE' &&
+                              votingData.stage === 'voting' &&
                               (!votingData.onlyRegistered || votingData.isRegistered) && (
                                 <Button
                                   className="px-4 py-2 text-xs font-bold"
@@ -1396,7 +1402,7 @@ function MiniAppContent() {
                               )}
 
                             {!votingData.hasVoted &&
-                              votingData.status === 'ACTIVE' &&
+                              votingData.stage === 'voting' &&
                               votingData.onlyRegistered &&
                               !votingData.isRegistered && (
                                 <Button
@@ -1421,7 +1427,7 @@ function MiniAppContent() {
                             {votingData.hasVoted &&
                               !isChosen &&
                               votingData.allowChangeVote &&
-                              votingData.status === 'ACTIVE' &&
+                              votingData.stage === 'voting' &&
                               (!votingData.onlyRegistered || votingData.isRegistered) && (
                                 <Button
                                   variant="outline"
@@ -2249,14 +2255,22 @@ function MiniAppContent() {
                           <div className="text-xs text-muted flex items-center gap-1.5 whitespace-nowrap overflow-hidden">
                             <span className="inline-flex items-center gap-1 text-purple-300 font-semibold shrink-0">
                               <span className="h-1.5 w-1.5 rounded-full bg-purple-400 animate-pulse" />
-                              {vt.status === 'ACTIVE' ? 'Голосування триває' : 'Завершено'}
+                              {vt.stage === 'submissions'
+                                ? 'Прийом заявок'
+                                : vt.stage === 'voting'
+                                  ? 'Голосування триває'
+                                  : 'Завершено'}
                             </span>
                             <span className="shrink-0">•</span>
                             <span className="shrink-0">{vt.totalVotes} голосів</span>
                           </div>
                         </div>
                         <span className="shrink-0 rounded-xl border border-purple-500/50 bg-purple-500/20 px-3.5 py-2 text-xs font-black text-purple-200 group-hover:bg-purple-500/30 transition-colors shadow-sm">
-                          {vt.status === 'ACTIVE' ? 'Взяти участь →' : 'Результати →'}
+                          {vt.stage === 'submissions'
+                            ? 'Подати заявку →'
+                            : vt.stage === 'voting'
+                              ? 'Взяти участь →'
+                              : 'Результати →'}
                         </span>
                       </div>
                     ))}

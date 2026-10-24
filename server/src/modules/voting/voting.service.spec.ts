@@ -94,6 +94,20 @@ describe('VotingService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
+    it('takes no votes while entries are still coming in', async () => {
+      prisma.eventVoting.findUnique.mockResolvedValue({
+        id: votingId,
+        status: VotingStatus.ACTIVE,
+        allowSubmissions: true,
+        submissionsOpen: true,
+      });
+
+      await expect(
+        service.castVote(votingId, telegramId, { candidateId }),
+      ).rejects.toThrow('прийом заявок');
+      expect(prisma.vote.create).not.toHaveBeenCalled();
+    });
+
     it('only counts votes for approved candidates', async () => {
       prisma.eventVoting.findUnique.mockResolvedValue({
         id: votingId,
@@ -243,9 +257,28 @@ describe('VotingService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
+    it('takes no entries in a draft or once the vote is closed', async () => {
+      for (const status of [VotingStatus.DRAFT, VotingStatus.CLOSED]) {
+        prisma.eventVoting.findUnique.mockResolvedValue({
+          id: votingId,
+          status,
+          allowSubmissions: true,
+          submissionsOpen: true,
+        });
+
+        await expect(
+          service.submitCandidate(votingId, telegramId, {
+            name: 'Batman',
+            photoUrl: '/uploads/batman.jpg',
+          }),
+        ).rejects.toThrow('Прийом заявок наразі закрито');
+      }
+    });
+
     const openVoting = {
       id: votingId,
       eventId: 'event-uuid',
+      status: VotingStatus.ACTIVE,
       allowSubmissions: true,
       submissionsOpen: true,
       onlyRegistered: false,

@@ -68,6 +68,22 @@ function partnerOf(ep: AwardPartner) {
   };
 }
 
+export type VotingStage = 'draft' | 'submissions' | 'voting' | 'closed';
+
+/**
+ * Where a nomination is: entries come in first while nobody can vote, then the
+ * vote runs with entries shut, and a closed nomination takes neither.
+ */
+export function stageOf(v: {
+  status: VotingStatus;
+  allowSubmissions: boolean;
+  submissionsOpen: boolean;
+}): VotingStage {
+  if (v.status === VotingStatus.DRAFT) return 'draft';
+  if (v.status === VotingStatus.CLOSED) return 'closed';
+  return v.allowSubmissions && v.submissionsOpen ? 'submissions' : 'voting';
+}
+
 const AWARD_ORDER: Prisma.VotingPartnerAwardOrderByWithRelationInput[] = [
   { order: 'asc' },
   { createdAt: 'asc' },
@@ -122,6 +138,7 @@ export class VotingService {
       title: v.title,
       description: v.description,
       status: v.status,
+      stage: stageOf(v),
       onlyRegistered: v.onlyRegistered,
       showResultsLive: v.showResultsLive,
       allowChangeVote: v.allowChangeVote,
@@ -218,7 +235,8 @@ export class VotingService {
         showResultsLive: dto.showResultsLive,
         allowChangeVote: dto.allowChangeVote,
         allowSubmissions: dto.allowSubmissions,
-        submissionsOpen: dto.submissionsOpen,
+        submissionsOpen:
+          dto.allowSubmissions === false ? false : dto.submissionsOpen,
       },
       include: { candidates: true },
     });
@@ -402,6 +420,7 @@ export class VotingService {
       title: voting.title,
       description: voting.description,
       status: voting.status,
+      stage: stageOf(voting),
       onlyRegistered: voting.onlyRegistered,
       showResultsLive: voting.showResultsLive,
       allowChangeVote: voting.allowChangeVote,
@@ -448,7 +467,7 @@ export class VotingService {
       );
     }
 
-    if (!voting.submissionsOpen) {
+    if (stageOf(voting) !== 'submissions') {
       throw new BadRequestException('Прийом заявок наразі закрито');
     }
 
@@ -633,7 +652,13 @@ export class VotingService {
     });
     if (!voting) throw new NotFoundException(`Voting ${votingId} not found`);
 
-    if (voting.status !== VotingStatus.ACTIVE) {
+    const stage = stageOf(voting);
+    if (stage === 'submissions') {
+      throw new BadRequestException(
+        'Зараз триває прийом заявок — голосування почнеться пізніше',
+      );
+    }
+    if (stage !== 'voting') {
       throw new BadRequestException('Голосування зараз не активне');
     }
 
@@ -1033,6 +1058,8 @@ export class VotingService {
         status: true,
         allowChangeVote: true,
         showResultsLive: true,
+        allowSubmissions: true,
+        submissionsOpen: true,
         _count: { select: { votes: true } },
       },
     });
@@ -1042,6 +1069,7 @@ export class VotingService {
       title: v.title,
       description: v.description,
       status: v.status,
+      stage: stageOf(v),
       allowChangeVote: v.allowChangeVote,
       showResultsLive: v.showResultsLive,
       totalVotes: v._count.votes,
