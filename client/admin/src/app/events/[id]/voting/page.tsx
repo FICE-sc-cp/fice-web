@@ -92,6 +92,9 @@ function VotersPicker({ value, onChange }: { value: Voters; onChange: (v: Voters
   );
 }
 
+// Entries waiting for moderation, or rejected, stay in the moderation panel.
+const approvedOf = (v: EventVoting) => v.candidates.filter((c) => c.status === 'APPROVED');
+
 export default function EventVotingPage() {
   const { id: eventId } = useParams<{ id: string }>();
   const qc = useQueryClient();
@@ -653,7 +656,7 @@ export default function EventVotingPage() {
               <div className="pt-2">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-bold uppercase tracking-wider text-muted">
-                    Кандидати ({v.candidates.length})
+                    Кандидати ({approvedOf(v).length})
                   </span>
                   <button
                     onClick={() => setCandidateVotingId(v.id)}
@@ -663,13 +666,13 @@ export default function EventVotingPage() {
                   </button>
                 </div>
 
-                {v.candidates.length === 0 ? (
+                {approvedOf(v).length === 0 ? (
                   <div className="text-xs text-muted py-2 italic">
                     Ще немає кандидатів
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {v.candidates.map((c, idx) => (
+                    {approvedOf(v).map((c, idx) => (
                       <div
                         key={c.id}
                         className="flex items-center gap-3 rounded-xl border border-border bg-bg/50 p-2.5"
@@ -690,16 +693,6 @@ export default function EventVotingPage() {
                             <span className="text-xs font-bold text-fg truncate">
                               {c.name}
                             </span>
-                            {c.status === 'PENDING' && (
-                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold border border-amber-500/30">
-                                На розгляді
-                              </span>
-                            )}
-                            {c.status === 'REJECTED' && (
-                              <span className="text-[9px] px-1.5 py-0.5 rounded bg-red-500/20 text-red-400 font-bold border border-red-500/30">
-                                Відхилено
-                              </span>
-                            )}
                             {c.submittedByTag && (
                               <span className="text-[10px] text-brand-cyan">
                                 {c.submittedByTag}
@@ -797,6 +790,9 @@ export default function EventVotingPage() {
                           ))}
                         </div>
                       </div>
+                      <p className="text-[11px] text-muted">
+                        Учасник отримає повідомлення в боті, коли ви схвалите заявку або відхилите її з причиною.
+                      </p>
 
                       {isSubmissionsLoading ? (
                         <div className="flex justify-center py-4">
@@ -1162,10 +1158,10 @@ export default function EventVotingPage() {
           <div className="w-full max-w-sm rounded-2xl border border-border bg-surface p-5 space-y-3">
             <h3 className="font-bold text-fg">Відхилити заявку</h3>
             <p className="text-xs text-muted">
-              Ви збираєтесь відхилити заявку «{rejectModal.candidateName}». Вона не потрапить до списку голосування.
+              Ви збираєтесь відхилити заявку «{rejectModal.candidateName}». Вона не потрапить до списку голосування, а учасник отримає повідомлення в боті з причиною.
             </p>
             <Input
-              label="Причина відхилення (опціонально)"
+              label="Причина (її отримає учасник)"
               placeholder="Наприклад: Не відповідає темі заходу або низька якість фото"
               value={rejectModal.reason}
               onChange={(e) =>
