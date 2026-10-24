@@ -198,7 +198,7 @@ export async function DepartmentTop({ d }: { d: DepartmentData }) {
     dbDept?.memberCount ??
     (d.slug === "presidium" && teamMembers.length > 0
       ? teamMembers.length
-      : d.memberCount);
+      : null);
   const projectPeople = dbDept
     ? await safe(
         fice.projectParticipants(dbDept.id),
@@ -263,7 +263,7 @@ export async function DepartmentTop({ d }: { d: DepartmentData }) {
                   hasCover && "lg:justify-start",
                 )}
               >
-                {d.memberCount != null && (
+                {memberCount != null && (
                   <span className="inline-flex h-11 items-center gap-2 rounded-full border border-white/10 bg-surface/50 px-4 text-base font-semibold text-fg">
                     <span className="size-5">
                       <PeopleIcon gradient={iconGrad} />

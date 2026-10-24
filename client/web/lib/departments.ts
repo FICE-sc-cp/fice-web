@@ -27,7 +27,6 @@ export interface DepartmentData {
   gradient: string;
   glow: [string, string];
   cover: string | null;
-  memberCount: number | null;
   // Title of the department people wall («сердечко»). The wall renders on the
   // department page whenever the bot has harvested participants for it;
   // when heartTitle is null the department name is used.
@@ -50,7 +49,6 @@ interface DeptInput {
   gradient: string;
   glow: [string, string];
   cover?: string | null;
-  memberCount?: number | null;
   heartTitle?: string | null;
   slogan?: string | null;
   about?: string[] | null;
@@ -71,7 +69,6 @@ function dept(input: DeptInput): DepartmentData {
     gradient: input.gradient,
     glow: input.glow,
     cover: input.cover ?? null,
-    memberCount: input.memberCount ?? null,
     heartTitle: input.heartTitle ?? null,
     slogan: input.slogan ?? null,
     about: input.about ?? null,
@@ -92,7 +89,6 @@ export const DEPARTMENTS: Record<string, DepartmentData> = {
     accent: "magenta",
     gradient: "bg-gradient-magenta",
     glow: ["#AD46FF", "#F6339A"],
-    memberCount: 7,
     slogan:
       "Ми — команда голови Студради ФІОТ: координуємо департаменти й відстоюємо інтереси студентів.",
     about: [
@@ -146,7 +142,6 @@ export const DEPARTMENTS: Record<string, DepartmentData> = {
     accent: "orange",
     gradient: "bg-gradient-orange",
     glow: ["#FF8904", "#FB2C36"],
-    memberCount: 45,
     heartTitle: "Люди проєктного",
     slogan: "Твори свої ідеї 💫",
     about: [
@@ -193,7 +188,6 @@ export const DEPARTMENTS: Record<string, DepartmentData> = {
     accent: "green",
     gradient: "bg-gradient-green",
     glow: ["#2EFF97", "#00E3C5"],
-    memberCount: 46,
     heartTitle: "Медійка",
     slogan:
       "Ми робимо життя факультету видимим, зрозумілим і ближчим до студентів.",
@@ -275,7 +269,6 @@ export const DEPARTMENTS: Record<string, DepartmentData> = {
     accent: "cyan",
     gradient: "bg-gradient-blue",
     glow: ["#00E3F3", "#36DFFF"],
-    memberCount: 16,
     slogan:
       "Питають non-profit: “Де ти береш гроші ?”.\nА він каже: “У тумбочці”.",
     about: [
@@ -341,7 +334,6 @@ export const DEPARTMENTS: Record<string, DepartmentData> = {
     accent: "purple",
     gradient: "bg-gradient-purple",
     glow: ["#AD46FF", "#9810FA"],
-    memberCount: 19,
     slogan: "Розробка дизайнів друкованої та сувенірної продукції.",
     about: [
       "Ми - департамент, що займається розробкою друкованої продукції до подій факультету. Якщо ти хоча б раз був на факультетських заходах, то, найімовірніше, вже бачив результати нашої роботи: бейджики на організаторах і волонтерах, постери, флаєри, паспорти для квестів та інші друковані матеріали.",
@@ -411,7 +403,6 @@ export const DEPARTMENTS: Record<string, DepartmentData> = {
     accent: "blue",
     gradient: "bg-gradient-dark-blue",
     glow: ["#1D4ED8", "#2563EB"],
-    memberCount: 20,
     slogan: "Якісна освіта — це результат спільної роботи кожного з нас.",
     about: [
       "Наша основна робота — покращення якості освіти на факультеті. Для цього ми активно співпрацюємо з усіма учасниками освітнього процесу: студентами, викладачами та представниками адміністрації.",
@@ -466,7 +457,6 @@ export const APPLICANTS_DEPARTMENT = dept({
   accent: "magenta",
   gradient: "bg-gradient-magenta",
   glow: ["#F6339A", "#AD46FF"],
-  memberCount: 9,
   slogan:
     "Ми стали містком між амбіціями майбутніх студентів та можливостями університету — створюючи простір для впевненого старту і свідомого вибору.",
   about: [
