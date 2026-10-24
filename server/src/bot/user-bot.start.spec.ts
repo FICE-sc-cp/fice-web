@@ -58,6 +58,8 @@ describe('UserBotService /start reg_ confirmation', () => {
         update: jest.fn(),
       },
       eventRegistration: {
+        findMany: jest.fn().mockResolvedValue([]),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
         findFirst: jest.fn().mockResolvedValue(null),
         create: jest.fn().mockResolvedValue({
           id: 'r1',
@@ -101,6 +103,32 @@ describe('UserBotService /start reg_ confirmation', () => {
     chat: { id: 4242, type: 'private' },
     match: `reg_${TOKEN}`,
     reply: jest.fn().mockResolvedValue(undefined),
+  });
+
+  it('sends tickets an organizer added for this tag on the first /start', async () => {
+    const event = { id: 'e1', name: 'Event', date: new Date(), location: null };
+    const reg = {
+      id: 'r9',
+      fullName: 'Олена Коваль',
+      group: 'ІП-21',
+      ticketCode: '11111111-2222-3333-4444-555555555555',
+      event,
+    };
+    prisma.eventRegistration.findMany.mockResolvedValue([reg]);
+    prisma.eventRegistration.updateMany.mockResolvedValue({ count: 1 });
+    prisma.botUser.findUnique.mockResolvedValue({ id: 'bot-user' });
+
+    await startHandler({ ...ctxFrom({ username: 'Olena_K' }), match: '' });
+
+    expect(prisma.eventRegistration.findMany).toHaveBeenCalledWith({
+      where: { telegramUserId: null, source: 'ADMIN', telegramTag: '@olena_k' },
+      include: { event: true },
+    });
+    expect(prisma.eventRegistration.updateMany).toHaveBeenCalledWith({
+      where: { id: 'r9', telegramUserId: null },
+      data: { telegramUserId: 4242n, botUserId: 'bot-user' },
+    });
+    expect(service.sendTicketToUser).toHaveBeenCalledWith(4242n, reg, event);
   });
 
   it('does not hold up update polling while completing a registration', async () => {

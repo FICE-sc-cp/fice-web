@@ -60,8 +60,13 @@ export class BotUserController {
     @Headers('x-telegram-init-data') initData?: string,
     @Query('tgUserId') fallbackId?: string,
   ) {
-    const telegramId = this.resolveTelegramId(initData, fallbackId);
-    return this.botUserService.getMyRegistrations(telegramId);
+    const user = resolveValidatedTelegramUser(this.config, initData, {
+      id: fallbackId,
+    });
+    return this.botUserService.getMyRegistrations(
+      user.telegramId,
+      user.username,
+    );
   }
 
   @Delete('registrations/:id')

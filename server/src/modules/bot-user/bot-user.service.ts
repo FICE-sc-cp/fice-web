@@ -3,7 +3,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { RegistrationSource } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
+import {
+  normalizeTelegramUsername,
+  telegramTagOf,
+} from '../event/registration-identity';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @Injectable()
@@ -62,7 +67,19 @@ export class BotUserService {
     };
   }
 
-  async getMyRegistrations(telegramId: bigint) {
+  async getMyRegistrations(telegramId: bigint, username?: string) {
+    // Someone an organizer added by @tag sees the ticket even before /start.
+    const clean = normalizeTelegramUsername(username);
+    if (clean) {
+      await this.prisma.eventRegistration.updateMany({
+        where: {
+          telegramUserId: null,
+          source: RegistrationSource.ADMIN,
+          telegramTag: telegramTagOf(clean),
+        },
+        data: { telegramUserId: telegramId },
+      });
+    }
     const registrations = await this.prisma.eventRegistration.findMany({
       where: { telegramUserId: telegramId },
       include: {

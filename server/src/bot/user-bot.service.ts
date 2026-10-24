@@ -207,6 +207,11 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
         'Failed to upsert BotUser on /start: ' + errorMessage(err),
       );
     }
+    await this.deliverWaitingTickets(telegramId, from.username).catch((err) =>
+      this.logger.warn(
+        'Failed to deliver waiting tickets: ' + errorMessage(err),
+      ),
+    );
 
     const match = ctx.match?.trim() ?? '';
     const baseAppUrl = this.getMiniAppUrl();
@@ -605,6 +610,35 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  /**
+   * Registrations an organizer added for this @tag before the person opened
+   * the bot: link them to the account and send their tickets.
+   */
+  private async deliverWaitingTickets(telegramId: bigint, username?: string) {
+    const clean = normalizeTelegramUsername(username);
+    if (!clean) return;
+    const waiting = await this.prisma.eventRegistration.findMany({
+      where: {
+        telegramUserId: null,
+        source: RegistrationSource.ADMIN,
+        telegramTag: telegramTagOf(clean),
+      },
+      include: { event: true },
+    });
+    if (!waiting.length) return;
+    const botUser = await this.prisma.botUser.findUnique({
+      where: { telegramId },
+    });
+    for (const reg of waiting) {
+      // Claimed first, so a second /start never sends the same ticket twice.
+      const { count } = await this.prisma.eventRegistration.updateMany({
+        where: { id: reg.id, telegramUserId: null },
+        data: { telegramUserId: telegramId, botUserId: botUser?.id ?? null },
+      });
+      if (count) await this.sendTicketToUser(telegramId, reg, reg.event);
+    }
+  }
+
   async sendTicketToUser(
     telegramUserId: bigint | number,
     reg: {
@@ -642,7 +676,6 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
           light: '#ffffff',
         },
       });
-
 
       const eventDateStr = new Intl.DateTimeFormat('uk-UA', {
         day: '2-digit',
