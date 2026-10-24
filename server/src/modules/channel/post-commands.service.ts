@@ -23,6 +23,7 @@ import {
   ButtonChoice,
   ChannelService,
   HANDLED,
+  linkButtons,
   PostKind,
   QueueItem,
 } from './channel.service';
@@ -611,8 +612,11 @@ export class PostCommandsService implements OnModuleInit {
       if (out && p.messageId) {
         lines.push(`Уже в каналі: ${this.channel.postLink(p.messageId)}`);
       }
+      const votes = linkButtons(p.buttons);
       lines.push(
-        `Кнопка: ${p.buttonUrl ? link(p.buttonText, p.buttonUrl) : 'немає'}`,
+        votes
+          ? `Кнопки: ${votes.map((b) => escapeHtml(b.text)).join(', ')}`
+          : `Кнопка: ${p.buttonUrl ? link(p.buttonText, p.buttonUrl) : 'немає'}`,
         `Медіа: ${p.mediaType ? MEDIA_NAMES[p.mediaType as MediaType] : p.imageUrl ? 'є' : 'немає'}`,
         ...(p.author ? [`Автор: ${escapeHtml(p.author)}`] : []),
       );

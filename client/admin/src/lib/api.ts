@@ -486,6 +486,8 @@ export interface ChannelPostInput {
   eventId?: string;
   buttonText?: string;
   buttonUrl?: string;
+  /** A vote button per nomination, instead of the button above. */
+  votingIds?: string[];
   /** ISO time; empty publishes right away. */
   publishAt?: string;
 }
@@ -510,6 +512,8 @@ export interface ChannelPost {
   mediaType: 'photo' | 'video' | 'animation' | null;
   buttonText: string | null;
   buttonUrl: string | null;
+  /** Vote buttons for nominations, one per row, instead of the button above. */
+  buttons: { text: string; url: string }[] | null;
   publishAt: string;
   status: ChannelPostStatus;
   error: string | null;

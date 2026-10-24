@@ -9,7 +9,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ChannelPost, News, NewsCategory } from '@prisma/client';
+import { ChannelPost, News, NewsCategory, Prisma } from '@prisma/client';
 import {
   BotService,
   ChannelPostOptions,
@@ -41,6 +41,17 @@ const OUT = 'Пост уже в каналі: у ньому можна змін�
 export const HANDLED = 'Цей запит уже оброблено';
 
 export type PostKind = 'channel' | 'site';
+
+export type LinkButton = { text: string; url: string };
+
+/** The buttons a post keeps in its JSON column (one per row). */
+export function linkButtons(
+  value: Prisma.JsonValue | null,
+): LinkButton[] | undefined {
+  return Array.isArray(value) && value.length
+    ? (value as LinkButton[])
+    : undefined;
+}
 
 /** A link button, or the registration button of one of our events. */
 export type ButtonChoice = { text: string; url: string } | { eventId: string };
@@ -105,7 +116,8 @@ export class ChannelService implements OnModuleInit, OnModuleDestroy {
   /** The admin panel composer: publishes now, or at publishAt when it is in the future. */
   async post(dto: CreateChannelPostDto, author?: string) {
     let photoUrl = dto.imageUrl;
-    let button: { text: string; url: string } | undefined;
+    let button: LinkButton | undefined;
+    let buttons: LinkButton[] | undefined;
 
     if (dto.eventId) {
       const event = await this.prisma.event.findUnique({
@@ -122,7 +134,17 @@ export class ChannelService implements OnModuleInit, OnModuleDestroy {
       }
     }
 
-    if (dto.buttonUrl) {
+    if (dto.votingIds?.length) {
+      const votes = await this.voteButtons(dto.votingIds);
+      buttons = votes.buttons;
+      if (
+        !photoUrl &&
+        votes.cover &&
+        plainText(dto.text).length <= CAPTION_LIMIT
+      ) {
+        photoUrl = votes.cover;
+      }
+    } else if (dto.buttonUrl) {
       button = {
         text: dto.buttonText?.trim() || 'Перейти',
         url: dto.buttonUrl.trim(),
@@ -145,6 +167,7 @@ export class ChannelService implements OnModuleInit, OnModuleDestroy {
         imageUrl: photoUrl ?? null,
         buttonText: button?.text ?? null,
         buttonUrl: button?.url ?? null,
+        ...(buttons && { buttons }),
         publishAt: later ?? now,
         author: author ?? null,
       },
@@ -154,6 +177,37 @@ export class ChannelService implements OnModuleInit, OnModuleDestroy {
       ok: true,
       id: post.id,
       messageId: await this.publishOrDrop(post.id),
+    };
+  }
+
+  /**
+   * A vote button per nomination: each opens that vote in the student bot,
+   * which checks who may vote (registered, present) when the vote comes in.
+   */
+  private async voteButtons(votingIds: string[]) {
+    const bot = this.userBot.getUsername();
+    if (!bot) {
+      throw new ServiceUnavailableException(
+        'USER_BOT_USERNAME не налаштовано — кнопкам голосування нікуди вести.',
+      );
+    }
+    const app = this.config.get<string>('USER_MINI_APP_NAME') || 'app';
+    const votings = await this.prisma.eventVoting.findMany({
+      where: { id: { in: votingIds }, status: { not: 'DRAFT' } },
+      orderBy: { createdAt: 'asc' },
+      select: { id: true, title: true, event: { select: { photoUrl: true } } },
+    });
+    if (!votings.length) {
+      throw new BadRequestException(
+        'Оберіть хоча б одну опубліковану номінацію',
+      );
+    }
+    return {
+      cover: votings[0].event.photoUrl,
+      buttons: votings.map((v) => ({
+        text: v.title,
+        url: `https://t.me/${bot}/${app}?startapp=vote_${v.id}`,
+      })),
     };
   }
 
@@ -210,6 +264,7 @@ export class ChannelService implements OnModuleInit, OnModuleDestroy {
       button: post.buttonUrl
         ? { text: post.buttonText || 'Перейти', url: post.buttonUrl }
         : undefined,
+      buttons: linkButtons(post.buttons),
     };
   }
 
@@ -416,13 +471,16 @@ export class ChannelService implements OnModuleInit, OnModuleDestroy {
     return url;
   }
 
+  /** A new button, or none, takes the place of the post's buttons, vote ones too. */
   private channelButton(choice: ButtonChoice | null) {
-    if (!choice) return { buttonText: null, buttonUrl: null };
+    const buttons: LinkButton[] = [];
+    if (!choice) return { buttonText: null, buttonUrl: null, buttons };
     if ('url' in choice)
-      return { buttonText: choice.text, buttonUrl: choice.url };
+      return { buttonText: choice.text, buttonUrl: choice.url, buttons };
     return {
       buttonText: 'Зареєструватися',
       buttonUrl: this.eventButtonUrl(choice.eventId),
+      buttons,
     };
   }
 

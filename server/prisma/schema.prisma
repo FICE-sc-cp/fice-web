@@ -71,6 +71,8 @@ model ChannelPost {
   mediaType       String?           @db.VarChar(16)
   buttonText      String?           @db.VarChar(64)
   buttonUrl       String?
+  // Link buttons one per row, e.g. votes for nominations; used instead of the one above.
+  buttons         Json?
   publishAt       DateTime
   status          ChannelPostStatus @default(SCHEDULED)
   messageId       Int?

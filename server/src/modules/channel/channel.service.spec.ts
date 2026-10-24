@@ -6,6 +6,7 @@ type Cfg = Record<string, string | undefined>;
 function makeService(
   cfg: Cfg,
   event: { id: string; photoUrl: string | null } | null,
+  votings: object[] = [],
 ) {
   const postToChannel = jest.fn().mockResolvedValue({ messageId: 42 });
   const editChannelPost = jest.fn().mockResolvedValue(undefined);
@@ -14,6 +15,7 @@ function makeService(
   const row = (id: string) => rows.get(id)!;
   const prisma = {
     event: { findUnique: jest.fn().mockResolvedValue(event) },
+    eventVoting: { findMany: jest.fn().mockResolvedValue(votings) },
     channelPost: {
       create: jest.fn(({ data }: { data: object }) => {
         const r = { id: `p${rows.size + 1}`, status: 'SCHEDULED', ...data };
@@ -70,6 +72,42 @@ describe('ChannelService', () => {
         url: `${WEB}/events/evt-1#register`,
       },
     });
+  });
+
+  it('puts a vote button per nomination on a post and keeps them through edits', async () => {
+    const cover = { photoUrl: '/uploads/cover.jpg' };
+    const { service, postToChannel, editChannelPost, rows } = makeService(
+      { USER_BOT_USERNAME: 'fice_bot' },
+      null,
+      [
+        { id: 'v1', title: 'Найкращий костюм', event: cover },
+        { id: 'v2', title: 'Найстрашніший грим', event: cover },
+      ],
+    );
+    const buttons = [
+      {
+        text: 'Найкращий костюм',
+        url: 'https://t.me/fice_bot/app?startapp=vote_v1',
+      },
+      {
+        text: 'Найстрашніший грим',
+        url: 'https://t.me/fice_bot/app?startapp=vote_v2',
+      },
+    ];
+
+    await service.post({ text: 'Голосуйте!', votingIds: ['v1', 'v2'] });
+    await service.change('channel', 'p1', { text: 'Голосуйте вже!' });
+
+    expect(postToChannel).toHaveBeenCalledWith({
+      text: 'Голосуйте!',
+      photoUrl: '/uploads/cover.jpg',
+      buttons,
+    });
+    expect(editChannelPost).toHaveBeenCalledWith(
+      42,
+      expect.objectContaining({ text: 'Голосуйте вже!', buttons }),
+    );
+    expect(rows.get('p1')).toMatchObject({ buttons });
   });
 
   it('trims a trailing slash on PUBLIC_WEB_URL and honors a custom button label', async () => {

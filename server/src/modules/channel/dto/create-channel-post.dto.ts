@@ -1,6 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsDate,
   IsNotEmpty,
   IsOptional,
@@ -56,4 +58,15 @@ export class CreateChannelPostDto {
   @IsOptional()
   @IsUrl({ require_tld: false })
   buttonUrl?: string;
+
+  @ApiPropertyOptional({
+    type: [String],
+    description:
+      'Номінації — по кнопці голосування на кожну (замість кнопки вище)',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(20)
+  @IsUUID('all', { each: true })
+  votingIds?: string[];
 }

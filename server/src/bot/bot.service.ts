@@ -58,6 +58,16 @@ export interface ChannelPostOptions {
   /** Media of a Telegram message, sent again by its file id. */
   media?: { type: MediaType; fileId: string };
   button?: { text: string; url: string };
+  /** Several link buttons, one per row; used instead of `button`. */
+  buttons?: { text: string; url: string }[];
+}
+
+/** Link buttons under a channel post, one per row. */
+function channelKeyboard(options: ChannelPostOptions) {
+  const rows = options.buttons ?? (options.button ? [options.button] : []);
+  return rows.length
+    ? { inline_keyboard: rows.map((b) => [{ text: b.text, url: b.url }]) }
+    : undefined;
 }
 
 /**
@@ -655,13 +665,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       );
     }
 
-    const reply_markup = options.button
-      ? {
-          inline_keyboard: [
-            [{ text: options.button.text, url: options.button.url }],
-          ],
-        }
-      : undefined;
+    const reply_markup = channelKeyboard(options);
     const media = options.media
       ? { type: options.media.type, file: options.media.fileId }
       : options.photoUrl
@@ -718,12 +722,8 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     }
     const extra = {
       parse_mode: 'HTML' as const,
-      // Sent every time: an edit without reply_markup removes the button.
-      reply_markup: options.button && {
-        inline_keyboard: [
-          [{ text: options.button.text, url: options.button.url }],
-        ],
-      },
+      // Sent every time: an edit without reply_markup removes the buttons.
+      reply_markup: channelKeyboard(options),
     };
     try {
       // Same rule as postToChannel: media with a short text went out as a caption.

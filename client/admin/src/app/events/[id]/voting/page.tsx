@@ -9,6 +9,8 @@ import { PageHeader } from '@/components/PageHeader';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
+import { RichTextArea } from '@/components/RichTextArea';
+import { escapeHtml } from '@/lib/utils';
 import { ImageUpload } from '@/components/ImageUpload';
 import { ConfirmDialog } from '@/components/ConfirmDialog';
 import { FormError } from '@/components/ui/FormError';
@@ -125,6 +127,11 @@ export default function EventVotingPage() {
     description: string;
     photoUrl: string | null;
   } | null>(null);
+
+  // Channel post with a vote button per nomination
+  const [channelPost, setChannelPost] = useState<{ text: string; ids: string[]; at: string } | null>(
+    null,
+  );
 
   // State for notification confirm
   const [notifyVotingId, setNotifyVotingId] = useState<string | null>(null);
@@ -308,6 +315,43 @@ export default function EventVotingPage() {
     },
   });
 
+  // A regular channel post: it shows up in «Публікації», where it can be edited or moved.
+  const channelPostMutation = useMutation({
+    mutationFn: (p: { text: string; ids: string[]; at: string }) =>
+      api.postChannel({
+        text: p.text,
+        votingIds: p.ids,
+        publishAt: p.at ? new Date(p.at).toISOString() : undefined,
+      }),
+    onSuccess: (r) => {
+      hapticNotify('success');
+      setChannelPost(null);
+      setNotifyMsg(
+        r.scheduled
+          ? 'Пост заплановано. Він у «Публікаціях» — там його можна змінити або перенести.'
+          : 'Пост із кнопками номінацій вийшов у каналі. Змінити текст можна в «Публікаціях».',
+      );
+    },
+    onError: () => hapticNotify('error'),
+  });
+
+  // Nominations people can already open from a channel button
+  const published = (votings ?? []).filter((v) => v.stage !== 'draft');
+
+  const openChannelPost = () => {
+    const picked = published.filter((v) => v.stage === 'voting');
+    setChannelPost({
+      text:
+        `<b>Голосування на «${escapeHtml(event?.name ?? 'заході')}» відкрито!</b>\n\n` +
+        'Обирайте найкращих — кнопки нижче відкривають номінації в боті.' +
+        (picked.length > 0 && picked.every((v) => v.onlyAttended)
+          ? '\nГолосувати можуть лише присутні на заході.'
+          : ''),
+      ids: picked.map((v) => v.id),
+      at: '',
+    });
+  };
+
   return (
     <main className="mx-auto max-w-xl px-4 py-6">
       <PageHeader
@@ -325,9 +369,19 @@ export default function EventVotingPage() {
         <div className="text-sm font-semibold text-muted">
           Номінацій: {votings?.length ?? 0}
         </div>
-        <Button onClick={() => setCreateOpen(true)} className="px-3 py-1.5 text-xs">
-          + Створити номінацію
-        </Button>
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button
+            variant="outline"
+            disabled={published.length === 0}
+            onClick={openChannelPost}
+            className="px-3 py-1.5 text-xs"
+          >
+            Пост у канал
+          </Button>
+          <Button onClick={() => setCreateOpen(true)} className="px-3 py-1.5 text-xs">
+            + Створити номінацію
+          </Button>
+        </div>
       </div>
 
       {createOpen ? (
@@ -395,6 +449,82 @@ export default function EventVotingPage() {
               onClick={() => createMutation.mutate()}
             >
               {createMutation.isPending ? 'Створення…' : 'Створити'}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      {channelPost ? (
+        <div className="mb-6 rounded-2xl border border-border bg-surface p-4 space-y-3">
+          <h3 className="font-bold text-fg">Пост у Telegram-канал</h3>
+          <RichTextArea
+            label="Текст"
+            value={channelPost.text}
+            onChange={(text) => setChannelPost((p) => (p ? { ...p, text } : p))}
+            rows={5}
+          />
+          <fieldset className="space-y-1.5">
+            <legend className="mb-1 text-xs font-bold text-muted">Кнопки — по одній на номінацію</legend>
+            {published.map((v) => (
+              <label key={v.id} className="flex cursor-pointer items-start gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={channelPost.ids.includes(v.id)}
+                  onChange={(e) =>
+                    setChannelPost((p) =>
+                      p
+                        ? {
+                            ...p,
+                            ids: e.target.checked
+                              ? [...p.ids, v.id]
+                              : p.ids.filter((id) => id !== v.id),
+                          }
+                        : p,
+                    )
+                  }
+                  className="mt-0.5 h-4 w-4 rounded accent-brand-cyan"
+                />
+                <span>
+                  {v.title}
+                  <span className="block text-xs text-muted">
+                    {STAGES[v.stage].label} · {VOTERS[votersOf(v)].short}
+                  </span>
+                </span>
+              </label>
+            ))}
+          </fieldset>
+          <p className="text-[11px] text-muted">
+            Кнопка відкриває номінацію в боті. Хто може голосувати, задає налаштування номінації — бот перевіряє це під час голосу.
+          </p>
+          <Input
+            label="Коли опублікувати (за Києвом)"
+            type="datetime-local"
+            value={channelPost.at}
+            onChange={(e) => {
+              const at = e.target.value;
+              setChannelPost((p) => (p ? { ...p, at } : p));
+            }}
+          />
+          <p className="-mt-2 text-[11px] text-muted">
+            Порожньо — одразу. Пост зʼявиться в «Публікаціях»: там його можна змінити, перенести чи прибрати.
+          </p>
+          {channelPostMutation.error ? <FormError error={channelPostMutation.error} /> : null}
+          <div className="flex gap-2">
+            <Button variant="outline" className="flex-1" onClick={() => setChannelPost(null)}>
+              Скасувати
+            </Button>
+            <Button
+              className="flex-1"
+              disabled={
+                !channelPost.text.trim() || channelPost.ids.length === 0 || channelPostMutation.isPending
+              }
+              onClick={() => channelPostMutation.mutate({ ...channelPost, text: channelPost.text.trim() })}
+            >
+              {channelPostMutation.isPending
+                ? 'Збереження…'
+                : channelPost.at
+                  ? 'Запланувати'
+                  : 'Опублікувати'}
             </Button>
           </div>
         </div>

@@ -132,6 +132,8 @@ function Composer({
   // A photo, video or GIF the post took from the media chat: kept unless replaced or removed.
   const [chatMedia, setChatMedia] = useState(editing?.mediaFileId ? editing.mediaType : null);
   const [withButton, setWithButton] = useState(editing ? !!editing.buttonUrl : true);
+  // Vote buttons for nominations stay as they are; the rest of the post can change.
+  const voteButtons = editing?.buttons?.length ? editing.buttons : null;
   const [buttonText, setButtonText] = useState(editing?.buttonText ?? 'Зареєструватися');
   const [buttonUrl, setButtonUrl] = useState(editing?.buttonUrl ?? '');
   const [publishAt, setPublishAt] = useState(editing ? toLocalInput(editing.publishAt) : '');
@@ -152,8 +154,12 @@ function Composer({
         await api.updateChannelPost(editing.id, {
           text: text.trim(),
           ...(chatMedia || published ? {} : { imageUrl }),
-          buttonUrl: withButton && buttonUrl.trim() ? buttonUrl.trim() : null,
-          buttonText: buttonText.trim() || undefined,
+          ...(voteButtons
+            ? {}
+            : {
+                buttonUrl: withButton && buttonUrl.trim() ? buttonUrl.trim() : null,
+                buttonText: buttonText.trim() || undefined,
+              }),
           ...(published ? {} : { publishAt: when }),
         });
         return null;
@@ -285,14 +291,20 @@ function Composer({
             </>
           )}
 
-          <label className="flex items-center gap-2 text-sm font-medium text-muted">
-            <input
-              type="checkbox"
-              checked={withButton}
-              onChange={(e) => setWithButton(e.target.checked)}
-            />
-            Додати кнопку
-          </label>
+          {voteButtons ? (
+            <p className="rounded-xl border border-border bg-bg-soft px-4 py-3 text-sm">
+              Кнопки голосування: {voteButtons.map((b) => b.text).join(' · ')}
+            </p>
+          ) : (
+            <label className="flex items-center gap-2 text-sm font-medium text-muted">
+              <input
+                type="checkbox"
+                checked={withButton}
+                onChange={(e) => setWithButton(e.target.checked)}
+              />
+              Додати кнопку
+            </label>
+          )}
 
           {withButton && (
             <>
