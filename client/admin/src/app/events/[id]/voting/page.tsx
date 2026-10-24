@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -48,6 +48,48 @@ const STAGES: Record<
   },
 };
 
+// Who may vote; "present" means checked in at the entrance with the ticket QR.
+const VOTERS = {
+  all: { label: 'Усі', short: 'Для всіх', onlyRegistered: false, onlyAttended: false },
+  registered: {
+    label: 'Зареєстровані на захід',
+    short: 'Тільки для зареєстрованих',
+    onlyRegistered: true,
+    onlyAttended: false,
+  },
+  attended: {
+    label: 'Присутні на заході (відмічені на вході)',
+    short: 'Тільки для присутніх',
+    onlyRegistered: true,
+    onlyAttended: true,
+  },
+} as const;
+type Voters = keyof typeof VOTERS;
+
+const votersOf = (v: { onlyRegistered: boolean; onlyAttended: boolean }): Voters =>
+  v.onlyAttended ? 'attended' : v.onlyRegistered ? 'registered' : 'all';
+
+function VotersPicker({ value, onChange }: { value: Voters; onChange: (v: Voters) => void }) {
+  const name = useId();
+  return (
+    <fieldset className="space-y-1.5">
+      <legend className="mb-1 text-xs font-bold text-muted">Хто може голосувати</legend>
+      {(Object.keys(VOTERS) as Voters[]).map((key) => (
+        <label key={key} className="flex cursor-pointer items-center gap-2 text-sm">
+          <input
+            type="radio"
+            name={name}
+            checked={value === key}
+            onChange={() => onChange(key)}
+            className="h-4 w-4 accent-brand-cyan"
+          />
+          <span>{VOTERS[key].label}</span>
+        </label>
+      ))}
+    </fieldset>
+  );
+}
+
 export default function EventVotingPage() {
   const { id: eventId } = useParams<{ id: string }>();
   const qc = useQueryClient();
@@ -66,7 +108,7 @@ export default function EventVotingPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [onlyRegistered, setOnlyRegistered] = useState(true);
+  const [voters, setVoters] = useState<Voters>('registered');
   const [showResultsLive, setShowResultsLive] = useState(false);
   const [allowChangeVote, setAllowChangeVote] = useState(false);
   const [allowSubmissions, setAllowSubmissions] = useState(false);
@@ -106,7 +148,7 @@ export default function EventVotingPage() {
     id: string;
     title: string;
     description: string;
-    onlyRegistered: boolean;
+    voters: Voters;
     showResultsLive: boolean;
     allowChangeVote: boolean;
     allowSubmissions: boolean;
@@ -129,7 +171,8 @@ export default function EventVotingPage() {
       api.createVoting(eventId, {
         title: title.trim(),
         description: description.trim() || undefined,
-        onlyRegistered,
+        onlyRegistered: VOTERS[voters].onlyRegistered,
+        onlyAttended: VOTERS[voters].onlyAttended,
         showResultsLive,
         allowChangeVote,
         allowSubmissions,
@@ -304,15 +347,7 @@ export default function EventVotingPage() {
             onChange={(e) => setDescription(e.target.value)}
           />
           <div className="space-y-2 pt-1">
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={onlyRegistered}
-                onChange={(e) => setOnlyRegistered(e.target.checked)}
-                className="h-4 w-4 rounded accent-brand-cyan"
-              />
-              <span>Голосувати можуть тільки зареєстровані учасники заходу</span>
-            </label>
+            <VotersPicker value={voters} onChange={setVoters} />
             <label className="flex items-center gap-2 text-sm">
               <input
                 type="checkbox"
@@ -396,7 +431,7 @@ export default function EventVotingPage() {
                   <div className="mt-2 text-xs text-muted flex flex-wrap gap-x-3 gap-y-1">
                     <span>Голосів: <b className="text-brand-cyan">{v.totalVotes}</b></span>
                     <span>Кандидатів: <b className="text-fg">{v.candidates.length}</b></span>
-                    <span>{v.onlyRegistered ? 'Тільки для зареєстрованих' : 'Для всіх'}</span>
+                    <span>{VOTERS[votersOf(v)].short}</span>
                     <span>{v.allowChangeVote ? 'Зміна голосу: так' : 'Зміна голосу: ні'}</span>
                   </div>
                 </div>
@@ -408,7 +443,7 @@ export default function EventVotingPage() {
                         id: v.id,
                         title: v.title,
                         description: v.description || '',
-                        onlyRegistered: v.onlyRegistered,
+                        voters: votersOf(v),
                         showResultsLive: v.showResultsLive,
                         allowChangeVote: v.allowChangeVote,
                         allowSubmissions: v.allowSubmissions,
@@ -1132,19 +1167,12 @@ export default function EventVotingPage() {
               />
 
               <div className="space-y-2 pt-2 border-t border-border">
-                <label className="flex items-center gap-2 text-xs font-semibold text-fg cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={editVotingModal.onlyRegistered}
-                    onChange={(e) =>
-                      setEditVotingModal((prev) =>
-                        prev ? { ...prev, onlyRegistered: e.target.checked } : null,
-                      )
-                    }
-                    className="h-4 w-4 rounded accent-brand-cyan"
-                  />
-                  <span>Голосувати можуть лише зареєстровані учасники заходу</span>
-                </label>
+                <VotersPicker
+                  value={editVotingModal.voters}
+                  onChange={(voters) =>
+                    setEditVotingModal((prev) => (prev ? { ...prev, voters } : null))
+                  }
+                />
 
                 <label className="flex items-center gap-2 text-xs font-semibold text-fg cursor-pointer">
                   <input
@@ -1213,7 +1241,8 @@ export default function EventVotingPage() {
                     body: {
                       title: editVotingModal.title.trim(),
                       description: editVotingModal.description.trim() || undefined,
-                      onlyRegistered: editVotingModal.onlyRegistered,
+                      onlyRegistered: VOTERS[editVotingModal.voters].onlyRegistered,
+                      onlyAttended: VOTERS[editVotingModal.voters].onlyAttended,
                       showResultsLive: editVotingModal.showResultsLive,
                       allowChangeVote: editVotingModal.allowChangeVote,
                       allowSubmissions: editVotingModal.allowSubmissions,

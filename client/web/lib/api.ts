@@ -740,10 +740,13 @@ export interface PublicVoting {
   status: 'DRAFT' | 'ACTIVE' | 'CLOSED';
   stage: VotingStage;
   onlyRegistered: boolean;
+  /** Only people checked in at the entrance vote. */
+  onlyAttended: boolean;
   allowChangeVote: boolean;
   allowSubmissions: boolean;
   submissionsOpen: boolean;
   isRegistered: boolean;
+  isAttended: boolean;
   hasVoted: boolean;
   votedCandidateId: string | null;
   userSubmission?: {

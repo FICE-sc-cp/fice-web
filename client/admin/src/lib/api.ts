@@ -1002,6 +1002,7 @@ export interface EventVoting {
   status: VotingStatus;
   stage: VotingStage;
   onlyRegistered: boolean;
+  onlyAttended: boolean;
   showResultsLive: boolean;
   allowChangeVote: boolean;
   allowSubmissions: boolean;
@@ -1102,6 +1103,7 @@ export interface VotingInput {
   title: string;
   description?: string;
   onlyRegistered?: boolean;
+  onlyAttended?: boolean;
   showResultsLive?: boolean;
   allowChangeVote?: boolean;
   allowSubmissions?: boolean;

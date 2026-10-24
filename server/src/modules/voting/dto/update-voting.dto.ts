@@ -30,6 +30,14 @@ export class UpdateVotingDto {
   @IsBoolean()
   onlyRegistered?: boolean;
 
+  @ApiPropertyOptional({
+    default: false,
+    description: 'Only people checked in at the entrance vote',
+  })
+  @IsOptional()
+  @IsBoolean()
+  onlyAttended?: boolean;
+
   @ApiPropertyOptional()
   @IsOptional()
   @IsBoolean()

@@ -140,6 +140,7 @@ export class VotingService {
       status: v.status,
       stage: stageOf(v),
       onlyRegistered: v.onlyRegistered,
+      onlyAttended: v.onlyAttended,
       showResultsLive: v.showResultsLive,
       allowChangeVote: v.allowChangeVote,
       allowSubmissions: v.allowSubmissions,
@@ -196,6 +197,7 @@ export class VotingService {
         title: dto.title,
         description: dto.description,
         onlyRegistered: dto.onlyRegistered ?? true,
+        onlyAttended: dto.onlyAttended ?? false,
         showResultsLive: dto.showResultsLive ?? false,
         allowChangeVote: dto.allowChangeVote ?? false,
         allowSubmissions: dto.allowSubmissions ?? false,
@@ -232,6 +234,7 @@ export class VotingService {
         description: dto.description,
         status: dto.status,
         onlyRegistered: dto.onlyRegistered,
+        onlyAttended: dto.onlyAttended,
         showResultsLive: dto.showResultsLive,
         allowChangeVote: dto.allowChangeVote,
         allowSubmissions: dto.allowSubmissions,
@@ -315,6 +318,7 @@ export class VotingService {
 
     let userVotedCandidateId: string | null = null;
     let isRegistered = voting.event?.noRegistration ?? false;
+    let isAttended = isRegistered;
     let userSubmission: {
       id: string;
       name: string;
@@ -343,8 +347,10 @@ export class VotingService {
           eventId: voting.eventId,
           telegramUserId: telegramId,
         },
+        orderBy: { attended: 'desc' },
       });
       isRegistered = isRegistered || !!reg;
+      isAttended = isAttended || !!reg?.attended;
 
       const userSub = await this.prisma.votingCandidate.findFirst({
         where: {
@@ -422,11 +428,13 @@ export class VotingService {
       status: voting.status,
       stage: stageOf(voting),
       onlyRegistered: voting.onlyRegistered,
+      onlyAttended: voting.onlyAttended,
       showResultsLive: voting.showResultsLive,
       allowChangeVote: voting.allowChangeVote,
       allowSubmissions: voting.allowSubmissions,
       submissionsOpen: voting.submissionsOpen,
       isRegistered,
+      isAttended,
       hasVoted: !!userVotedCandidateId,
       votedCandidateId: userVotedCandidateId,
       userSubmission,
@@ -694,9 +702,9 @@ export class VotingService {
       return { ok: true, message: 'Ваш голос успішно змінено!' };
     }
 
-    // If only registered, check registration
+    // Registered-only and present-only nominations look at the ticket
     let registrationId: string | undefined;
-    if (voting.onlyRegistered) {
+    if (voting.onlyRegistered || voting.onlyAttended) {
       const event = await this.prisma.event.findUnique({
         where: { id: voting.eventId },
         select: { noRegistration: true },
@@ -707,10 +715,16 @@ export class VotingService {
             eventId: voting.eventId,
             telegramUserId: telegramId,
           },
+          orderBy: { attended: 'desc' },
         });
         if (!reg) {
           throw new ForbiddenException(
             'Голосувати можуть тільки користувачі, які зареєстровані на цей захід',
+          );
+        }
+        if (voting.onlyAttended && !reg.attended) {
+          throw new ForbiddenException(
+            'Голосувати можуть лише присутні на заході — покажіть QR-квиток на вході',
           );
         }
         registrationId = reg.id;
@@ -1007,11 +1021,12 @@ export class VotingService {
     });
     if (!voting) throw new NotFoundException(`Voting ${votingId} not found`);
 
-    // Get all registered users for this event with a telegramUserId
+    // Everyone registered with a Telegram id, or only those checked in
     const registrations = await this.prisma.eventRegistration.findMany({
       where: {
         eventId: voting.eventId,
         telegramUserId: { not: null },
+        ...(voting.onlyAttended && { attended: true }),
       },
       select: { telegramUserId: true },
     });

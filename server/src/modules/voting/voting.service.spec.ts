@@ -174,6 +174,40 @@ describe('VotingService', () => {
       ).rejects.toThrow(ForbiddenException);
     });
 
+    it('takes votes only from people checked in at the entrance', async () => {
+      prisma.eventVoting.findUnique.mockResolvedValue({
+        id: votingId,
+        eventId: 'event-uuid',
+        status: VotingStatus.ACTIVE,
+        onlyRegistered: false,
+        onlyAttended: true,
+      });
+      prisma.votingCandidate.findFirst.mockResolvedValue({ id: candidateId });
+      prisma.vote.findUnique.mockResolvedValue(null);
+      prisma.eventRegistration.findFirst.mockResolvedValue({
+        id: 'reg-uuid',
+        attended: false,
+      });
+
+      await expect(
+        service.castVote(votingId, telegramId, { candidateId }),
+      ).rejects.toThrow('присутні');
+      expect(prisma.vote.create).not.toHaveBeenCalled();
+
+      prisma.eventRegistration.findFirst.mockResolvedValue({
+        id: 'reg-uuid',
+        attended: true,
+      });
+      prisma.botUser.findUnique.mockResolvedValue(null);
+      prisma.vote.create.mockResolvedValue({ id: 'new-vote' });
+
+      const res = await service.castVote(votingId, telegramId, { candidateId });
+      expect(res.ok).toBe(true);
+      expect(prisma.vote.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ registrationId: 'reg-uuid' }),
+      });
+    });
+
     it('successfully casts vote when user is registered', async () => {
       prisma.eventVoting.findUnique.mockResolvedValue({
         id: votingId,

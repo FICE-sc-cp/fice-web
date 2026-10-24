@@ -24,6 +24,14 @@ export class CreateVotingDto {
   @IsBoolean()
   onlyRegistered?: boolean;
 
+  @ApiPropertyOptional({
+    default: false,
+    description: 'Only people checked in at the entrance vote',
+  })
+  @IsOptional()
+  @IsBoolean()
+  onlyAttended?: boolean;
+
   @ApiPropertyOptional({ default: false })
   @IsOptional()
   @IsBoolean()

@@ -484,6 +484,8 @@ model EventVoting {
   description      String?           @db.Text
   status           VotingStatus      @default(DRAFT)
   onlyRegistered   Boolean           @default(true)
+  // Only people checked in at the entrance vote.
+  onlyAttended     Boolean           @default(false)
   showResultsLive  Boolean           @default(false)
   allowChangeVote  Boolean           @default(false)
   allowSubmissions Boolean           @default(false)

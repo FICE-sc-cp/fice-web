@@ -1145,6 +1145,21 @@ function MiniAppContent() {
                     </div>
                   )}
 
+                  {votingData.onlyAttended &&
+                    votingData.isRegistered &&
+                    !votingData.isAttended &&
+                    !votingData.hasVoted &&
+                    votingData.stage === 'voting' && (
+                      <div className="rounded-2xl border border-brand-cyan/40 bg-brand-cyan/10 p-3.5 space-y-1">
+                        <div className="text-xs font-bold text-brand-cyan">
+                          📍 Голосують лише присутні на заході
+                        </div>
+                        <p className="text-xs text-muted leading-relaxed">
+                          Покажіть QR-квиток зі сторінки заходу волонтеру на вході — після відмітки тут зʼявляться кнопки голосування.
+                        </p>
+                      </div>
+                    )}
+
                   {/* Costume Contest Submission Section */}
                   {votingData.allowSubmissions &&
                     (votingData.stage === 'submissions' || !!votingData.userSubmission) && (
@@ -1391,7 +1406,8 @@ function MiniAppContent() {
 
                             {!votingData.hasVoted &&
                               votingData.stage === 'voting' &&
-                              (!votingData.onlyRegistered || votingData.isRegistered) && (
+                              (!votingData.onlyRegistered || votingData.isRegistered) &&
+                              (!votingData.onlyAttended || votingData.isAttended) && (
                                 <Button
                                   className="px-4 py-2 text-xs font-bold"
                                   disabled={isVotingSubmitting}
@@ -1428,7 +1444,8 @@ function MiniAppContent() {
                               !isChosen &&
                               votingData.allowChangeVote &&
                               votingData.stage === 'voting' &&
-                              (!votingData.onlyRegistered || votingData.isRegistered) && (
+                              (!votingData.onlyRegistered || votingData.isRegistered) &&
+                              (!votingData.onlyAttended || votingData.isAttended) && (
                                 <Button
                                   variant="outline"
                                   className="px-3.5 py-2 text-xs font-bold border-brand-cyan/40 text-brand-cyan hover:bg-brand-cyan/10"
