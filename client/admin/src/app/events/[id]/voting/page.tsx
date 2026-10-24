@@ -917,7 +917,7 @@ export default function EventVotingPage() {
                 </div>
               )}
 
-              <PartnerAwards eventId={eventId} voting={v} partners={event?.eventPartners ?? []} />
+              <PartnerAwards voting={v} partners={event?.eventPartners ?? []} />
 
               {/* Results & Stage Screen buttons */}
               <div className="pt-2 border-t border-border flex flex-wrap justify-between items-center gap-2">

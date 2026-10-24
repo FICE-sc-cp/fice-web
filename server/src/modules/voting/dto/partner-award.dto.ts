@@ -1,7 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
-  ArrayMaxSize,
-  IsArray,
   IsBoolean,
   IsNotEmpty,
   IsOptional,
@@ -72,15 +70,4 @@ export class UpdatePartnerAwardDto {
   @IsOptional()
   @IsUUID()
   candidateId?: string | null;
-}
-
-export class ReorderPartnerAwardsDto {
-  @ApiProperty({
-    type: [String],
-    description: 'All award ids in the new order',
-  })
-  @IsArray()
-  @ArrayMaxSize(50)
-  @IsUUID('all', { each: true })
-  ids: string[];
 }

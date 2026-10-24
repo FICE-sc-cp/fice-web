@@ -899,11 +899,6 @@ export const api = {
     }),
   deletePartnerAward: (awardId: string) =>
     request<unknown>(`/voting/partner-awards/${awardId}`, { method: 'DELETE' }),
-  reorderPartnerAwards: (votingId: string, ids: string[]) =>
-    request<unknown>(`/voting/${votingId}/partner-awards/reorder`, {
-      method: 'POST',
-      ...json({ ids }),
-    }),
   votingSubmissions: (votingId: string, status?: string) =>
     request<VotingCandidate[]>(
       `/voting/${votingId}/submissions${status ? `?status=${status}` : ''}`,
@@ -1041,6 +1036,9 @@ export interface ScreenState {
   theme?: ScreenTheme;
   view?: ScreenView;
   step?: number;
+  /** Partner award shown over the ceremony, and whether its pick is revealed. */
+  award?: string | null;
+  awardOpen?: boolean;
   nav?: { rev: number; d: -1 | 1 };
   salute?: number;
 }
@@ -1050,6 +1048,8 @@ export interface ScreenCommand {
   theme?: ScreenTheme;
   view?: ScreenView;
   step?: number;
+  award?: string | null;
+  awardOpen?: boolean;
   nav?: -1 | 1;
   salute?: boolean;
 }
@@ -1059,7 +1059,7 @@ export interface VotingScreenInfo {
   voting: { id: string; title: string; status: VotingStatus; eventName: string };
   candidates: { id: string }[];
   winners: { place: number }[];
-  partnerAwards?: { id: string; partnerName: string; pick: { id: string } | null }[];
+  partnerAwards?: { id: string; title: string; partnerName: string; pick: { id: string; name: string } | null }[];
 }
 
 export interface PartnerAwardInput {

@@ -18,13 +18,7 @@ import { Input } from './ui/Input';
 import { FormError } from './ui/FormError';
 
 // Special awards inside a nomination: a partner picks a winner on their own
-// (by a personal link, or the organizer enters it), revealed after 1st place.
-
-const PODIUM = [
-  { n: '3', label: '3 місце', bg: 'linear-gradient(90deg, #ff8904 0%, #fb2c36 100%)' },
-  { n: '2', label: '2 місце', bg: 'linear-gradient(90deg, #00e3f3 0%, #2b7fff 100%)' },
-  { n: '1', label: 'Переможець', bg: 'linear-gradient(90deg, #2eff97 -19.71%, #36dfff 48.48%, #ad46ff 116.67%)' },
-];
+// (by a personal link, or the organizer enters it), shown from the screen remote.
 
 function partnerLabel(ep: EventPartner) {
   return ep.name ?? ep.partner?.name ?? 'Партнер';
@@ -57,32 +51,10 @@ const ClockIcon = () => (
   </svg>
 );
 
-export function PartnerAwards({
-  eventId,
-  voting,
-  partners,
-}: {
-  eventId: string;
-  voting: EventVoting;
-  partners: EventPartner[];
-}) {
-  const qc = useQueryClient();
+export function PartnerAwards({ voting, partners }: { voting: EventVoting; partners: EventPartner[] }) {
   // null = closed, 'new' = create form, award = edit form
   const [form, setForm] = useState<'new' | PartnerAward | null>(null);
   const awards = voting.partnerAwards ?? [];
-
-  const invalidate = () => qc.invalidateQueries({ queryKey: ['event-votings', eventId] });
-
-  const reorder = useMutation({
-    mutationFn: (ids: string[]) => api.reorderPartnerAwards(voting.id, ids),
-    onSuccess: invalidate,
-  });
-
-  const move = (idx: number, d: -1 | 1) => {
-    const ids = awards.map((a) => a.id);
-    [ids[idx], ids[idx + d]] = [ids[idx + d], ids[idx]];
-    reorder.mutate(ids);
-  };
 
   return (
     <div className="space-y-3 border-t border-border pt-3">
@@ -92,7 +64,7 @@ export function PartnerAwards({
         </span>
         <p className="text-[11px] leading-relaxed text-subtle">
           Партнер сам обирає переможця серед кандидатів цієї номінації. Голоси для цього не
-          потрібні й ніде не показуються. На екрані — окремий крок церемонії після 1 місця.
+          потрібні й ніде не показуються. На екран відзнака виходить окремо — кнопкою на пульті екрана.
         </p>
       </div>
 
@@ -122,56 +94,6 @@ export function PartnerAwards({
         </button>
       )}
 
-      {awards.length > 0 && (
-        <div className="space-y-2 rounded-xl border border-border bg-bg/40 p-3">
-          <div>
-            <div className="text-xs font-bold text-fg">Сценарій церемонії</div>
-            <p className="text-[11px] text-subtle">Порядок кроків на пульті екрана.</p>
-          </div>
-          <ol className="flex flex-col gap-1.5">
-            {PODIUM.map((p) => (
-              <li key={p.n} className="flex min-h-11 items-center gap-2.5 rounded-xl bg-surface-2 px-3">
-                <span className="flex size-[22px] items-center justify-center rounded-md text-xs font-black text-black" style={{ background: p.bg }}>
-                  {p.n}
-                </span>
-                <span className="flex-1 text-sm font-bold">{p.label}</span>
-              </li>
-            ))}
-            {awards.map((a, idx) => (
-              <li
-                key={a.id}
-                className={`flex min-h-11 items-center gap-2.5 rounded-xl border bg-surface-2 px-3 ${
-                  a.candidateId ? 'border-brand-green/30' : 'border-brand-orange/35'
-                }`}
-              >
-                <LogoTile src={a.partnerLogo} name={a.partnerName} className="size-[22px] rounded-md" />
-                <span className="min-w-0 flex-1 truncate text-sm font-bold">Вибір {a.partnerName}</span>
-                {!a.candidateId && <span className="text-[11px] font-extrabold text-brand-orange">чекаємо</span>}
-                <button
-                  type="button"
-                  aria-label={`Перемістити «${a.partnerName}» вище`}
-                  disabled={idx === 0 || reorder.isPending}
-                  onClick={() => move(idx, -1)}
-                  className="flex size-9 items-center justify-center rounded-lg text-muted hover:text-fg disabled:opacity-30"
-                >
-                  ↑
-                </button>
-                <button
-                  type="button"
-                  aria-label={`Перемістити «${a.partnerName}» нижче`}
-                  disabled={idx === awards.length - 1 || reorder.isPending}
-                  onClick={() => move(idx, 1)}
-                  className="flex size-9 items-center justify-center rounded-lg text-muted hover:text-fg disabled:opacity-30"
-                >
-                  ↓
-                </button>
-              </li>
-            ))}
-          </ol>
-          <p className="text-[11px] text-subtle">Відзнаку без вибору екран пропустить.</p>
-          <FormError error={reorder.error} />
-        </div>
-      )}
     </div>
   );
 }

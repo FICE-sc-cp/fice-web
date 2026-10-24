@@ -834,6 +834,9 @@ export interface ScreenState {
   theme?: 'fice' | 'ny' | 'hw' | 'ball';
   view?: 'auto' | 'grid' | 'show';
   step?: number;
+  /** Partner award shown over the ceremony, and whether its pick is revealed. */
+  award?: string | null;
+  awardOpen?: boolean;
   /** One-off commands: act on them when their stamp changes. */
   nav?: { rev: number; d: -1 | 1 };
   salute?: number;

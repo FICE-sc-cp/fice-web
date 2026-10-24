@@ -513,6 +513,7 @@ export default function LiveVotingScreenPage() {
   const [phase, setPhase] = useState(-2); // auto view: <0 grid, >=0 slide index
   const [slide, setSlide] = useState(0);
   const [stepWant, setStepWant] = useState(0); // ceremony step asked for (a step number, see `steps`)
+  const [awardShow, setAwardShow] = useState<{ id: string; open: boolean } | null>(null); // partner award on screen
   const [salute, setSalute] = useState(0);
   const [ratios, setRatios] = useState<Record<string, number>>({});
   const [scale, setScale] = useState(1);
@@ -577,27 +578,18 @@ export default function LiveVotingScreenPage() {
   // Ceremony steps that exist for this voting (skip places without a winner).
   const winners: Record<number, Person | undefined> = {};
   for (const w of data?.winners ?? []) winners[w.place] = w;
-  // Partner awards with a pick get two steps each after the podium: 7+2i intrigue, 8+2i reveal.
-  const awards = (data?.partnerAwards ?? []).filter((a) => a.pick);
-  const steps = [
-    0,
-    ...(winners[3] ? [1, 2] : []),
-    ...(winners[2] ? [3, 4] : []),
-    ...(winners[1] ? [5, 6] : []),
-    ...awards.flatMap((_, i) => [7 + 2 * i, 8 + 2 * i]),
-  ];
+  const steps = [0, ...(winners[3] ? [1, 2] : []), ...(winners[2] ? [3, 4] : []), ...(winners[1] ? [5, 6] : [])];
   // The step asked for, or the nearest one before it that exists (a place may have no winner).
   const stepIdx = Math.max(0, steps.findLastIndex((s) => s <= stepWant));
   const stepNo = steps[stepIdx] ?? 0;
-  const awardIdx = stepNo >= 7 ? Math.floor((stepNo - 7) / 2) : -1;
+  // A partner award is not a step: the operator shows it on its own, over the ceremony.
+  const awards = (data?.partnerAwards ?? []).filter((a) => a.pick);
+  const awardIdx = awardShow ? awards.findIndex((a) => a.id === awardShow.id) : -1;
   const award = awards[awardIdx] ?? null;
-  const awardOpen = !!award && (stepNo - 7) % 2 === 1;
+  const awardOpen = !!award && !!awardShow?.open;
   const step = award ? -1 : stepNo; // podium step; -1 while a partner award is on screen
   const isCer = curMode === 'ceremony';
-  const stepName = (s: number) =>
-    s < 7 ? STEP_NAMES[s] : `${(s - 7) % 2 ? 'вибір' : 'інтрига ·'} ${awards[Math.floor((s - 7) / 2)]?.partnerName}`;
-  const stepAction = (s: number) =>
-    s < 7 ? STEP_ACTIONS[s] : `${(s - 7) % 2 ? 'відкрити вибір' : 'інтрига:'} ${awards[Math.floor((s - 7) / 2)]?.partnerName}`;
+  const sceneKey = `${stepIdx}-${award?.id ?? ''}-${awardOpen}`; // restarts the lights and confetti
 
   // Auto view: grid for 10 s, then each photo for 5 s, round and round.
   useEffect(() => {
@@ -636,6 +628,7 @@ export default function LiveVotingScreenPage() {
   const pickMode = (m: Mode) => {
     setMode(m);
     setStepWant(0);
+    setAwardShow(null);
     setSalute(0);
     setPhase(-2);
     setSlide(0);
@@ -666,8 +659,12 @@ export default function LiveVotingScreenPage() {
       if (st.mode && st.mode !== prev.mode) {
         setMode(st.mode);
         setStepWant(0);
+        setAwardShow(null);
         setPhase(-2);
         setSlide(0);
+      }
+      if (st.award !== undefined && (st.award !== prev.award || st.awardOpen !== prev.awardOpen)) {
+        setAwardShow(st.award ? { id: st.award, open: !!st.awardOpen } : null);
       }
       if (st.view && st.view !== prev.view) {
         setView(st.view);
@@ -706,16 +703,18 @@ export default function LiveVotingScreenPage() {
       else if (e.code === 'Escape') setShowPanel(false);
       else if (e.code === 'Space' || e.code === 'ArrowRight') {
         e.preventDefault();
-        if (isCer) next();
+        if (isCer && award) setAwardShow({ id: award.id, open: true });
+        else if (isCer) next();
         else if (isLive) go(1);
       } else if (e.code === 'ArrowLeft') {
-        if (isCer) back();
+        if (isCer && award) setAwardShow(awardOpen ? { id: award.id, open: false } : null);
+        else if (isCer) back();
         else if (isLive) go(-1);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [isCer, isLive, next, back, go, fireSalute]);
+  }, [isCer, isLive, next, back, go, fireSalute, award, awardOpen]);
 
   // The mouse only brings the cursor back; the on-screen remote opens with M.
   const onMouseMove = () => {
@@ -1065,7 +1064,7 @@ export default function LiveVotingScreenPage() {
 
         {/* ================= CEREMONY ================= */}
         {beams.map((b, i) => (
-          <StageLight key={`${stepIdx}-${i}`} b={b} rgb={t.beam} />
+          <StageLight key={`${sceneKey}-${i}`} b={b} rgb={t.beam} />
         ))}
 
         {isCer && !award && (
@@ -1196,7 +1195,7 @@ export default function LiveVotingScreenPage() {
           </>
         )}
 
-        {/* ================= PARTNER AWARD ================= */}
+        {/* ================= PARTNER AWARD (shown on its own, not a step) ================= */}
         {isCer && award?.pick && (
           <div key={`award-${awardIdx}`}>
             <div className="fadeup" style={{ position: 'absolute', left: 0, top: 64, width: 1920, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, zIndex: 7 }}>
@@ -1276,7 +1275,7 @@ export default function LiveVotingScreenPage() {
           </div>
         )}
 
-        <div key={`fx-${stepIdx}-${salute}`} aria-hidden="true" style={{ position: 'absolute', inset: 0, zIndex: 20, pointerEvents: 'none' }}>
+        <div key={`fx-${sceneKey}-${salute}`} aria-hidden="true" style={{ position: 'absolute', inset: 0, zIndex: 20, pointerEvents: 'none' }}>
           <Particles list={bursts} />
           <Particles list={rainList} />
           <Particles list={saluteList} />
@@ -1333,14 +1332,28 @@ export default function LiveVotingScreenPage() {
                   <span key={s} style={{ flexGrow: 1, height: 6, borderRadius: 3, background: i <= stepIdx ? G : '#2a2a33' }} />
                 ))}
               </div>
-              <div style={{ fontSize: 13, fontWeight: 700, color: '#d3d3d3', whiteSpace: 'nowrap' }}>Крок {stepIdx + 1} з {steps.length} · {stepName(stepNo)}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: '#d3d3d3', whiteSpace: 'nowrap' }}>Крок {stepIdx + 1} з {steps.length} · {STEP_NAMES[stepNo]}</div>
             </div>
             <button type="button" onClick={next} style={{ height: 56, flexShrink: 0, padding: '0 20px', border: 0, borderRadius: 14, background: G, color: '#000000', fontSize: 16, fontWeight: 900, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, whiteSpace: 'nowrap', opacity: stepIdx >= steps.length - 1 ? 0.45 : 1 }}>
-              <span>Далі: {stepIdx >= steps.length - 1 ? 'сценарій завершено' : stepAction(steps[stepIdx + 1])}</span>
+              <span>Далі: {stepIdx >= steps.length - 1 ? 'сценарій завершено' : STEP_ACTIONS[steps[stepIdx + 1]]}</span>
               <span style={{ padding: '3px 8px', borderRadius: 6, background: 'rgba(0, 0, 0, 0.18)', fontSize: 12, fontWeight: 800 }}>Пробіл</span>
             </button>
             <button type="button" onClick={fireSalute} style={{ ...iconBtn, width: 'auto', padding: '0 14px', fontSize: 15, fontWeight: 800 }}>Салют</button>
             <button type="button" onClick={() => setStepWant(0)} style={{ height: 48, flexShrink: 0, padding: '0 12px', border: 0, borderRadius: 12, background: 'transparent', color: '#d3d3d3', fontSize: 15, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>З початку</button>
+            {awards.length > 0 && (
+              <div role="group" aria-label="Спецвідзнаки партнерів" style={btnGroup}>
+                {awards.map((a) => (
+                  <button key={a.id} type="button" aria-pressed={award?.id === a.id} onClick={() => setAwardShow(award?.id === a.id ? null : { id: a.id, open: false })} style={segBtn(award?.id === a.id)}>
+                    {a.partnerName}
+                  </button>
+                ))}
+                {award && (
+                  <button type="button" onClick={() => setAwardShow({ id: award.id, open: !awardOpen })} style={segBtn(false)}>
+                    {awardOpen ? 'Закрити вибір' : 'Відкрити вибір'}
+                  </button>
+                )}
+              </div>
+            )}
           </>
         )}
 

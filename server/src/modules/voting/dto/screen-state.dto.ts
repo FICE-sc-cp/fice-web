@@ -1,5 +1,13 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsIn, IsInt, IsOptional, Max, Min } from 'class-validator';
+import {
+  IsBoolean,
+  IsIn,
+  IsInt,
+  IsOptional,
+  IsUUID,
+  Max,
+  Min,
+} from 'class-validator';
 
 export const SCREEN_MODES = ['live', 'closed', 'ceremony'] as const;
 export const SCREEN_THEMES = ['fice', 'ny', 'hw', 'ball'] as const;
@@ -28,6 +36,20 @@ export class UpdateScreenStateDto {
   @Min(0)
   @Max(200)
   step?: number;
+
+  @ApiPropertyOptional({
+    format: 'uuid',
+    nullable: true,
+    description: 'Partner award to show over the ceremony; null hides it',
+  })
+  @IsOptional()
+  @IsUUID()
+  award?: string | null;
+
+  @ApiPropertyOptional({ description: "Reveal the shown award's pick" })
+  @IsOptional()
+  @IsBoolean()
+  awardOpen?: boolean;
 
   @ApiPropertyOptional({ enum: [-1, 1], description: 'Previous / next photo' })
   @IsOptional()

@@ -34,7 +34,7 @@ const VIEWS: [ScreenView, string][] = [
   ['grid', 'Сітка'],
   ['show', 'По одному'],
 ];
-// The screen's ceremony steps: 0–6 the podium, then two per partner award with a pick.
+// The screen's ceremony steps (the podium); partner awards are shown separately.
 const STEP_NAMES = ['вступ', 'інтрига · 3 місце', '3 місце', 'інтрига · 2 місце', '2 місце', 'інтрига · переможець', 'переможець'];
 const STEP_ACTIONS = ['вступ', 'інтрига 3 місця', 'відкрити 3 місце', 'інтрига 2 місця', 'відкрити 2 місце', 'інтрига переможця', 'відкрити переможця'];
 
@@ -71,6 +71,14 @@ export default function ScreenRemotePage() {
         if (cmd.theme) next.theme = cmd.theme;
         if (cmd.view) next.view = cmd.view;
         if (cmd.step !== undefined) next.step = cmd.step;
+        // Same rules as the API: a mode switch puts a shown partner award away.
+        if (cmd.award !== undefined) {
+          next.award = cmd.award;
+          next.awardOpen = cmd.awardOpen ?? false;
+        } else if (cmd.mode) {
+          next.award = null;
+          next.awardOpen = false;
+        } else if (cmd.awardOpen !== undefined) next.awardOpen = cmd.awardOpen;
         return next;
       });
     },
@@ -104,21 +112,15 @@ export default function ScreenRemotePage() {
   const st = state.data;
   const v = info.data;
   const places = new Set(v.winners.map((w) => w.place));
-  const awards = (v.partnerAwards ?? []).filter((a) => a.pick);
-  const steps = [
-    0,
-    ...(places.has(3) ? [1, 2] : []),
-    ...(places.has(2) ? [3, 4] : []),
-    ...(places.has(1) ? [5, 6] : []),
-    ...awards.flatMap((_, i) => [7 + 2 * i, 8 + 2 * i]),
-  ];
-  const partner = (s: number) => awards[Math.floor((s - 7) / 2)]?.partnerName;
-  const stepName = (s: number) => (s < 7 ? STEP_NAMES[s] : `${(s - 7) % 2 ? 'вибір' : 'інтрига ·'} ${partner(s)}`);
-  const stepAction = (s: number) => (s < 7 ? STEP_ACTIONS[s] : `${(s - 7) % 2 ? 'відкрити вибір' : 'інтрига:'} ${partner(s)}`);
+  const steps = [0, ...(places.has(3) ? [1, 2] : []), ...(places.has(2) ? [3, 4] : []), ...(places.has(1) ? [5, 6] : [])];
   const idx = Math.max(0, steps.findLastIndex((s) => s <= (st.step ?? 0)));
   const last = idx >= steps.length - 1;
   const mode = st.mode ?? (v.voting.status === 'CLOSED' ? 'closed' : 'live');
   const view = st.view ?? 'auto';
+  const awards = v.partnerAwards ?? [];
+  const shownAward = mode === 'ceremony' ? st.award : null;
+  // Moving the podium on also puts a shown partner award away.
+  const toStep = (step: number) => send.mutate(shownAward ? { step, award: null } : { step });
 
   return (
     <main className="mx-auto max-w-xl px-4 py-6">
@@ -177,27 +179,70 @@ export default function ScreenRemotePage() {
             ))}
           </div>
           <p className="text-sm font-bold" aria-live="polite">
-            Крок {idx + 1} з {steps.length} · {stepName(steps[idx])}
+            Крок {idx + 1} з {steps.length} · {STEP_NAMES[steps[idx]]}
           </p>
           <button
             type="button"
             disabled={last}
-            onClick={() => send.mutate({ step: steps[idx + 1] })}
+            onClick={() => toStep(steps[idx + 1])}
             className="min-h-16 w-full rounded-2xl bg-gradient-main px-4 text-base font-black text-black disabled:opacity-45"
           >
-            {last ? 'Сценарій завершено' : `Далі: ${stepAction(steps[idx + 1])}`}
+            {last ? 'Сценарій завершено' : `Далі: ${STEP_ACTIONS[steps[idx + 1]]}`}
           </button>
           <div className="grid grid-cols-3 gap-2">
-            <button type="button" disabled={idx === 0} onClick={() => send.mutate({ step: steps[idx - 1] })} className={pad}>
+            <button type="button" disabled={idx === 0} onClick={() => toStep(steps[idx - 1])} className={pad}>
               ‹ Назад
             </button>
             <button type="button" onClick={() => send.mutate({ salute: true })} className={pad}>
               Салют
             </button>
-            <button type="button" onClick={() => send.mutate({ step: 0 })} className={pad}>
+            <button type="button" onClick={() => toStep(0)} className={pad}>
               З початку
             </button>
           </div>
+        </section>
+      )}
+
+      {awards.length > 0 && (
+        <section className="mb-5 space-y-2">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-muted">Спецвідзнаки партнерів</h2>
+          <p className="text-xs text-subtle">Показуються окремо від кроків: спершу інтрига, потім вибір партнера. Потім «Сховати» — і екран повертається до церемонії.</p>
+          {awards.map((a) => {
+            const shown = shownAward === a.id;
+            return (
+              <div key={a.id} className={`space-y-2 rounded-2xl border p-3 ${shown ? 'border-brand-green bg-brand-green/5' : 'border-border bg-surface'}`}>
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="font-extrabold">{a.partnerName}</span>
+                  <span className="truncate text-xs text-muted">{a.title}</span>
+                </div>
+                {!a.pick ? (
+                  <p className="text-xs font-bold text-brand-orange">Партнер ще не обрав</p>
+                ) : shown ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      disabled={st.awardOpen}
+                      onClick={() => send.mutate({ awardOpen: true })}
+                      className="min-h-14 rounded-2xl bg-gradient-main px-3 text-sm font-black text-black disabled:opacity-45"
+                    >
+                      {st.awardOpen ? 'Вибір відкрито' : 'Відкрити вибір'}
+                    </button>
+                    <button type="button" onClick={() => send.mutate({ award: null })} className={pad}>
+                      Сховати
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => send.mutate(mode === 'ceremony' ? { award: a.id } : { mode: 'ceremony', step: 0, award: a.id })}
+                    className={`${pad} w-full`}
+                  >
+                    Показати на екрані
+                  </button>
+                )}
+              </div>
+            );
+          })}
         </section>
       )}
 

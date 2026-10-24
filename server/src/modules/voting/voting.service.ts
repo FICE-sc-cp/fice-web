@@ -40,6 +40,8 @@ export type ScreenState = {
   theme?: UpdateScreenStateDto['theme'];
   view?: UpdateScreenStateDto['view'];
   step?: number;
+  award?: string | null;
+  awardOpen?: boolean;
   nav?: { rev: number; d: -1 | 1 };
   salute?: number;
 };
@@ -1123,30 +1125,6 @@ export class VotingService {
     return this.prisma.votingPartnerAward.delete({ where: { id: awardId } });
   }
 
-  async reorderPartnerAwards(votingId: string, ids: string[]) {
-    const awards = await this.prisma.votingPartnerAward.findMany({
-      where: { votingId },
-      select: { id: true },
-    });
-    const known = new Set(awards.map((a) => a.id));
-    if (
-      ids.length !== known.size ||
-      new Set(ids).size !== ids.length ||
-      ids.some((id) => !known.has(id))
-    ) {
-      throw new BadRequestException('Список відзнак застарів — онови сторінку');
-    }
-    await this.prisma.$transaction(
-      ids.map((id, order) =>
-        this.prisma.votingPartnerAward.update({
-          where: { id },
-          data: { order },
-        }),
-      ),
-    );
-    return { ok: true };
-  }
-
   private async findPickAward(code: string) {
     const award = await this.prisma.votingPartnerAward.findUnique({
       where: { code },
@@ -1242,6 +1220,15 @@ export class VotingService {
       ...(dto.theme && { theme: dto.theme }),
       ...(dto.view && { view: dto.view }),
       ...(dto.step !== undefined && { step: dto.step }),
+      // A partner award is shown on its own; switching mode puts it away.
+      ...(dto.mode &&
+        dto.award === undefined && { award: null, awardOpen: false }),
+      ...(dto.award !== undefined && {
+        award: dto.award,
+        awardOpen: dto.awardOpen ?? false,
+      }),
+      ...(dto.award === undefined &&
+        dto.awardOpen !== undefined && { awardOpen: dto.awardOpen }),
       ...(dto.nav && { nav: { rev, d: dto.nav } }),
       ...(dto.salute && { salute: rev }),
     };

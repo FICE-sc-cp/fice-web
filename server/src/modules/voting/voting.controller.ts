@@ -24,7 +24,6 @@ import { UpdateCandidateDto } from './dto/update-candidate.dto';
 import { CreateVotingDto } from './dto/create-voting.dto';
 import {
   CreatePartnerAwardDto,
-  ReorderPartnerAwardsDto,
   UpdatePartnerAwardDto,
 } from './dto/partner-award.dto';
 import { SubmitCandidateDto } from './dto/submit-candidate.dto';
@@ -201,16 +200,6 @@ export class VotingController {
     @Body() dto: CreatePartnerAwardDto,
   ) {
     return this.votingService.createPartnerAward(id, dto);
-  }
-
-  @Post(':id/partner-awards/reorder')
-  @Admin()
-  @ApiOperation({ summary: 'Reorder partner awards in the ceremony (admin)' })
-  reorderPartnerAwards(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Body() dto: ReorderPartnerAwardsDto,
-  ) {
-    return this.votingService.reorderPartnerAwards(id, dto.ids);
   }
 
   @Patch('partner-awards/:awardId')

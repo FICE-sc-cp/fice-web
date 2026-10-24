@@ -536,6 +536,42 @@ describe('VotingService', () => {
       });
     });
 
+    it('shows a partner award on its own and puts it away on a mode switch', async () => {
+      const awardId = '3f0c6c2e-8a51-4e2b-9a0e-5b1f7c9d2e10';
+      prisma.eventVoting.findUnique.mockResolvedValueOnce({
+        screenState: { rev: 1, mode: 'ceremony', step: 6 },
+      });
+      const shown = await service.updateScreenState('voting-1', {
+        award: awardId,
+      });
+      expect(shown).toMatchObject({
+        rev: 2,
+        step: 6,
+        award: awardId,
+        awardOpen: false,
+      });
+
+      prisma.eventVoting.findUnique.mockResolvedValueOnce({
+        screenState: shown,
+      });
+      const opened = await service.updateScreenState('voting-1', {
+        awardOpen: true,
+      });
+      expect(opened).toMatchObject({ award: awardId, awardOpen: true });
+
+      prisma.eventVoting.findUnique.mockResolvedValueOnce({
+        screenState: opened,
+      });
+      const live = await service.updateScreenState('voting-1', {
+        mode: 'live',
+      });
+      expect(live).toMatchObject({
+        mode: 'live',
+        award: null,
+        awardOpen: false,
+      });
+    });
+
     it('starts from an empty state', async () => {
       prisma.eventVoting.findUnique.mockResolvedValue({ screenState: null });
 
