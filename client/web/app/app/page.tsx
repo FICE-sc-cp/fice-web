@@ -2262,25 +2262,12 @@ function MiniAppContent() {
                           haptic('light');
                           setActiveVotingId(vt.id);
                         }}
-                        className="group flex items-center justify-between rounded-2xl border border-purple-500/40 bg-gradient-to-r from-purple-500/15 via-purple-500/5 to-surface p-4 transition-all hover:border-purple-500/70 cursor-pointer shadow-md"
+                        className="group flex flex-wrap items-center justify-between gap-x-3 gap-y-2.5 rounded-2xl border border-purple-500/40 bg-gradient-to-r from-purple-500/15 via-purple-500/5 to-surface p-4 transition-all hover:border-purple-500/70 cursor-pointer shadow-md"
                       >
-                        <div className="min-w-0 pr-3 space-y-1 flex-1">
-                          <div className="text-sm font-black text-fg group-hover:text-purple-300 transition-colors flex items-center gap-2">
-                            <span>🗳️</span>
-                            <span className="truncate">{vt.title}</span>
-                          </div>
-                          <div className="text-xs text-muted flex items-center gap-1.5 whitespace-nowrap overflow-hidden">
-                            <span className="inline-flex items-center gap-1 text-purple-300 font-semibold shrink-0">
-                              <span className="h-1.5 w-1.5 rounded-full bg-purple-400 animate-pulse" />
-                              {vt.stage === 'submissions'
-                                ? 'Прийом заявок'
-                                : vt.stage === 'voting'
-                                  ? 'Голосування триває'
-                                  : 'Завершено'}
-                            </span>
-                            <span className="shrink-0">•</span>
-                            <span className="shrink-0">{vt.totalVotes} голосів</span>
-                          </div>
+                        {/* On a phone the button goes under the title, so a long name is never cut. */}
+                        <div className="min-w-0 flex-[1_1_12rem] text-sm font-black text-fg group-hover:text-purple-300 transition-colors flex items-center gap-2">
+                          <span>🗳️</span>
+                          <span className="min-w-0 break-words">{vt.title}</span>
                         </div>
                         <span className="shrink-0 rounded-xl border border-purple-500/50 bg-purple-500/20 px-3.5 py-2 text-xs font-black text-purple-200 group-hover:bg-purple-500/30 transition-colors shadow-sm">
                           {vt.stage === 'submissions'
