@@ -1318,11 +1318,9 @@ function MiniAppContent() {
                     </p>
                   )}
 
-                  {votingData.candidates.length === 0 ? (
+                  {votingData.candidates.length === 0 && votingData.stage !== 'submissions' ? (
                     <div className="rounded-2xl border border-dashed border-border p-6 text-center text-xs text-muted">
-                      {votingData.stage === 'submissions'
-                        ? 'Учасники ще подають заявки. Станьте першим, завантаживши фото вище!'
-                        : 'Список кандидатів наразі порожній.'}
+                      Список кандидатів наразі порожній.
                     </div>
                   ) : null}
 
