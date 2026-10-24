@@ -984,24 +984,30 @@ export default function LiveVotingScreenPage() {
               </>
             )}
             <div style={{ flexGrow: 1 }} />
-            <div style={{ width: '100%', height: 1, flexShrink: 0, background: t.cardBorder }} />
-            <div style={{ width: '100%', display: 'flex', alignItems: 'flex-start', gap: 12, textAlign: 'left', fontSize: 21, lineHeight: 1.35, fontWeight: 600, color: t.muted }}>
-              <span style={{ marginTop: 2, display: 'flex' }}><LockIcon size={24} /></span>
-              <span>Твій голос анонімний. Результати — лише на церемонії.</span>
-            </div>
-            {logoAwards.length > 0 && (
-              <div style={{ width: '100%', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 14, textAlign: 'left' }}>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {logoAwards.map((a) => (
-                    <PartnerLogo key={a.id} name={a.partnerName} logo={a.partnerLogo} w={logoAwards.length > 1 ? 72 : 96} h={logoAwards.length > 1 ? 44 : 52} radius={10} font={12} />
-                  ))}
-                </div>
-                <div style={{ fontSize: 20, lineHeight: 1.3, fontWeight: 700, color: t.text }}>
+            <div style={{ width: '100%', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+              <div style={{ width: '100%', height: 1, background: t.cardBorder }} />
+              <div style={{ width: '100%', display: 'flex', alignItems: 'flex-start', gap: 12, textAlign: 'left', fontSize: 21, lineHeight: 1.35, fontWeight: 600, color: t.muted }}>
+                <span style={{ marginTop: 2, display: 'flex' }}><LockIcon size={24} /></span>
+                <span>Твій голос анонімний. Результати — лише на церемонії.</span>
+              </div>
+              {/* FICE × partners on one line, so a partner logo never pushes ours out of the panel */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '10px 16px' }}>
+                <img src="/logo_white.png" alt="FICE" style={{ display: 'block', height: 34, width: 'auto', flexShrink: 0 }} />
+                {logoAwards.length > 0 && (
+                  <span aria-hidden="true" style={{ fontSize: 26, lineHeight: 1, fontWeight: 700, color: t.subtle }}>
+                    ×
+                  </span>
+                )}
+                {logoAwards.map((a) => (
+                  <PartnerLogo key={a.id} name={a.partnerName} logo={a.partnerLogo} w={logoAwards.length > 1 ? 76 : 104} h={logoAwards.length > 1 ? 44 : 52} radius={10} font={12} />
+                ))}
+              </div>
+              {logoAwards.length > 0 && (
+                <div style={{ fontSize: 18, lineHeight: 1.3, fontWeight: 700, color: t.text }}>
                   {logoAwards.length > 1 ? '+ спецвідзнаки від партнерів' : '+ спецвідзнака від партнера'}
                 </div>
-              </div>
-            )}
-            <img src="/logo_white.png" alt="FICE" style={{ display: 'block', height: 34, width: 'auto', flexShrink: 0 }} />
+              )}
+            </div>
           </div>
         )}
 
