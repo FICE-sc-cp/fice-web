@@ -542,7 +542,12 @@ function MiniAppContent() {
       const inName = item.fullName.toLowerCase().includes(q);
       const inGroup = item.group.toLowerCase().includes(q);
       const inTg = item.telegramTag.toLowerCase().includes(q);
-      return inName || inGroup || inTg;
+      // The number under the ticket QR: the first characters of its code.
+      const code = q.replace(/^#/, '');
+      const inTicket =
+        /^[0-9a-f]{4,}$/.test(code) &&
+        (item.ticketCode || item.id).toLowerCase().startsWith(code);
+      return inName || inGroup || inTg || inTicket;
     });
   }, [checkInList, checkInFilter, checkInSearch]);
 
@@ -1586,7 +1591,7 @@ function MiniAppContent() {
                   type="text"
                   value={checkInSearch}
                   onChange={(e) => setCheckInSearch(e.target.value)}
-                  placeholder="Швидкий пошук: ПІБ, група, @тег..."
+                  placeholder="Швидкий пошук: ПІБ, група, @тег, № квитка..."
                   className="w-full rounded-xl border border-border bg-bg px-3.5 py-2 text-xs text-fg placeholder:text-subtle outline-none transition-colors focus:border-brand-cyan"
                 />
                 {checkInSearch && (
