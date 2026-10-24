@@ -2316,14 +2316,8 @@ function MiniAppContent() {
                   <div className="rounded-3xl border border-brand-green/40 bg-gradient-to-b from-brand-green/10 via-surface/80 to-surface p-5 space-y-4 shadow-xl">
                     <div className="flex items-center justify-between border-b border-border pb-3">
                       <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="relative flex h-2.5 w-2.5">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-green opacity-75" />
-                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-brand-green" />
-                          </span>
-                          <span className="text-xs font-black uppercase tracking-wider text-brand-green">
-                            Ви зареєстровані
-                          </span>
+                        <div className="text-xs font-black uppercase tracking-wider text-brand-green">
+                          Ви зареєстровані
                         </div>
                         <p
                           className={`text-xs ${
@@ -2409,12 +2403,8 @@ function MiniAppContent() {
                               Предʼявіть цей QR-код волонтеру на вході
                             </div>
                           )}
-                          <p className="text-[11px] text-muted flex items-center justify-center gap-1">
-                            <span>🔆</span>
-                            <span>Збільшіть яскравість екрана перед скануванням</span>
-                          </p>
-                          <p className="text-[10px] text-subtle">
-                            Працює навіть без інтернету! Можна зберегти або зробити скриншот.
+                          <p className="text-[11px] text-muted">
+                            Збільшіть яскравість екрана перед скануванням
                           </p>
                         </div>
                       </div>
