@@ -217,6 +217,7 @@ const CSS = `
 @keyframes b7{0%{opacity:0;transform:translate(0,0) rotate(0) scale(.3)}8%{opacity:1;transform:translate(0,0) scale(1)}45%{transform:translate(60px,-300px) rotate(-260deg)}100%{opacity:0;transform:translate(90px,380px) rotate(-620deg)}}
 .dash{animation:dash .8s linear infinite}
 @keyframes dash{from{background-position:0 0}to{background-position:28px 0}}
+@keyframes ringspin{to{transform:rotate(360deg)}}
 @keyframes fall{0%{opacity:0;transform:translate3d(0,0,0) rotate(0)}6%{opacity:1}100%{opacity:.9;transform:translate3d(70px,1180px,0) rotate(720deg)}}
 `;
 
@@ -768,6 +769,7 @@ export default function LiveVotingScreenPage() {
   const saluteList = salute ? [...burst(320, 760, 34, 21, t, 0), ...burst(960, 620, 34, 22, t, 0.25), ...burst(1600, 760, 34, 23, t, 0.5)] : [];
   const dimOp = !isCer ? 0 : step === 5 ? 0.55 : step === 1 || step === 3 || (award && !awardOpen) ? 0.32 : 0;
   const logoAwards = (data?.partnerAwards ?? []).filter((a) => a.showLogo);
+  const ring = `conic-gradient(${t.conf.join(', ')}, ${t.conf[0]})`;
 
   const snow = t.id === 'ny'
     ? Array.from({ length: 46 }, (_, i) => {
@@ -1211,7 +1213,9 @@ export default function LiveVotingScreenPage() {
             </div>
 
             <div className="fadeup" style={{ position: 'absolute', left: 170, top: 340, width: 700, display: 'flex', flexDirection: 'column', gap: 22, zIndex: 6, animationDelay: '0.2s' }}>
-              <PartnerLogo name={award.partnerName} logo={award.partnerLogo} w={560} h={240} radius={24} font={44} extra={{ boxShadow: '0 30px 80px rgba(0, 0, 0, 0.45)' }} />
+              <div style={{ width: 560, height: 240, boxSizing: 'border-box', padding: 6, borderRadius: 30, background: t.grad, boxShadow: `0 30px 80px rgba(0, 0, 0, 0.45), 0 0 60px ${t.a1}40` }}>
+                <PartnerLogo name={award.partnerName} logo={award.partnerLogo} w={548} h={228} radius={24} font={44} />
+              </div>
               <div style={{ marginTop: 14, fontFamily: t.display, fontWeight: t.dw, fontStyle: t.ds, fontSize: 60, lineHeight: 1.05, letterSpacing: t.dls, color: t.text }}>{award.partnerName}</div>
               {award.prize && <div style={{ fontSize: 32, lineHeight: 1.3, fontWeight: 700, color: t.muted }}>Приз: {award.prize}</div>}
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 24, fontWeight: 600, color: t.subtle }}>
@@ -1259,8 +1263,10 @@ export default function LiveVotingScreenPage() {
                       )}
                     </div>
                     <div className="stamp" style={{ position: 'absolute', left: -26, top: 34, padding: '12px 26px', borderRadius: 14, background: t.badgeBg, color: t.badgeText, fontFamily: t.badgeFont, fontSize: 28, fontWeight: 900, letterSpacing: t.badgeLS, textTransform: 'uppercase', boxShadow: `0 0 0 5px ${t.ring}`, whiteSpace: 'nowrap' }}>{award.title}</div>
-                    <div className="stamp" style={{ position: 'absolute', right: -34, bottom: 120, animationDelay: '1.35s' }}>
-                      <PartnerLogo name={award.partnerName} logo={award.partnerLogo} w={132} h={132} radius="50%" font={16} extra={{ boxShadow: `0 0 0 6px ${t.ring}` }} />
+                    <div className="stamp" style={{ position: 'absolute', right: -64, top: 210, width: 212, height: 212, animationDelay: '1.35s' }}>
+                      <div aria-hidden="true" style={{ position: 'absolute', inset: -12, borderRadius: '50%', background: ring, filter: 'blur(14px)', opacity: 0.8, animation: 'ringspin 7s linear infinite' }} />
+                      <div aria-hidden="true" style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: ring, animation: 'ringspin 7s linear infinite' }} />
+                      <PartnerLogo name={award.partnerName} logo={award.partnerLogo} w={188} h={188} radius="50%" font={22} extra={{ position: 'absolute', left: 12, top: 12, boxShadow: `0 0 0 4px ${t.ring}` }} />
                     </div>
                   </div>
                   <div className="flash" aria-hidden="true" />
