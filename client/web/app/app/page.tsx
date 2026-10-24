@@ -50,6 +50,30 @@ function getAgeInfo(birthDate?: string | null) {
   return { age, isAdult: age >= 18 };
 }
 
+// The payment state the door acts on: the same on the scan card and in the check-in list.
+function PaymentBadge({
+  payment,
+  paymentStatus,
+  className,
+}: {
+  payment?: string | null;
+  paymentStatus?: string | null;
+  className: string;
+}) {
+  const [label, tone] =
+    paymentStatus === 'CONFIRMED'
+      ? ['✓ Оплачено', 'border-brand-green/40 bg-brand-green/15 text-brand-green']
+      : payment === 'AT_EVENT'
+        ? ['💵 На вході', 'border-brand-orange/40 bg-brand-orange/15 text-brand-orange']
+        : paymentStatus === 'REJECTED'
+          ? ['✕ Відхилено', 'border-red-500/40 bg-red-500/15 text-red-400']
+          : paymentStatus === 'PENDING'
+            ? ['⏳ На перевірці', 'border-amber-500/40 bg-amber-500/15 text-amber-300']
+            : [null, ''];
+  if (!label) return null;
+  return <span className={cn('border font-bold', tone, className)}>{label}</span>;
+}
+
 function pluralizeEvents(count: number): string {
   const mod10 = count % 10;
   const mod100 = count % 100;
@@ -1699,11 +1723,11 @@ function MiniAppContent() {
                             {item.telegramTag}
                           </a>
                         )}
-                        {item.payment && item.payment !== 'NONE' && (
-                          <span className="rounded-md border border-brand-orange/30 bg-brand-orange/10 px-1.5 py-0.5 text-brand-orange text-[10px] font-bold">
-                            {item.payment === 'DONATED' ? 'Задонатив' : 'На вході'}
-                          </span>
-                        )}
+                        <PaymentBadge
+                          payment={item.payment}
+                          paymentStatus={item.paymentStatus}
+                          className="rounded-md px-1.5 py-0.5 text-[10px]"
+                        />
                       </div>
                       {item.attended && item.attendedAt && (
                         <div className="text-[10px] text-brand-green font-medium">
@@ -1827,23 +1851,11 @@ function MiniAppContent() {
                           </span>
                         )}
 
-                        {scanModal.registration.paymentStatus === 'CONFIRMED' ? (
-                          <span className="rounded-lg border border-brand-green/40 bg-brand-green/15 px-2 py-0.5 text-[11px] font-bold text-brand-green">
-                            ✓ Оплачено
-                          </span>
-                        ) : scanModal.registration.payment === 'AT_EVENT' ? (
-                          <span className="rounded-lg border border-brand-orange/40 bg-brand-orange/15 px-2 py-0.5 text-[11px] font-bold text-brand-orange">
-                            💵 На вході
-                          </span>
-                        ) : scanModal.registration.paymentStatus === 'REJECTED' ? (
-                          <span className="rounded-lg border border-red-500/40 bg-red-500/15 px-2 py-0.5 text-[11px] font-bold text-red-400">
-                            ✕ Відхилено
-                          </span>
-                        ) : scanModal.registration.paymentStatus === 'PENDING' ? (
-                          <span className="rounded-lg border border-amber-500/40 bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold text-amber-300">
-                            ⏳ На перевірці
-                          </span>
-                        ) : null}
+                        <PaymentBadge
+                          payment={scanModal.registration.payment}
+                          paymentStatus={scanModal.registration.paymentStatus}
+                          className="rounded-lg px-2 py-0.5 text-[11px]"
+                        />
                       </div>
 
                       {/* Telegram tag & Ticket info */}
