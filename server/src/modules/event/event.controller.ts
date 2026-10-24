@@ -114,21 +114,6 @@ export class EventController {
     return this.eventService.getRegistrationSession(token);
   }
 
-  @Get('checkin/events')
-  @ApiOperation({ summary: 'List events where user has check-in permissions' })
-  getCheckInEvents(
-    @Headers('x-telegram-init-data') initData?: string,
-    @Query('tgUserId') queryTgUserId?: string,
-    @Query('tgTag') queryTgTag?: string,
-  ) {
-    const { telegramId, username } = this.resolveTelegramUser(
-      initData,
-      queryTgUserId,
-      queryTgTag,
-    );
-    return this.eventService.getCheckInEvents(telegramId, username);
-  }
-
   @Get(':id')
   @ApiOperation({ summary: 'Get an event by id' })
   @ApiOkResponse({ type: EventEntity })

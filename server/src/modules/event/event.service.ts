@@ -1178,39 +1178,4 @@ export class EventService {
       },
     };
   }
-
-  async getCheckInEvents(telegramId?: bigint, username?: string) {
-    const adminGroupId = this.configService.get<string>('ADMIN_GROUP_CHAT_ID');
-    let isAdmin = false;
-    if (telegramId && adminGroupId) {
-      isAdmin = await this.botService.isUserInChat(
-        adminGroupId,
-        Number(telegramId),
-      );
-    }
-    if (this.configService.get<string>('AUTH_DISABLED') === 'true') {
-      isAdmin = true;
-    }
-
-    if (!isAdmin && telegramId === undefined) return [];
-
-    const events = await this.prisma.event.findMany({
-      where: {
-        isDraft: false,
-        ...(isAdmin ? {} : { checkInStaffIds: { has: telegramId } }),
-      },
-      orderBy: { date: 'desc' },
-      take: 30,
-      select: {
-        id: true,
-        name: true,
-        date: true,
-        hasTime: true,
-        location: true,
-        photoUrl: true,
-        _count: { select: { registrations: true } },
-      },
-    });
-    return events.map((e) => ({ ...e, isAdmin }));
-  }
 }
