@@ -159,10 +159,10 @@ export class VotingController {
   @Post(':id/notify')
   @Admin()
   @ApiOperation({
-    summary: 'Broadcast voting launch to event attendees (admin)',
+    summary: 'Announce the open entries or the vote to the event (admin)',
   })
-  notifyVotingStarted(@Param('id', ParseUUIDPipe) id: string) {
-    return this.votingService.notifyVotingStarted(id);
+  announceStage(@Param('id', ParseUUIDPipe) id: string) {
+    return this.votingService.announceStage(id);
   }
 
   @Get(':id/submissions')

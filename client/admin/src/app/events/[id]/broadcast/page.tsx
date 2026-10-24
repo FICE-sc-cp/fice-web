@@ -46,8 +46,8 @@ export default function EventBroadcastPage() {
     if (!isInitialLoad.current) return;
     isInitialLoad.current = false;
 
-    if (templateParam === 'costume_contest') {
-      applyTemplate('costume_contest');
+    if (templateParam === 'costume_contest' || templateParam === 'voting_start') {
+      applyTemplate(templateParam);
       return;
     }
 
@@ -108,9 +108,9 @@ export default function EventBroadcastPage() {
     return preview?.defaultUrls?.webEvent || '';
   };
 
-  // If costume_contest template is used and preview loads later, update empty buttonUrl
+  // If a nomination template is used and preview loads later, update empty buttonUrl
   useEffect(() => {
-    if (templateParam === 'costume_contest' && !buttonUrl) {
+    if ((templateParam === 'costume_contest' || templateParam === 'voting_start') && !buttonUrl) {
       const link = getContestLink();
       if (link) setButtonUrl(link);
     }

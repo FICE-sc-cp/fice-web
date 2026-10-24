@@ -1014,19 +1014,28 @@ export class VotingService {
     return Buffer.from(uint8);
   }
 
-  async notifyVotingStarted(votingId: string) {
+  /** Tells the event's participants about the open stage: entries or the vote. */
+  async announceStage(votingId: string) {
     const voting = await this.prisma.eventVoting.findUnique({
       where: { id: votingId },
       include: { event: { select: { id: true, name: true } } },
     });
     if (!voting) throw new NotFoundException(`Voting ${votingId} not found`);
 
-    // Everyone registered with a Telegram id, or only those checked in
+    const stage = stageOf(voting);
+    if (stage !== 'submissions' && stage !== 'voting') {
+      throw new BadRequestException(
+        'Оголосити можна прийом заявок або голосування, а номінація зараз закрита',
+      );
+    }
+    const entries = stage === 'submissions';
+
+    // Everyone registered with a Telegram id; a present-only vote goes to those checked in
     const registrations = await this.prisma.eventRegistration.findMany({
       where: {
         eventId: voting.eventId,
         telegramUserId: { not: null },
-        ...(voting.onlyAttended && { attended: true }),
+        ...(!entries && voting.onlyAttended && { attended: true }),
       },
       select: { telegramUserId: true },
     });
@@ -1038,14 +1047,23 @@ export class VotingService {
     const appUrl = this.userBot.getMiniAppUrl();
     const votingUrl = `${appUrl}?startapp=vote_${votingId}`;
 
-    const text =
-      `<b>Розпочалося голосування!</b>\n\n` +
-      `На заході <b>«${escapeHtml(voting.event.name)}»</b> відкрито голосування в номінації:\n` +
-      `<b>«${escapeHtml(voting.title)}»</b>\n\n` +
-      (voting.description ? `${escapeHtml(voting.description)}\n\n` : '') +
-      `Переходь за кнопкою нижче та віддай свій голос:`;
+    const event = escapeHtml(voting.event.name);
+    const title = escapeHtml(voting.title);
+    const about = voting.description
+      ? `${escapeHtml(voting.description)}\n\n`
+      : '';
+    const text = entries
+      ? `🎭 <b>Відкрито прийом заявок!</b>\n\n` +
+        `На заході <b>«${event}»</b> стартує конкурс <b>«${title}»</b>.\n\n` +
+        about +
+        `Надсилай фото свого образу за кнопкою нижче — переможців обере голосування! 🏆`
+      : `<b>Розпочалося голосування!</b>\n\n` +
+        `На заході <b>«${event}»</b> відкрито голосування в номінації:\n` +
+        `<b>«${title}»</b>\n\n` +
+        about +
+        `Переходь за кнопкою нижче та віддай свій голос:`;
 
-    const buttonText = 'Взяти участь у голосуванні';
+    const buttonText = entries ? 'Подати заявку' : 'Взяти участь у голосуванні';
     return this.broadcasts.startBroadcast(
       {
         eventId: voting.eventId,

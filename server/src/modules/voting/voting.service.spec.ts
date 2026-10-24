@@ -70,6 +70,67 @@ describe('VotingService', () => {
     service = new VotingService(prisma, userBot, config, {} as never);
   });
 
+  describe('announceStage', () => {
+    const broadcasts = { startBroadcast: jest.fn().mockResolvedValue({}) };
+    const voting = (submissionsOpen: boolean) => ({
+      id: 'vote-uuid',
+      eventId: 'event-uuid',
+      title: 'Костюм',
+      description: null,
+      status: VotingStatus.ACTIVE,
+      allowSubmissions: true,
+      submissionsOpen,
+      onlyAttended: true,
+      event: { id: 'event-uuid', name: 'Гелловін' },
+    });
+
+    beforeEach(() => {
+      service = new VotingService(prisma, userBot, config, broadcasts as never);
+      broadcasts.startBroadcast.mockClear();
+      prisma.eventRegistration.findMany.mockResolvedValue([
+        { telegramUserId: BigInt(1) },
+      ]);
+    });
+
+    it('calls everyone registered to send entries', async () => {
+      prisma.eventVoting.findUnique.mockResolvedValue(voting(true));
+
+      await service.announceStage('vote-uuid');
+
+      expect(
+        prisma.eventRegistration.findMany.mock.calls[0][0].where,
+      ).not.toHaveProperty('attended');
+      expect(broadcasts.startBroadcast.mock.calls[0][0].text).toContain(
+        'прийом заявок',
+      );
+    });
+
+    it('calls only people checked in to a present-only vote', async () => {
+      prisma.eventVoting.findUnique.mockResolvedValue(voting(false));
+
+      await service.announceStage('vote-uuid');
+
+      expect(
+        prisma.eventRegistration.findMany.mock.calls[0][0].where,
+      ).toMatchObject({ attended: true });
+      expect(broadcasts.startBroadcast.mock.calls[0][0].text).toContain(
+        'голосування',
+      );
+    });
+
+    it('has nothing to announce in a draft', async () => {
+      prisma.eventVoting.findUnique.mockResolvedValue({
+        ...voting(false),
+        status: VotingStatus.DRAFT,
+      });
+
+      await expect(service.announceStage('vote-uuid')).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(broadcasts.startBroadcast).not.toHaveBeenCalled();
+    });
+  });
+
   describe('castVote', () => {
     const votingId = 'vote-uuid';
     const candidateId = 'cand-uuid';

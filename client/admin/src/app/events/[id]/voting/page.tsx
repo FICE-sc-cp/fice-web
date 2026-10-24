@@ -298,12 +298,12 @@ export default function EventVotingPage() {
   });
 
   const notifyMutation = useMutation({
-    mutationFn: (vId: string) => api.notifyVotingStarted(vId),
+    mutationFn: (vId: string) => api.announceVotingStage(vId),
     onSuccess: (res) => {
       setNotifyVotingId(null);
       hapticNotify('success');
       setNotifyMsg(
-        `Сповіщення надсилається ${res.recipientsCount} зареєстрованим учасникам. Прогрес — в історії розсилок.`,
+        `Розсилка йде ${res.recipientsCount} учасникам. Прогрес — в історії розсилок.`,
       );
     },
   });
@@ -495,19 +495,27 @@ export default function EventVotingPage() {
                 <p className="text-[11px] text-muted">{STAGES[v.stage].hint}</p>
               </div>
 
-              {/* Broadcast Action Bar */}
-              {v.stage === 'voting' && (
-                <div className="flex items-center justify-between gap-2 rounded-xl border border-brand-green/30 bg-brand-green/10 px-3 py-2">
-                  <span className="text-xs text-brand-green font-medium">
-                    Голосування відкрите для учасників
+              {/* Announce the open stage: one tap, or your own text on the broadcast page */}
+              {(v.stage === 'submissions' || v.stage === 'voting') && (
+                <div className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2 ${STAGES[v.stage].on}`}>
+                  <span className="text-xs font-medium">
+                    {v.stage === 'voting' ? 'Голосування відкрите для учасників' : 'Прийом заявок відкрито'}
                   </span>
-                  <Button
-                    variant="outline"
-                    className="text-xs px-3 py-1 border-brand-green/40 text-brand-green hover:bg-brand-green/20"
-                    onClick={() => setNotifyVotingId(v.id)}
-                  >
-                    Оголосити старт (розсилка)
-                  </Button>
+                  <div className="flex items-center gap-3">
+                    <Link
+                      href={`/events/${eventId}/broadcast?template=${v.stage === 'voting' ? 'voting_start' : 'costume_contest'}&votingId=${v.id}`}
+                      className="text-xs underline opacity-80 hover:opacity-100"
+                    >
+                      Свій текст
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => setNotifyVotingId(v.id)}
+                      className="rounded-lg border border-current px-3 py-1 text-xs font-bold hover:bg-white/10"
+                    >
+                      📣 {v.stage === 'voting' ? 'Оголосити голосування' : 'Оголосити прийом заявок'}
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -614,12 +622,6 @@ export default function EventVotingPage() {
               {v.allowSubmissions && (
                 <div className="pt-3 border-t border-border space-y-3">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Link
-                      href={`/events/${eventId}/broadcast?template=costume_contest&votingId=${v.id}`}
-                      className="text-xs px-2.5 py-1 rounded-lg border border-purple-500/40 bg-purple-500/10 text-purple-300 hover:bg-purple-500/20 font-medium"
-                    >
-                      Швидка розсилка про конкурс
-                    </Link>
                     <Button
                       variant="outline"
                       className="text-xs px-3 py-1"
@@ -1005,8 +1007,18 @@ export default function EventVotingPage() {
       {/* Notify Confirm Dialog */}
       <ConfirmDialog
         open={!!notifyVotingId}
-        title="Оголосити початок голосування"
-        message="Надіслати всім зареєстрованим учасникам заходу розсилку в Telegram про те, що голосування розпочато?"
+        title={
+          votings?.find((x) => x.id === notifyVotingId)?.stage === 'submissions'
+            ? 'Оголосити прийом заявок'
+            : 'Оголосити голосування'
+        }
+        message={
+          votings?.find((x) => x.id === notifyVotingId)?.stage === 'submissions'
+            ? 'Надіслати зареєстрованим учасникам заходу розсилку в Telegram про те, що прийом заявок відкрито?'
+            : votings?.find((x) => x.id === notifyVotingId)?.onlyAttended
+              ? 'Надіслати розсилку про старт голосування тим, кого відмітили на вході?'
+              : 'Надіслати зареєстрованим учасникам заходу розсилку в Telegram про те, що голосування розпочато?'
+        }
         confirmLabel="Розіслати"
         loading={notifyMutation.isPending}
         error={notifyMutation.error}

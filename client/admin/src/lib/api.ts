@@ -867,7 +867,7 @@ export const api = {
     if (!res.ok) throw new Error(`Помилка ${res.status}`);
     return res.blob();
   },
-  notifyVotingStarted: (id: string) =>
+  announceVotingStage: (id: string) =>
     request<{
       id: string;
       ok: boolean;
