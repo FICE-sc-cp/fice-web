@@ -2362,6 +2362,83 @@ function MiniAppContent() {
                       </div>
                     </div>
 
+                    {/* Ticket QR or Payment Review Status */}
+                    {existingReg.paymentStatus === 'PENDING' ? (
+                      <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3.5 space-y-2">
+                        <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-300">
+                          <span className="animate-pulse">⏳</span>
+                          <span>Оплата на перевірці</span>
+                        </div>
+                        <p className="text-xs text-amber-200/90 leading-relaxed">
+                          Організатори перевіряють вашу квитанцію. Щойно оплату буде підтверджено, тут зʼявиться ваш персональний QR-код для проходу на захід.
+                        </p>
+                        {existingReg.receiptUrl && (
+                          <a
+                            href={mediaUrl(existingReg.receiptUrl) || '#'}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1 text-xs text-brand-cyan hover:underline font-semibold pt-0.5"
+                          >
+                            <span>Переглянути завантажену квитанцію</span>
+                            <span>↗</span>
+                          </a>
+                        )}
+                      </div>
+                    ) : existingReg.paymentStatus === 'REJECTED' ? (
+                      <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-3.5 space-y-1.5">
+                        <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-red-400">
+                          <span>❌</span>
+                          <span>Оплату не підтверджено</span>
+                        </div>
+                        <p className="text-xs text-red-300/90 leading-relaxed">
+                          {existingReg.paymentRejectionReason
+                            ? `Причина: ${existingReg.paymentRejectionReason}`
+                            : 'Квитанцію відхилено або оплату не знайдено.'}
+                        </p>
+                        <p className="text-[11px] text-muted">
+                          Будь ласка, зверніться до організаторів для уточнення.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4 flex flex-col items-center text-center space-y-3">
+                        <div className="flex items-center justify-between w-full">
+                          <span className="text-[11px] font-mono font-bold text-brand-cyan tracking-wider">
+                            КВИТОК #{((existingReg.ticketCode || existingReg.id).slice(0, 8)).toUpperCase()}
+                          </span>
+                        </div>
+
+                        {/* QR Code Container - MUST have white background so black QR is readable in dark themes */}
+                        <div className="p-3.5 rounded-2xl bg-white shadow-lg inline-block">
+                          <QRCodeSVG
+                            value={`FICE-TICKET:${existingReg.ticketCode || existingReg.id}`}
+                            size={180}
+                            level="M"
+                            includeMargin={false}
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          {existingReg.attended ? (
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-brand-green/20 border border-brand-green/40 text-brand-green text-xs font-bold">
+                              <span>✓</span>
+                              <span>Ви вже пройшли на захід</span>
+                            </div>
+                          ) : (
+                            <div className="text-xs font-bold text-fg">
+                              Предʼявіть цей QR-код волонтеру на вході
+                            </div>
+                          )}
+                          <p className="text-[11px] text-muted flex items-center justify-center gap-1">
+                            <span>🔆</span>
+                            <span>Збільшіть яскравість екрана перед скануванням</span>
+                          </p>
+                          <p className="text-[10px] text-subtle">
+                            Працює навіть без інтернету! Можна зберегти або зробити скриншот.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="rounded-2xl border border-border/80 bg-surface/80 p-3.5 space-y-2 text-xs">
                       <div className="flex justify-between items-center">
                         <span className="text-muted">Учасник:</span>
@@ -3085,83 +3162,6 @@ function MiniAppContent() {
                       </div>
                     </div>
 
-                    {/* Ticket QR or Payment Review Status */}
-                    {reg.paymentStatus === 'PENDING' ? (
-                      <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3.5 space-y-2">
-                        <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-300">
-                          <span className="animate-pulse">⏳</span>
-                          <span>Оплата на перевірці</span>
-                        </div>
-                        <p className="text-xs text-amber-200/90 leading-relaxed">
-                          Організатори перевіряють вашу квитанцію. Щойно оплату буде підтверджено, тут зʼявиться ваш персональний QR-код для проходу на захід.
-                        </p>
-                        {reg.receiptUrl && (
-                          <a
-                            href={mediaUrl(reg.receiptUrl) || '#'}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-brand-cyan hover:underline font-semibold pt-0.5"
-                          >
-                            <span>Переглянути завантажену квитанцію</span>
-                            <span>↗</span>
-                          </a>
-                        )}
-                      </div>
-                    ) : reg.paymentStatus === 'REJECTED' ? (
-                      <div className="rounded-2xl border border-red-500/30 bg-red-500/10 p-3.5 space-y-1.5">
-                        <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-red-400">
-                          <span>❌</span>
-                          <span>Оплату не підтверджено</span>
-                        </div>
-                        <p className="text-xs text-red-300/90 leading-relaxed">
-                          {reg.paymentRejectionReason
-                            ? `Причина: ${reg.paymentRejectionReason}`
-                            : 'Квитанцію відхилено або оплату не знайдено.'}
-                        </p>
-                        <p className="text-[11px] text-muted">
-                          Будь ласка, зверніться до організаторів для уточнення.
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="rounded-2xl border border-white/10 bg-white/5 p-4 flex flex-col items-center text-center space-y-3">
-                        <div className="flex items-center justify-between w-full">
-                          <span className="text-[11px] font-mono font-bold text-brand-cyan tracking-wider">
-                            КВИТОК #{((reg.ticketCode || reg.id).slice(0, 8)).toUpperCase()}
-                          </span>
-                        </div>
-
-                        {/* QR Code Container - MUST have white background so black QR is readable in dark themes */}
-                        <div className="p-3.5 rounded-2xl bg-white shadow-lg inline-block">
-                          <QRCodeSVG
-                            value={`FICE-TICKET:${reg.ticketCode || reg.id}`}
-                            size={180}
-                            level="M"
-                            includeMargin={false}
-                          />
-                        </div>
-
-                        <div className="space-y-1">
-                          {reg.attended ? (
-                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-brand-green/20 border border-brand-green/40 text-brand-green text-xs font-bold">
-                              <span>✓</span>
-                              <span>Ви вже пройшли на захід</span>
-                            </div>
-                          ) : (
-                            <div className="text-xs font-bold text-fg">
-                              Предʼявіть цей QR-код волонтеру на вході
-                            </div>
-                          )}
-                          <p className="text-[11px] text-muted flex items-center justify-center gap-1">
-                            <span>🔆</span>
-                            <span>Збільшіть яскравість екрана перед скануванням</span>
-                          </p>
-                          <p className="text-[10px] text-subtle">
-                            Працює навіть без інтернету! Можна зберегти або зробити скриншот.
-                          </p>
-                        </div>
-                      </div>
-                    )}
-
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
@@ -3170,7 +3170,7 @@ function MiniAppContent() {
                         }}
                         className="flex-1 text-xs font-bold py-2.5"
                       >
-                        Інформація заходу
+                        Квиток і деталі заходу
                       </Button>
                     </div>
                   </div>
