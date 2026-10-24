@@ -1110,7 +1110,11 @@ function MiniAppContent() {
                     </div>
                   )}
 
-                  {votingData.onlyRegistered && !votingData.isRegistered && !votingData.hasVoted && (
+                  {/* While entries are open the contest card asks to register itself. */}
+                  {votingData.stage === 'voting' &&
+                    votingData.onlyRegistered &&
+                    !votingData.isRegistered &&
+                    !votingData.hasVoted && (
                     <div className="rounded-2xl border border-yellow-500/40 bg-yellow-500/10 p-3.5 space-y-2.5">
                       <div className="flex items-center gap-2 text-xs font-bold text-yellow-300">
                         <svg
@@ -1412,23 +1416,6 @@ function MiniAppContent() {
                                   onClick={() => handleVote(cand.id)}
                                 >
                                   Проголосувати
-                                </Button>
-                              )}
-
-                            {!votingData.hasVoted &&
-                              votingData.stage === 'voting' &&
-                              votingData.onlyRegistered &&
-                              !votingData.isRegistered && (
-                                <Button
-                                  variant="outline"
-                                  className="px-3 py-2 text-xs font-semibold border-yellow-500/40 text-yellow-300 hover:bg-yellow-500/10 shrink-0"
-                                  onClick={() => {
-                                    setSelectedEventId(votingData.eventId);
-                                    setActiveVotingId(null);
-                                    setActiveTab('events');
-                                  }}
-                                >
-                                  Зареєструватись
                                 </Button>
                               )}
 
