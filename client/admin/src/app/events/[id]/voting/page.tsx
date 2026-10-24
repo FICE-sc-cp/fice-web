@@ -380,10 +380,10 @@ export default function EventVotingPage() {
               key={v.id}
               className="rounded-2xl border border-border bg-surface p-5 space-y-4"
             >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-extrabold text-lg text-fg">{v.title}</h3>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0 grow basis-60">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <h3 className="font-extrabold text-lg text-fg break-words">{v.title}</h3>
                     <span
                       className={`text-xs px-2 py-0.5 rounded-full border font-bold uppercase tracking-wider ${STAGES[v.stage].on}`}
                     >
@@ -400,7 +400,7 @@ export default function EventVotingPage() {
                     <span>{v.allowChangeVote ? 'Зміна голосу: так' : 'Зміна голосу: ні'}</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex shrink-0 items-center gap-2">
                   <button
                     type="button"
                     onClick={() =>
