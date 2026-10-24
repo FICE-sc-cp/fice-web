@@ -48,6 +48,13 @@ export interface TelegramUser {
   username?: string;
 }
 
+/** Opens a t.me link inside Telegram from a Mini App, in a new tab elsewhere. */
+export function openTelegram(url: string) {
+  const webApp = window.Telegram?.WebApp;
+  if (webApp?.openTelegramLink) webApp.openTelegramLink(url);
+  else window.open(url, '_blank');
+}
+
 let activeBackHandler: (() => void) | null = null;
 
 export function useTelegram() {

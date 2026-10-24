@@ -15,7 +15,7 @@ import {
   type RegistrationPayment,
 } from '@/lib/api';
 import { renderRichInline } from '@/lib/richText';
-import { useTelegram } from '@/lib/telegram';
+import { openTelegram, useTelegram } from '@/lib/telegram';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
@@ -3202,6 +3202,27 @@ function MiniAppContent() {
                   : 'Зберегти зміни'}
               </Button>
             </form>
+
+            {/* Where to write when something goes wrong */}
+            <div className="rounded-2xl border border-border bg-surface p-4 space-y-3">
+              <div className="space-y-1">
+                <h3 className="text-sm font-black text-fg">Потрібна допомога?</h3>
+                <p className="text-xs text-muted leading-relaxed">
+                  Не виходить зареєструватися, завантажити квитанцію чи знайти квиток? Напишіть у бот зворотного звʼязку Студради — допоможемо.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  haptic('light');
+                  openTelegram('https://t.me/fice_robot');
+                }}
+                className="w-full text-xs font-bold"
+              >
+                Написати в @fice_robot
+              </Button>
+            </div>
           </div>
         )}
       </main>

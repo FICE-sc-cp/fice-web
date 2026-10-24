@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import Image from 'next/image';
-import { useTelegram } from '@/lib/telegram';
+import { openTelegram, useTelegram } from '@/lib/telegram';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
@@ -64,12 +64,6 @@ const errorText = (err: unknown) =>
   err instanceof Error ? err.message : 'Щось пішло не так, спробуй ще раз';
 
 const deptLabel = (d?: StaffDepartment) => d?.shortName ?? d?.name ?? '';
-
-function openTelegram(url: string) {
-  const webApp = window.Telegram?.WebApp;
-  if (webApp?.openTelegramLink) webApp.openTelegramLink(url);
-  else window.open(url, '_blank');
-}
 
 /** Runs one mutation at a time with an error message and haptics. */
 function useAction(tg: Tg) {
