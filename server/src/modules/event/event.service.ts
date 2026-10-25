@@ -39,6 +39,7 @@ import { createRegistrationGuarded } from './registration-writer';
 import { paymentRuleViolation, pendingPaymentSubject } from './payment-rules';
 import { validateAnswers } from './registration-answers';
 import { registrationListWhere } from './registration-filters';
+import { registrationTable } from './registration-table';
 import { RegistrationListQueryDto } from './dto/registration-list-query.dto';
 import { ageOf } from './age';
 import {
@@ -57,18 +58,6 @@ import { UpdateEventDto } from './dto/update-event.dto';
 import { BotService } from '../../bot/bot.service';
 import { UserBotService } from '../../bot/user-bot.service';
 import { resolveValidatedTelegramUser } from '../../auth/init-data.util';
-
-const PAYMENT_LABEL: Record<RegistrationPayment, string> = {
-  NONE: '—',
-  DONATED: 'Задонатив',
-  AT_EVENT: 'На заході',
-};
-
-const SOURCE_LABEL: Record<RegistrationSource, string> = {
-  WEB: 'Сайт',
-  BOT: 'Telegram-бот',
-  ADMIN: 'Додано вручну',
-};
 
 export const SESSION_TOKEN_PATTERN = /^[0-9a-f]{32}$/;
 
@@ -734,61 +723,16 @@ export class EventService {
     const workbook = new ExcelJS.Workbook();
     const sheet = workbook.addWorksheet('Реєстрації');
 
-    const baseHeaders = [
-      'ПІБ',
-      'Telegram',
-      'Група',
-      'Дата народження',
-      'Телефон',
-      'Джерело',
-      'Оплата',
-      'Статус оплати',
-      'Скрін/Чек',
-      'Код квитка',
-      'Зареєстровано',
-      'Присутність',
-      'Час відмітки',
-      'Хто відмітив',
-    ];
-    sheet.columns = [
-      ...baseHeaders,
-      ...event.questions.map((q) => q.label),
-    ].map((header) => ({
+    const [headers, ...rows] = registrationTable(
+      event,
+      this.configService.get<string>('PUBLIC_WEB_URL'),
+    );
+    sheet.columns = headers.map((header) => ({
       header,
       width: Math.min(40, Math.max(16, header.length + 4)),
     }));
     sheet.getRow(1).font = { bold: true };
-
-    for (const reg of event.registrations) {
-      const answerMap = new Map(
-        reg.answers.map((a) => [a.questionId, a.value]),
-      );
-      sheet.addRow([
-        reg.fullName,
-        reg.telegramTag,
-        reg.group,
-        reg.birthDate ? reg.birthDate.toISOString().slice(0, 10) : '',
-        reg.phoneNumber ?? '',
-        SOURCE_LABEL[reg.source],
-        PAYMENT_LABEL[reg.payment],
-        reg.paymentStatus === 'CONFIRMED'
-          ? 'Підтверджено'
-          : reg.paymentStatus === 'REJECTED'
-            ? `Відхилено${reg.paymentRejectionReason ? `: ${reg.paymentRejectionReason}` : ''}`
-            : reg.paymentStatus === 'PENDING'
-              ? 'Очікує підтвердження'
-              : '—',
-        reg.receiptUrl ?? '',
-        reg.ticketCode ?? '',
-        reg.createdAt.toISOString().slice(0, 16).replace('T', ' '),
-        reg.attended ? 'ТАК' : 'НІ',
-        reg.attendedAt
-          ? reg.attendedAt.toISOString().slice(0, 16).replace('T', ' ')
-          : '',
-        reg.attendedBy ?? '',
-        ...event.questions.map((q) => answerMap.get(q.id) ?? ''),
-      ]);
-    }
+    sheet.addRows(rows);
 
     const buffer = await workbook.xlsx.writeBuffer();
     return Buffer.from(buffer as ArrayBuffer);
