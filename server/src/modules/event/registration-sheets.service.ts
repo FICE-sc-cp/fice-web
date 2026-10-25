@@ -1,0 +1,325 @@
+import {
+  BadGatewayException,
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+  OnModuleDestroy,
+  OnModuleInit,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Prisma } from '@prisma/client';
+import { createHash } from 'crypto';
+import { PrismaService } from '../../database/prisma.service';
+import { GoogleSheetsService } from '../applicant/google-sheets.service';
+import {
+  RegistrationTableEvent,
+  registrationTable,
+} from './registration-table';
+
+const API = 'https://sheets.googleapis.com/v4/spreadsheets';
+export const TICK_MS = 30_000;
+// After the first full pass only events of the last week are re-read each
+// tick; older tabs are rewritten at the next start or from the admin button.
+const RECENT_MS = 7 * 24 * 60 * 60_000;
+const PAUSE_AFTER_ERROR_MS = 5 * 60_000;
+// Keeps each batchUpdate far below Google's request size limit.
+const CELLS_PER_CALL = 50_000;
+const FIELDS = 'userEnteredValue,userEnteredFormat.textFormat';
+
+const eventDay = new Intl.DateTimeFormat('uk-UA', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  timeZone: 'Europe/Kyiv',
+});
+
+type SheetEvent = RegistrationTableEvent & {
+  id: string;
+  name: string;
+  date: Date;
+};
+
+export interface SheetProperties {
+  sheetId: number;
+  title: string;
+  gridProperties?: { rowCount?: number; columnCount?: number };
+}
+
+/** The tab id comes from the event id, so a renamed event keeps its tab. */
+export function sheetIdFor(eventId: string): number {
+  return parseInt(eventId.replace(/-/g, '').slice(0, 7), 16) + 1;
+}
+
+function cell(value: string, header: boolean) {
+  const link = /^https?:\/\//.test(value) ? { uri: value } : undefined;
+  return {
+    userEnteredValue: { stringValue: value },
+    ...(header || link
+      ? {
+          userEnteredFormat: {
+            textFormat: { bold: header || undefined, link },
+          },
+        }
+      : {}),
+  };
+}
+
+/**
+ * batchUpdate requests that leave `table` in the first columns of the
+ * event's tab, creating the tab or growing its grid when needed.
+ */
+export function tabRequests(
+  event: { id: string; name: string; date: Date },
+  table: string[][],
+  sheet: SheetProperties | undefined,
+  titles: Set<string>,
+): object[] {
+  const sheetId = sheetIdFor(event.id);
+  const width = table[0].length;
+  const requests: object[] = [];
+  if (!sheet) {
+    let title = `${event.name} (${eventDay.format(event.date)})`;
+    if (titles.has(title)) title += ` #${event.id.slice(0, 4)}`;
+    titles.add(title);
+    requests.push({
+      addSheet: {
+        properties: {
+          sheetId,
+          title,
+          gridProperties: {
+            rowCount: Math.max(1000, table.length),
+            columnCount: Math.max(26, width),
+            frozenRowCount: 1,
+          },
+        },
+      },
+    });
+  } else {
+    const rows = sheet.gridProperties?.rowCount ?? 0;
+    const columns = sheet.gridProperties?.columnCount ?? 0;
+    if (rows < table.length) {
+      requests.push({
+        appendDimension: {
+          sheetId,
+          dimension: 'ROWS',
+          length: table.length - rows,
+        },
+      });
+    }
+    if (columns < width) {
+      requests.push({
+        appendDimension: {
+          sheetId,
+          dimension: 'COLUMNS',
+          length: width - columns,
+        },
+      });
+    }
+  }
+  requests.push(
+    // Wipes what the last write left in these columns, e.g. a deleted registration.
+    {
+      updateCells: {
+        range: { sheetId, startColumnIndex: 0, endColumnIndex: width },
+        fields: FIELDS,
+      },
+    },
+    {
+      updateCells: {
+        start: { sheetId, rowIndex: 0, columnIndex: 0 },
+        rows: table.map((row, i) => ({
+          values: row.map((value) => cell(value, i === 0)),
+        })),
+        fields: FIELDS,
+      },
+    },
+  );
+  return requests;
+}
+
+/**
+ * Mirrors registrations into one Google spreadsheet, a tab per event. The
+ * first pass after a start copies every event; then changed tabs are
+ * rewritten every 30 s. Needs GOOGLE_EVENTS_SPREADSHEET_ID and the service
+ * account of the join applications sheet, with edit access to the file.
+ */
+@Injectable()
+export class RegistrationSheetsService
+  implements OnModuleInit, OnModuleDestroy
+{
+  private readonly logger = new Logger(RegistrationSheetsService.name);
+  private timer?: NodeJS.Timeout;
+  private queue: Promise<unknown> = Promise.resolve();
+  private ticking = false;
+  private backfilled = false;
+  private pausedUntil = 0;
+  // Hash of the table each tab got last, so unchanged tabs are skipped.
+  private readonly written = new Map<string, string>();
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly google: GoogleSheetsService,
+    private readonly config: ConfigService,
+  ) {}
+
+  private get spreadsheetId(): string {
+    return (
+      this.config.get<string>('GOOGLE_EVENTS_SPREADSHEET_ID')?.trim() ?? ''
+    );
+  }
+
+  onModuleInit() {
+    if (!this.spreadsheetId) return;
+    this.timer = setInterval(() => void this.tick(), TICK_MS);
+    this.logger.log(
+      'Registrations are copied to Google Sheets, a tab per event.',
+    );
+  }
+
+  onModuleDestroy() {
+    clearInterval(this.timer);
+  }
+
+  async tick(): Promise<void> {
+    if (this.ticking || Date.now() < this.pausedUntil) return;
+    this.ticking = true;
+    try {
+      await this.exclusive(async () => {
+        const recent = this.backfilled
+          ? { date: { gte: new Date(Date.now() - RECENT_MS) } }
+          : {};
+        const events = await this.load({
+          ...recent,
+          OR: [
+            { registrations: { some: {} } },
+            // A tab whose last registration was deleted still needs clearing.
+            { id: { in: [...this.written.keys()] } },
+          ],
+        });
+        await this.write(events, false);
+        this.backfilled = true;
+      });
+    } catch (err) {
+      this.pausedUntil = Date.now() + PAUSE_AFTER_ERROR_MS;
+      this.logger.warn(
+        `Google Sheets sync failed, next try in 5 min: ${errorText(err)}`,
+      );
+    } finally {
+      this.ticking = false;
+    }
+  }
+
+  /** Rewrites one event's tab now and links to it (the admin button). */
+  async syncEvent(eventId: string): Promise<{ url: string }> {
+    if (!this.spreadsheetId) {
+      throw new BadRequestException(
+        'Google Таблицю для реєстрацій не підключено: на сервері не задано GOOGLE_EVENTS_SPREADSHEET_ID.',
+      );
+    }
+    const found = await this.exclusive(async () => {
+      const events = await this.load({ id: eventId });
+      await this.write(events, true).catch((err: unknown) => {
+        throw new BadGatewayException(
+          `Google Таблиця не прийняла дані: ${errorText(err)}`,
+        );
+      });
+      return events.length > 0;
+    });
+    if (!found) throw new NotFoundException(`Event ${eventId} not found`);
+    this.pausedUntil = 0;
+    return {
+      url: `https://docs.google.com/spreadsheets/d/${this.spreadsheetId}/edit#gid=${sheetIdFor(eventId)}`,
+    };
+  }
+
+  private load(where: Prisma.EventWhereInput): Promise<SheetEvent[]> {
+    return this.prisma.event.findMany({
+      where,
+      orderBy: { date: 'asc' },
+      include: {
+        questions: { orderBy: { order: 'asc' } },
+        registrations: {
+          include: { answers: true },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    });
+  }
+
+  private async write(events: SheetEvent[], force: boolean): Promise<void> {
+    const webUrl = this.config.get<string>('PUBLIC_WEB_URL') ?? '';
+    const tabs = events
+      .map((event) => {
+        const table = registrationTable(event, webUrl);
+        const hash = createHash('sha1')
+          .update(JSON.stringify(table))
+          .digest('hex');
+        return { event, table, hash };
+      })
+      .filter((tab) => force || this.written.get(tab.event.id) !== tab.hash);
+    if (!tabs.length) return;
+
+    const token = await this.google.getAccessToken();
+    const { sheets = [] } = await this.call<{
+      sheets?: { properties: SheetProperties }[];
+    }>(
+      token,
+      '?fields=sheets.properties(sheetId,title,gridProperties(rowCount,columnCount))',
+    );
+    const existing = new Map(
+      sheets.map(({ properties }) => [properties.sheetId, properties]),
+    );
+    const titles = new Set(sheets.map(({ properties }) => properties.title));
+
+    let batch: typeof tabs = [];
+    let cells = 0;
+    const flush = async () => {
+      if (!batch.length) return;
+      const requests = batch.flatMap(({ event, table }) =>
+        tabRequests(event, table, existing.get(sheetIdFor(event.id)), titles),
+      );
+      await this.call(token, ':batchUpdate', { requests });
+      for (const { event, hash } of batch) this.written.set(event.id, hash);
+      batch = [];
+      cells = 0;
+    };
+    for (const tab of tabs) {
+      batch.push(tab);
+      cells += tab.table.length * tab.table[0].length;
+      if (cells >= CELLS_PER_CALL) await flush();
+    }
+    await flush();
+  }
+
+  private async call<T>(
+    token: string,
+    path: string,
+    body?: unknown,
+  ): Promise<T> {
+    const res = await fetch(`${API}/${this.spreadsheetId}${path}`, {
+      method: body ? 'POST' : 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!res.ok) {
+      throw new Error(
+        `Google Sheets ${res.status}: ${(await res.text()).slice(0, 300)}`,
+      );
+    }
+    return (await res.json()) as T;
+  }
+
+  private exclusive<T>(job: () => Promise<T>): Promise<T> {
+    const run = this.queue.then(job);
+    this.queue = run.catch(() => undefined);
+    return run;
+  }
+}
+
+function errorText(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}

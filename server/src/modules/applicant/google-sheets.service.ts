@@ -140,7 +140,7 @@ export class GoogleSheetsService {
     return { spreadsheetId, sheetName, clientEmail, privateKey };
   }
 
-  private async getAccessToken(): Promise<string> {
+  async getAccessToken(): Promise<string> {
     const now = Math.floor(Date.now() / 1000);
     if (this.cachedToken && this.cachedToken.expiresAt > now + 60) {
       return this.cachedToken.token;

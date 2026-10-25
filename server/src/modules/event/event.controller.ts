@@ -54,6 +54,7 @@ import {
   SESSION_TOKEN_PATTERN,
   toPublicEvent,
 } from './event.service';
+import { RegistrationSheetsService } from './registration-sheets.service';
 
 @ApiTags('events')
 @Controller('event')
@@ -63,6 +64,7 @@ export class EventController {
     private readonly configService: ConfigService,
     private readonly adminAccess: AdminAccessService,
     private readonly downloads: DownloadTokenService,
+    private readonly registrationSheets: RegistrationSheetsService,
   ) {}
 
   private resolveTelegramUser(
@@ -317,6 +319,15 @@ export class EventController {
   ) {
     const buffer = await this.eventService.exportRegistrations(id);
     sendXlsx(res, buffer, `event-${id}-registrations.xlsx`);
+  }
+
+  @Post(':id/registrations/sheet')
+  @Admin()
+  @ApiOperation({
+    summary: "Rewrite the event's Google Sheets tab now and link to it (admin)",
+  })
+  syncRegistrationsSheet(@Param('id', ParseUUIDPipe) id: string) {
+    return this.registrationSheets.syncEvent(id);
   }
 
   @Post(':id/registrations')

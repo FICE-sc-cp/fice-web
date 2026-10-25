@@ -94,6 +94,7 @@ services:
       GOOGLE_PRIVATE_KEY: ${GOOGLE_PRIVATE_KEY:-}
       GOOGLE_SERVICE_ACCOUNT_KEY_FILE: ${GOOGLE_SERVICE_ACCOUNT_KEY_FILE:-}
       GOOGLE_SHEETS_WEBHOOK_URL: ${GOOGLE_SHEETS_WEBHOOK_URL:-}
+      GOOGLE_EVENTS_SPREADSHEET_ID: ${GOOGLE_EVENTS_SPREADSHEET_ID:-}
       # Where uploaded images are stored inside the container (persisted via volume).
       UPLOAD_DIR: /app/uploads
     ports:
