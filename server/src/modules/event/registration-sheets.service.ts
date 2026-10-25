@@ -51,18 +51,106 @@ export function sheetIdFor(eventId: string): number {
   return parseInt(eventId.replace(/-/g, '').slice(0, 7), 16) + 1;
 }
 
+const rgb = (hex: string) => ({
+  red: parseInt(hex.slice(1, 3), 16) / 255,
+  green: parseInt(hex.slice(3, 5), 16) / 255,
+  blue: parseInt(hex.slice(5, 7), 16) / 255,
+});
+// The site's violet over white and lavender stripes.
+const WHITE = rgb('#ffffff');
+const VIOLET = rgb('#9810fa');
+const LAVENDER = rgb('#f6f0ff');
+
+// Pixel widths of the base columns; question columns get 200.
+const WIDTH: Record<string, number> = {
+  ПІБ: 200,
+  Telegram: 150,
+  Група: 80,
+  'Дата народження': 120,
+  Телефон: 130,
+  Джерело: 120,
+  Оплата: 100,
+  'Статус оплати': 190,
+  'Скрін/Чек': 200,
+  'Код квитка': 100,
+  Зареєстровано: 140,
+  Присутність: 120,
+  'Час відмітки': 140,
+  'Хто відмітив': 140,
+};
+
 function cell(value: string, header: boolean) {
   const link = /^https?:\/\//.test(value) ? { uri: value } : undefined;
+  const textFormat = header
+    ? { bold: true, foregroundColor: WHITE }
+    : link && { link };
   return {
     userEnteredValue: { stringValue: value },
-    ...(header || link
-      ? {
-          userEnteredFormat: {
-            textFormat: { bold: header || undefined, link },
-          },
-        }
-      : {}),
+    ...(textFormat ? { userEnteredFormat: { textFormat } } : {}),
   };
+}
+
+/**
+ * The looks a new tab gets once: violet header, stripes, filter buttons,
+ * column widths and a warning that edits here get overwritten.
+ */
+function decorate(
+  sheetId: number,
+  header: string[],
+  rows: number,
+  columns: number,
+): object[] {
+  const grid = {
+    sheetId,
+    startRowIndex: 0,
+    endRowIndex: rows,
+    startColumnIndex: 0,
+    endColumnIndex: columns,
+  };
+  return [
+    {
+      addBanding: {
+        bandedRange: {
+          range: grid,
+          rowProperties: {
+            headerColor: VIOLET,
+            firstBandColor: WHITE,
+            secondBandColor: LAVENDER,
+          },
+        },
+      },
+    },
+    { setBasicFilter: { filter: { range: grid } } },
+    {
+      updateDimensionProperties: {
+        range: { sheetId, dimension: 'ROWS', startIndex: 0, endIndex: 1 },
+        properties: { pixelSize: 36 },
+        fields: 'pixelSize',
+      },
+    },
+    ...header.map((title, i) => ({
+      updateDimensionProperties: {
+        range: {
+          sheetId,
+          dimension: 'COLUMNS',
+          startIndex: i,
+          endIndex: i + 1,
+        },
+        properties: { pixelSize: WIDTH[title] ?? 200 },
+        fields: 'pixelSize',
+      },
+    })),
+    {
+      addProtectedRange: {
+        protectedRange: {
+          range: { ...grid, endColumnIndex: header.length },
+          description:
+            'Ці колонки заповнює сайт, правки тут перезапишуться. Присутність відмічає сканер на вході.',
+          warningOnly: true,
+        },
+      },
+    },
+  ];
 }
 
 /**
@@ -82,19 +170,25 @@ export function tabRequests(
     let title = `${event.name} (${eventDay.format(event.date)})`;
     if (titles.has(title)) title += ` #${event.id.slice(0, 4)}`;
     titles.add(title);
-    requests.push({
-      addSheet: {
-        properties: {
-          sheetId,
-          title,
-          gridProperties: {
-            rowCount: Math.max(1000, table.length),
-            columnCount: Math.max(26, width),
-            frozenRowCount: 1,
+    const rowCount = Math.max(1000, table.length);
+    const columnCount = Math.max(26, width);
+    requests.push(
+      {
+        addSheet: {
+          properties: {
+            sheetId,
+            title,
+            gridProperties: {
+              rowCount,
+              columnCount,
+              frozenRowCount: 1,
+              frozenColumnCount: 1,
+            },
           },
         },
       },
-    });
+      ...decorate(sheetId, table[0], rowCount, columnCount),
+    );
   } else {
     const rows = sheet.gridProperties?.rowCount ?? 0;
     const columns = sheet.gridProperties?.columnCount ?? 0;

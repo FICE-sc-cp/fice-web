@@ -83,17 +83,28 @@ describe('tabRequests', () => {
     expect(requests[0].addSheet.properties).toEqual({
       sheetId: sheetIdFor(EVENT_ID),
       title: 'FICEween 2026 (25.10.2026) #7cbc',
-      gridProperties: { rowCount: 1000, columnCount: 26, frozenRowCount: 1 },
+      gridProperties: {
+        rowCount: 1000,
+        columnCount: 26,
+        frozenRowCount: 1,
+        frozenColumnCount: 1,
+      },
     });
-    expect(requests[1].updateCells.range).toEqual({
+    const [clear, write] = requests.filter((r: any) => r.updateCells);
+    expect(clear.updateCells.range).toEqual({
       sheetId: sheetIdFor(EVENT_ID),
       startColumnIndex: 0,
       endColumnIndex: 16,
     });
-    const [head, first] = requests[2].updateCells.rows;
+    const [head, first] = write.updateCells.rows;
     expect(head.values[0]).toEqual({
       userEnteredValue: { stringValue: 'ПІБ' },
-      userEnteredFormat: { textFormat: { bold: true } },
+      userEnteredFormat: {
+        textFormat: {
+          bold: true,
+          foregroundColor: { red: 1, green: 1, blue: 1 },
+        },
+      },
     });
     expect(first.values[0]).toEqual({
       userEnteredValue: { stringValue: 'Шевченко Тарас' },
@@ -101,6 +112,22 @@ describe('tabRequests', () => {
     expect(first.values[8].userEnteredFormat.textFormat.link).toEqual({
       uri: 'https://fice-sc.kpi.ua/uploads/receipt.jpg',
     });
+  });
+
+  it('gives a new tab stripes, filters and an edit warning', () => {
+    const requests = tabRequests(event(), table, undefined, new Set());
+    const find = (key: string) =>
+      requests.filter((r) => key in r) as Record<string, any>[];
+
+    expect(find('addBanding')).toHaveLength(1);
+    expect(find('setBasicFilter')).toHaveLength(1);
+    const [protection] = find('addProtectedRange');
+    expect(protection.addProtectedRange.protectedRange).toMatchObject({
+      warningOnly: true,
+      range: { startColumnIndex: 0, endColumnIndex: 16 },
+    });
+    // The looks go before the data, right after the tab is added.
+    expect(Object.keys(requests[1])).toEqual(['addBanding']);
   });
 
   it('grows an existing tab instead of adding one', () => {
