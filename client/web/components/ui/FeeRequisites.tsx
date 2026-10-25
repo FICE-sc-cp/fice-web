@@ -93,7 +93,7 @@ export function FeeRequisites({ text, className, onCopy }: FeeRequisitesProps) {
   };
 
   return (
-    <div className={cn('flex flex-col items-start gap-2', className)}>
+    <div className={cn('flex flex-col gap-2.5', className)}>
       {lines.map((line, i) => {
         if (line.kind === 'link') {
           return (
@@ -103,9 +103,9 @@ export function FeeRequisites({ text, className, onCopy }: FeeRequisitesProps) {
               target="_blank"
               rel="noopener noreferrer"
               title={line.url}
-              className="inline-flex items-center gap-1.5 font-bold text-brand-cyan underline-offset-2 hover:underline"
+              className="flex items-center justify-between gap-3 rounded-xl border border-brand-cyan/30 bg-brand-cyan/10 px-3.5 py-2.5 font-bold text-brand-cyan transition-colors hover:bg-brand-cyan/15"
             >
-              {line.label || linkLabel(line.url)}
+              <span className="min-w-0">{line.label || linkLabel(line.url)}</span>
               <svg
                 viewBox="0 0 24 24"
                 fill="none"
@@ -114,7 +114,7 @@ export function FeeRequisites({ text, className, onCopy }: FeeRequisitesProps) {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 aria-hidden
-                className="size-3.5 shrink-0"
+                className="size-4 shrink-0"
               >
                 <path d="M7 17 17 7" />
                 <path d="M8 7h9v9" />
@@ -125,26 +125,27 @@ export function FeeRequisites({ text, className, onCopy }: FeeRequisitesProps) {
         if (line.kind === 'card') {
           const done = copied === line.number;
           return (
-            <button
-              key={i}
-              type="button"
-              onClick={() => copy(line.number)}
-              className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-left"
-            >
-              <span>{line.label || 'Номер картки'}:</span>
-              <span className="font-bold tabular-nums text-fg">
-                {line.number}
-              </span>
-              <span
-                aria-live="polite"
-                className={cn(
-                  'text-xs font-bold',
-                  done ? 'text-brand-green' : 'text-brand-cyan',
-                )}
+            <div key={i} className="flex flex-col gap-1">
+              <span className="text-xs">{line.label || 'Номер картки'}</span>
+              <button
+                type="button"
+                onClick={() => copy(line.number)}
+                className="flex flex-col items-start gap-0.5 rounded-xl border border-border bg-surface px-3.5 py-2.5 text-left"
               >
-                {done ? 'Номер картки скопійовано ✓' : 'Копіювати'}
-              </span>
-            </button>
+                <span className="whitespace-nowrap font-mono text-base font-bold tracking-wide text-fg tabular-nums">
+                  {line.number.replace(/\D/g, '').replace(/(\d{4})(?=\d)/g, '$1 ')}
+                </span>
+                <span
+                  aria-live="polite"
+                  className={cn(
+                    'text-xs font-bold',
+                    done ? 'text-brand-green' : 'text-brand-cyan',
+                  )}
+                >
+                  {done ? 'Номер скопійовано ✓' : 'Натисни, щоб скопіювати'}
+                </span>
+              </button>
+            </div>
           );
         }
         return <p key={i}>{line.text}</p>;

@@ -2757,9 +2757,9 @@ function MiniAppContent() {
                     )}
 
                     {regPayment === 'DONATED' && (
-                      <div className="mt-2 space-y-2 rounded-2xl border border-border bg-bg/50 p-3.5">
-                        <div className="text-xs text-muted">
-                          Реквізити для переказу:
+                      <div className="mt-2 space-y-3 rounded-2xl border border-border bg-bg/50 p-3.5">
+                        <div className="text-xs font-semibold text-muted">
+                          Реквізити для переказу
                         </div>
                         {selectedEvent.feeRequisites ? (
                           <FeeRequisites
@@ -2772,31 +2772,43 @@ function MiniAppContent() {
                             Уточнюйте у організаторів
                           </div>
                         )}
-                        <label className="block text-xs font-semibold text-fg pt-1">
-                          Завантажити квитанцію або скриншот (JPG, PNG, WEBP, PDF, до {MAX_UPLOAD_MB} МБ):
+                        <label
+                          className={cn(
+                            'flex cursor-pointer flex-col items-center gap-1 rounded-xl border border-dashed px-4 py-5 text-center text-sm font-semibold transition-colors',
+                            regReceiptUrl
+                              ? 'border-brand-green/50 bg-brand-green/10 text-brand-green'
+                              : 'border-border text-fg hover:border-brand-cyan',
+                          )}
+                        >
+                          <input
+                            type="file"
+                            accept={RECEIPT_ACCEPT}
+                            onChange={handleReceiptUpload}
+                            disabled={regUploading}
+                            className="sr-only"
+                          />
+                          {regUploading ? (
+                            <span className="text-muted">⏳ Завантаження…</span>
+                          ) : regReceiptUrl ? (
+                            <>
+                              <span>
+                                {regReceiptUrl.toLowerCase().endsWith('.pdf')
+                                  ? '✓ Квитанцію (PDF) додано'
+                                  : '✓ Скриншот додано'}
+                              </span>
+                              <span className="text-xs font-normal text-muted">
+                                Натисни, щоб замінити
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span>📎 Додати скриншот оплати</span>
+                              <span className="text-xs font-normal text-muted">
+                                JPG, PNG, WEBP або PDF, до {MAX_UPLOAD_MB} МБ
+                              </span>
+                            </>
+                          )}
                         </label>
-                        <input
-                          type="file"
-                          accept={RECEIPT_ACCEPT}
-                          onChange={handleReceiptUpload}
-                          className="text-xs text-muted file:mr-2 file:py-1 file:px-3 file:rounded-xl file:border-0 file:bg-surface file:text-xs file:font-semibold file:text-fg"
-                        />
-                        {regUploading && (
-                          <div className="text-xs text-muted flex items-center gap-1.5">
-                            <span className="animate-spin">⏳</span>
-                            <span>Завантаження файлу…</span>
-                          </div>
-                        )}
-                        {regReceiptUrl && (
-                          <div className="text-xs text-brand-green font-semibold flex items-center gap-1.5">
-                            <span>✓</span>
-                            <span>
-                              {regReceiptUrl.toLowerCase().endsWith('.pdf')
-                                ? 'Квитанцію (PDF) успішно додано'
-                                : 'Скриншот успішно додано'}
-                            </span>
-                          </div>
-                        )}
                         {regErrors.receipt && (
                           <span className="text-xs text-red-400 block">
                             {regErrors.receipt}
