@@ -21,7 +21,6 @@ import { Spinner } from '@/components/ui/Spinner';
 import { Button } from '@/components/ui/Button';
 import { hapticNotify } from '@/lib/telegram';
 import { useDebouncedValue } from '@/lib/useDebouncedValue';
-import { saveFile } from '@/lib/download';
 import { downloadFile } from '@telegram-apps/sdk';
 
 const PAYMENT_LABEL: Record<RegistrationPayment, string> = {
@@ -69,8 +68,6 @@ export default function EventRegistrationsPage() {
   const { id } = useParams<{ id: string }>();
   const qc = useQueryClient();
 
-  const [downloading, setDownloading] = useState(false);
-  const [downloadError, setDownloadError] = useState<string | null>(null);
   const [sheet, setSheet] = useState<{ busy?: boolean; url?: string; error?: string }>({});
   const [search, setSearch] = useState('');
   const [paymentFilter, setPaymentFilter] = useState<'ALL' | 'PENDING' | 'CONFIRMED' | 'AT_EVENT' | 'REJECTED'>('ALL');
@@ -239,22 +236,6 @@ export default function EventRegistrationsPage() {
     [event?.questions],
   );
 
-  const download = async () => {
-    setDownloading(true);
-    setDownloadError(null);
-    try {
-      await saveFile({
-        fileName: `registrations-${id}.xlsx`,
-        createLink: () => api.eventRegistrationsExportLink(id),
-        loadBlob: () => api.exportEventRegistrations(id),
-      });
-    } catch (e) {
-      setDownloadError(e instanceof Error ? e.message : 'Не вдалося завантажити Excel');
-    } finally {
-      setDownloading(false);
-    }
-  };
-
   // Rewrites the event's tab in the Google spreadsheet, then links to it.
   const syncSheet = async () => {
     setSheet({ busy: true });
@@ -339,13 +320,6 @@ export default function EventRegistrationsPage() {
                 {sheet.busy ? 'Оновлення…' : 'Google Таблиця'}
               </Button>
             )}
-            <Button
-              onClick={download}
-              disabled={downloading || !data?.items.length}
-              className="flex items-center gap-1.5 text-xs font-bold"
-            >
-              <span>{downloading ? 'Експорт…' : 'Експорт в Excel'}</span>
-            </Button>
           </div>
         }
       />
@@ -679,11 +653,6 @@ export default function EventRegistrationsPage() {
         </div>
       </div>
 
-      {downloadError && (
-        <div className="rounded-xl border border-brand-red/40 bg-brand-red/10 p-3 text-sm text-brand-red">
-          {downloadError}
-        </div>
-      )}
       {sheet.error && (
         <div className="rounded-xl border border-brand-red/40 bg-brand-red/10 p-3 text-sm text-brand-red">
           {sheet.error}

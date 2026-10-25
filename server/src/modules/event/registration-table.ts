@@ -56,8 +56,8 @@ function paymentStatus(reg: EventRegistration): string {
 }
 
 /**
- * The header row and one row per registration, shared by the Excel export
- * and the Google Sheets tab. Receipts become full links to the site.
+ * The header row and one row per registration for the event's Google Sheets
+ * tab. Receipts become full links to the site.
  */
 export function registrationTable(
   event: RegistrationTableEvent,

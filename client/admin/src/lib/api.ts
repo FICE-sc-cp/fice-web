@@ -657,22 +657,10 @@ export const api = {
       `/event/${eventId}/registrations/${registrationId}`,
       { method: 'DELETE', ...json({ reason }) },
     ),
-  eventRegistrationsExportLink: (id: string) =>
-    request<{ path: string }>(`/event/${id}/registrations/export-link`, {
-      method: 'POST',
-    }),
   syncRegistrationsSheet: (id: string) =>
     request<{ url: string }>(`/event/${id}/registrations/sheet`, {
       method: 'POST',
     }),
-  exportEventRegistrations: async (id: string): Promise<Blob> => {
-    const res = await fetch(`${BASE}/event/${id}/registrations/export`, {
-      headers: { 'x-telegram-init-data': getInitData() },
-      cache: 'no-store',
-    });
-    if (!res.ok) throw new Error(`Помилка ${res.status}`);
-    return res.blob();
-  },
 
   createEventDetails: (body: EventDetailsInput) =>
     request<EventDetails>('/event-details', { method: 'POST', ...json(body) }),

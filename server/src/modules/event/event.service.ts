@@ -14,7 +14,6 @@ import {
   RegistrationSource,
 } from '@prisma/client';
 import { randomUUID } from 'crypto';
-import * as ExcelJS from 'exceljs';
 import { PrismaService } from '../../database/prisma.service';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { paginated, skipFor } from '../../common/pagination';
@@ -39,7 +38,6 @@ import { createRegistrationGuarded } from './registration-writer';
 import { paymentRuleViolation, pendingPaymentSubject } from './payment-rules';
 import { validateAnswers } from './registration-answers';
 import { registrationListWhere } from './registration-filters';
-import { registrationTable } from './registration-table';
 import { RegistrationListQueryDto } from './dto/registration-list-query.dto';
 import { ageOf } from './age';
 import {
@@ -703,39 +701,6 @@ export class EventService {
         isClosedByLimit,
       },
     };
-  }
-
-  async exportRegistrations(eventId: string): Promise<Buffer> {
-    const event = await this.prisma.event.findUnique({
-      where: { id: eventId },
-      include: {
-        questions: { orderBy: { order: 'asc' } },
-        registrations: {
-          include: { answers: true },
-          orderBy: { createdAt: 'asc' },
-        },
-      },
-    });
-    if (!event) {
-      throw new NotFoundException(`Event ${eventId} not found`);
-    }
-
-    const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet('Реєстрації');
-
-    const [headers, ...rows] = registrationTable(
-      event,
-      this.configService.get<string>('PUBLIC_WEB_URL'),
-    );
-    sheet.columns = headers.map((header) => ({
-      header,
-      width: Math.min(40, Math.max(16, header.length + 4)),
-    }));
-    sheet.getRow(1).font = { bold: true };
-    sheet.addRows(rows);
-
-    const buffer = await workbook.xlsx.writeBuffer();
-    return Buffer.from(buffer as ArrayBuffer);
   }
 
   async verifyCheckInAccess(

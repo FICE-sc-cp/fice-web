@@ -12,10 +12,8 @@ import {
   Patch,
   Post,
   Query,
-  Res,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { Response } from 'express';
 import {
   ApiCreatedResponse,
   ApiOkResponse,
@@ -27,8 +25,6 @@ import { Throttle } from '@nestjs/throttler';
 import { REGISTER_LIMIT_PER_IP, THROTTLE_TTL } from '../../common/throttle';
 import { Admin } from '../../auth/admin.decorator';
 import { AdminAccessService } from '../../auth/admin-access.service';
-import { DownloadTokenService } from '../../auth/download-token.service';
-import { sendXlsx } from '../../common/xlsx-response';
 import {
   extractTelegramUser,
   resolveValidatedTelegramUser,
@@ -63,7 +59,6 @@ export class EventController {
     private readonly eventService: EventService,
     private readonly configService: ConfigService,
     private readonly adminAccess: AdminAccessService,
-    private readonly downloads: DownloadTokenService,
     private readonly registrationSheets: RegistrationSheetsService,
   ) {}
 
@@ -310,17 +305,6 @@ export class EventController {
     return this.eventService.listRegistrations(id, query);
   }
 
-  @Get(':id/registrations/export')
-  @Admin()
-  @ApiOperation({ summary: 'Download event registrations as Excel (admin)' })
-  async exportRegistrations(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Res() res: Response,
-  ) {
-    const buffer = await this.eventService.exportRegistrations(id);
-    sendXlsx(res, buffer, `event-${id}-registrations.xlsx`);
-  }
-
   @Post(':id/registrations/sheet')
   @Admin()
   @ApiOperation({
@@ -341,31 +325,6 @@ export class EventController {
     @Body() dto: ManualRegistrationDto,
   ) {
     return this.eventService.addRegistration(id, dto);
-  }
-
-  @Post(':id/registrations/export-link')
-  @Admin()
-  @ApiOperation({
-    summary:
-      'Create a one-time, 2-minute link to the registrations Excel (admin)',
-  })
-  createRegistrationsExportLink(@Param('id', ParseUUIDPipe) id: string) {
-    const token = this.downloads.issue(`registrations:${id}`);
-    return { path: `/event/${id}/registrations/export-file?token=${token}` };
-  }
-
-  @Get(':id/registrations/export-file')
-  @ApiOperation({
-    summary: 'Download the registrations Excel with a one-time link',
-  })
-  async exportRegistrationsFile(
-    @Param('id', ParseUUIDPipe) id: string,
-    @Query('token') token: string | undefined,
-    @Res() res: Response,
-  ) {
-    this.downloads.redeem(token, `registrations:${id}`);
-    const buffer = await this.eventService.exportRegistrations(id);
-    sendXlsx(res, buffer, `event-${id}-registrations.xlsx`);
   }
 
   @Delete(':id/registrations/:registrationId')
