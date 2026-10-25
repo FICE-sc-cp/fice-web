@@ -661,6 +661,10 @@ export const api = {
     request<{ path: string }>(`/event/${id}/registrations/export-link`, {
       method: 'POST',
     }),
+  syncRegistrationsSheet: (id: string) =>
+    request<{ url: string }>(`/event/${id}/registrations/sheet`, {
+      method: 'POST',
+    }),
   exportEventRegistrations: async (id: string): Promise<Blob> => {
     const res = await fetch(`${BASE}/event/${id}/registrations/export`, {
       headers: { 'x-telegram-init-data': getInitData() },

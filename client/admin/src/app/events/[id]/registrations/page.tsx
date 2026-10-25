@@ -71,6 +71,7 @@ export default function EventRegistrationsPage() {
 
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
+  const [sheet, setSheet] = useState<{ busy?: boolean; url?: string; error?: string }>({});
   const [search, setSearch] = useState('');
   const [paymentFilter, setPaymentFilter] = useState<'ALL' | 'PENDING' | 'CONFIRMED' | 'AT_EVENT' | 'REJECTED'>('ALL');
   const [sourceFilter, setSourceFilter] = useState<'ALL' | RegistrationSource>('ALL');
@@ -254,6 +255,16 @@ export default function EventRegistrationsPage() {
     }
   };
 
+  // Rewrites the event's tab in the Google spreadsheet, then links to it.
+  const syncSheet = async () => {
+    setSheet({ busy: true });
+    try {
+      setSheet({ url: (await api.syncRegistrationsSheet(id)).url });
+    } catch (e) {
+      setSheet({ error: e instanceof Error ? e.message : 'Не вдалося оновити Google Таблицю' });
+    }
+  };
+
   const filteredItems = data?.items ?? [];
 
   const analytics = useMemo(() => {
@@ -307,8 +318,27 @@ export default function EventRegistrationsPage() {
         title={event ? `Реєстрації · ${event.name}` : 'Зареєстровані'}
         backHref={`/events/${id}`}
         action={
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <AddRegistration eventId={id} event={event} />
+            {sheet.url ? (
+              <a
+                href={sheet.url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center justify-center rounded-xl border border-brand-cyan px-5 py-3 text-xs font-bold whitespace-nowrap text-brand-cyan"
+              >
+                Відкрити таблицю ↗
+              </a>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={syncSheet}
+                disabled={sheet.busy}
+                className="text-xs font-bold whitespace-nowrap"
+              >
+                {sheet.busy ? 'Оновлення…' : 'Google Таблиця'}
+              </Button>
+            )}
             <Button
               onClick={download}
               disabled={downloading || !data?.items.length}
@@ -652,6 +682,11 @@ export default function EventRegistrationsPage() {
       {downloadError && (
         <div className="rounded-xl border border-brand-red/40 bg-brand-red/10 p-3 text-sm text-brand-red">
           {downloadError}
+        </div>
+      )}
+      {sheet.error && (
+        <div className="rounded-xl border border-brand-red/40 bg-brand-red/10 p-3 text-sm text-brand-red">
+          {sheet.error}
         </div>
       )}
 
