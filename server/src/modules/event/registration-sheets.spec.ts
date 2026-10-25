@@ -4,6 +4,7 @@ import { GoogleSheetsService } from '../applicant/google-sheets.service';
 import {
   RegistrationSheetsService,
   sheetIdFor,
+  styleRequests,
   tabRequests,
 } from './registration-sheets.service';
 import {
@@ -84,13 +85,10 @@ describe('tabRequests', () => {
     expect(requests[0].addSheet.properties).toEqual({
       sheetId: sheetIdFor(EVENT_ID),
       title: 'FICEween 2026 (25.10.2026) #7cbc',
-      gridProperties: {
-        rowCount: 1000,
-        columnCount: 26,
-        frozenRowCount: 1,
-        frozenColumnCount: 1,
-      },
+      gridProperties: { rowCount: 1000, columnCount: 26, frozenRowCount: 1 },
     });
+    // Only the data here: the looks go in a call of their own.
+    expect(requests).toHaveLength(3);
     const [clear, write] = requests.filter((r: any) => r.updateCells);
     expect(clear.updateCells.range).toEqual({
       sheetId: sheetIdFor(EVENT_ID),
@@ -98,9 +96,11 @@ describe('tabRequests', () => {
       endColumnIndex: 16,
     });
     const [head, first] = write.updateCells.rows;
+    // The header brings its own violet, so white text never lands on white.
     expect(head.values[0]).toEqual({
       userEnteredValue: { stringValue: 'ПІБ' },
       userEnteredFormat: {
+        backgroundColor: { red: 152 / 255, green: 16 / 255, blue: 250 / 255 },
         textFormat: {
           bold: true,
           foregroundColor: { red: 1, green: 1, blue: 1 },
@@ -113,40 +113,6 @@ describe('tabRequests', () => {
     expect(first.values[8].userEnteredFormat.textFormat.link).toEqual({
       uri: 'https://fice-sc.kpi.ua/uploads/receipt.jpg',
     });
-  });
-
-  it('gives a new tab stripes, filters, the attendance dropdown and row colors', () => {
-    const requests = tabRequests(event(), table, undefined, new Set());
-    const find = (key: string) =>
-      requests.filter((r) => key in r) as Record<string, any>[];
-
-    expect(find('addBanding')).toHaveLength(1);
-    expect(find('setBasicFilter')).toHaveLength(1);
-    const [validation] = find('setDataValidation');
-    // «Присутність» is the 12th column (L).
-    expect(validation.setDataValidation.range).toMatchObject({
-      startRowIndex: 1,
-      startColumnIndex: 11,
-      endColumnIndex: 12,
-    });
-    expect(validation.setDataValidation.rule.condition.values).toEqual([
-      { userEnteredValue: 'Присутній' },
-      { userEnteredValue: 'Очікується' },
-    ]);
-    const rules = find('addConditionalFormatRule').map(
-      (r) => r.addConditionalFormatRule,
-    );
-    expect(rules.map((r) => r.index)).toEqual([0, 1, 2, 3]);
-    expect(rules[3].rule.booleanRule.condition.values).toEqual([
-      { userEnteredValue: '=$L2="Присутній"' },
-    ]);
-    const [protection] = find('addProtectedRange');
-    expect(protection.addProtectedRange.protectedRange).toMatchObject({
-      warningOnly: true,
-      range: { startColumnIndex: 0, endColumnIndex: 16 },
-    });
-    // The looks go before the data, right after the tab is added.
-    expect(Object.keys(requests[1])).toEqual(['addBanding']);
   });
 
   it('grows an existing tab instead of adding one', () => {
@@ -180,61 +146,160 @@ describe('tabRequests', () => {
   });
 });
 
+describe('styleRequests', () => {
+  const [header] = registrationTable(event());
+
+  it('freezes, stripes and filters the tab, with the attendance dropdown and row colors', () => {
+    const requests = styleRequests(sheetIdFor(EVENT_ID), header, 1000, 26);
+    const find = (key: string) =>
+      requests.filter((r) => key in r) as Record<string, any>[];
+
+    expect(Object.keys(requests[0])).toEqual(['updateSheetProperties']);
+    expect(find('addBanding')).toHaveLength(1);
+    expect(find('setBasicFilter')).toHaveLength(1);
+    const [validation] = find('setDataValidation');
+    // «Присутність» is the 12th column (L).
+    expect(validation.setDataValidation.range).toMatchObject({
+      startRowIndex: 1,
+      startColumnIndex: 11,
+      endColumnIndex: 12,
+    });
+    expect(validation.setDataValidation.rule.condition.values).toEqual([
+      { userEnteredValue: 'Присутній' },
+      { userEnteredValue: 'Очікується' },
+    ]);
+    const rules = find('addConditionalFormatRule').map(
+      (r) => r.addConditionalFormatRule,
+    );
+    expect(rules.map((r) => r.index)).toEqual([0, 1, 2, 3]);
+    expect(rules[3].rule.booleanRule.condition.values).toEqual([
+      { userEnteredValue: '=$L2="Присутній"' },
+    ]);
+    expect(
+      find('addProtectedRange').map((r) => {
+        const { range, warningOnly } = r.addProtectedRange.protectedRange;
+        return [range.startColumnIndex, range.endColumnIndex, warningOnly];
+      }),
+    ).toEqual([[0, 16, true]]);
+  });
+});
+
 describe('RegistrationSheetsService', () => {
+  const sheetId = sheetIdFor(EVENT_ID);
   let data = [event()];
   const findMany = jest.fn(async () => data);
-  const service = new RegistrationSheetsService(
-    { event: { findMany } } as unknown as PrismaService,
-    { getAccessToken: async () => 'token' } as unknown as GoogleSheetsService,
-    {
-      get: (key: string) =>
-        ({
-          GOOGLE_EVENTS_SPREADSHEET_ID: 'sheet-1',
-          PUBLIC_WEB_URL: 'https://fice-sc.kpi.ua',
-        })[key],
-    } as unknown as ConfigService,
-  );
+  const makeService = () =>
+    new RegistrationSheetsService(
+      { event: { findMany } } as unknown as PrismaService,
+      { getAccessToken: async () => 'token' } as unknown as GoogleSheetsService,
+      {
+        get: (key: string) =>
+          ({
+            GOOGLE_EVENTS_SPREADSHEET_ID: 'sheet-1',
+            PUBLIC_WEB_URL: 'https://fice-sc.kpi.ua',
+          })[key],
+      } as unknown as ConfigService,
+    );
+  // What the spreadsheet holds and whether a styling call fails.
+  let sheets: object[] = [];
+  let failStyling = false;
   let fetchMock: jest.SpyInstance;
+  const batches = () =>
+    fetchMock.mock.calls
+      .filter(([url]) => String(url).endsWith(':batchUpdate'))
+      .map(([, init]) => JSON.parse(init.body).requests as object[]);
+  const has = (requests: object[], key: string) =>
+    requests.some((r) => key in r);
+  const absent = registration({
+    attended: false,
+    attendedAt: null,
+    attendedBy: null,
+  });
 
   beforeEach(() => {
+    data = [event()];
+    sheets = [];
+    failStyling = false;
     fetchMock = jest.spyOn(global, 'fetch').mockImplementation((async (
-      _url: string,
+      url: string,
       init?: RequestInit,
-    ) => ({
-      ok: true,
-      json: async () => (init?.method === 'POST' ? {} : { sheets: [] }),
-    })) as unknown as typeof fetch);
+    ) => {
+      const styling =
+        init?.method === 'POST' && String(init.body).includes('addBanding');
+      const reply = init?.method === 'POST' ? {} : { sheets };
+      return {
+        ok: !(styling && failStyling),
+        text: async () => 'bad request',
+        json: async () => reply,
+      };
+    }) as unknown as typeof fetch);
   });
 
   afterEach(() => jest.restoreAllMocks());
 
   it('copies everything first, then rewrites only changed tabs', async () => {
+    const service = makeService();
     await service.tick();
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-    const body = JSON.parse(fetchMock.mock.calls[1][1].body);
-    expect(body.requests[0].addSheet.properties.sheetId).toBe(
-      sheetIdFor(EVENT_ID),
-    );
+    // Read the tabs, write the data, then style the new tab.
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    const [write, style] = batches();
+    expect(has(write, 'addSheet') && !has(write, 'addBanding')).toBe(true);
+    expect(has(style, 'addBanding')).toBe(true);
 
     fetchMock.mockClear();
+    findMany.mockClear();
     await service.tick();
     expect(fetchMock).not.toHaveBeenCalled();
     // After the first pass only recent events are read.
-    expect(findMany.mock.calls[1]).toEqual([
+    expect(findMany.mock.calls[0]).toEqual([
       expect.objectContaining({
         where: expect.objectContaining({ date: expect.anything() }),
       }),
     ]);
 
-    data = [event([registration({ attended: false, attendedAt: null })])];
+    // A changed tab gets its data again but is not styled twice.
+    data = [event([absent])];
     await service.tick();
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(batches()).toHaveLength(1);
+  });
+
+  it('styles a tab made before the looks existed, and only that one', async () => {
+    const grid = { rowCount: 1000, columnCount: 26 };
+    sheets = [
+      { properties: { sheetId, title: 'old', gridProperties: grid } },
+      {
+        properties: { sheetId: 5, title: 'styled', gridProperties: grid },
+        bandedRanges: [{ bandedRangeId: 1 }],
+      },
+    ];
+    await makeService().tick();
+    const [write, style] = batches();
+    expect(has(write, 'addSheet')).toBe(false);
+    expect(has(style, 'addBanding')).toBe(true);
+
+    fetchMock.mockClear();
+    sheets = [{ ...sheets[0], bandedRanges: [{ bandedRangeId: 2 }] }];
+    await makeService().tick();
+    expect(batches()).toHaveLength(1);
+  });
+
+  it('keeps the data when styling fails', async () => {
+    failStyling = true;
+    const service = makeService();
+    await service.tick();
+    expect(batches()).toHaveLength(2);
+
+    // No pause after a styling error: the next change is written right away.
+    fetchMock.mockClear();
+    data = [event([absent])];
+    await service.tick();
+    expect(batches()).toHaveLength(1);
   });
 
   it('rewrites a tab on demand and links to it', async () => {
-    await expect(service.syncEvent(EVENT_ID)).resolves.toEqual({
-      url: `https://docs.google.com/spreadsheets/d/sheet-1/edit#gid=${sheetIdFor(EVENT_ID)}`,
+    await expect(makeService().syncEvent(EVENT_ID)).resolves.toEqual({
+      url: `https://docs.google.com/spreadsheets/d/sheet-1/edit#gid=${sheetId}`,
     });
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(batches()).toHaveLength(2);
   });
 });

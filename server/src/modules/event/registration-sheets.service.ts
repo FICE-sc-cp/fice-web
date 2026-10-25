@@ -27,7 +27,8 @@ const RECENT_MS = 7 * 24 * 60 * 60_000;
 const PAUSE_AFTER_ERROR_MS = 5 * 60_000;
 // Keeps each batchUpdate far below Google's request size limit.
 const CELLS_PER_CALL = 50_000;
-const FIELDS = 'userEnteredValue,userEnteredFormat.textFormat';
+const FIELDS =
+  'userEnteredValue,userEnteredFormat.textFormat,userEnteredFormat.backgroundColor';
 
 const eventDay = new Intl.DateTimeFormat('uk-UA', {
   day: '2-digit',
@@ -88,21 +89,26 @@ const WIDTH: Record<string, number> = {
 
 function cell(value: string, header: boolean) {
   const link = /^https?:\/\//.test(value) ? { uri: value } : undefined;
-  const textFormat = header
-    ? { bold: true, foregroundColor: WHITE }
-    : link && { link };
+  // The header paints its own violet: white text must stay readable even on
+  // a tab that has not got the looks yet.
+  const format = header
+    ? {
+        backgroundColor: VIOLET,
+        textFormat: { bold: true, foregroundColor: WHITE },
+      }
+    : link && { textFormat: { link } };
   return {
     userEnteredValue: { stringValue: value },
-    ...(textFormat ? { userEnteredFormat: { textFormat } } : {}),
+    ...(format ? { userEnteredFormat: format } : {}),
   };
 }
 
 /**
- * The looks a new tab gets once: violet header, stripes, filter buttons,
- * column widths, an attendance dropdown that colors the whole row, colored
- * payment statuses and a warning that edits here get overwritten.
+ * The looks a tab gets once: frozen header and names, stripes, filter
+ * buttons, column widths, an attendance dropdown that colors the whole row,
+ * colored payment statuses and a warning that edits here get overwritten.
  */
-function decorate(
+export function styleRequests(
   sheetId: number,
   header: string[],
   rows: number,
@@ -142,6 +148,16 @@ function decorate(
     },
   });
   return [
+    {
+      updateSheetProperties: {
+        properties: {
+          sheetId,
+          gridProperties: { frozenRowCount: 1, frozenColumnCount: 1 },
+        },
+        fields:
+          'gridProperties.frozenRowCount,gridProperties.frozenColumnCount',
+      },
+    },
     {
       addBanding: {
         bandedRange: {
@@ -243,25 +259,19 @@ export function tabRequests(
     let title = `${event.name} (${eventDay.format(event.date)})`;
     if (titles.has(title)) title += ` #${event.id.slice(0, 4)}`;
     titles.add(title);
-    const rowCount = Math.max(1000, table.length);
-    const columnCount = Math.max(26, width);
-    requests.push(
-      {
-        addSheet: {
-          properties: {
-            sheetId,
-            title,
-            gridProperties: {
-              rowCount,
-              columnCount,
-              frozenRowCount: 1,
-              frozenColumnCount: 1,
-            },
+    requests.push({
+      addSheet: {
+        properties: {
+          sheetId,
+          title,
+          gridProperties: {
+            rowCount: Math.max(1000, table.length),
+            columnCount: Math.max(26, width),
+            frozenRowCount: 1,
           },
         },
       },
-      ...decorate(sheetId, table[0], rowCount, columnCount),
-    );
+    });
   } else {
     const rows = sheet.gridProperties?.rowCount ?? 0;
     const columns = sheet.gridProperties?.columnCount ?? 0;
@@ -323,6 +333,8 @@ export class RegistrationSheetsService
   private pausedUntil = 0;
   // Hash of the table each tab got last, so unchanged tabs are skipped.
   private readonly written = new Map<string, string>();
+  // Tabs this process already tried to style; a failed try waits for a restart.
+  private readonly styled = new Set<number>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -429,15 +441,21 @@ export class RegistrationSheetsService
 
     const token = await this.google.getAccessToken();
     const { sheets = [] } = await this.call<{
-      sheets?: { properties: SheetProperties }[];
+      sheets?: { properties: SheetProperties; bandedRanges?: unknown[] }[];
     }>(
       token,
-      '?fields=sheets.properties(sheetId,title,gridProperties(rowCount,columnCount))',
+      '?fields=sheets(properties(sheetId,title,gridProperties(rowCount,columnCount)),bandedRanges(bandedRangeId))',
     );
     const existing = new Map(
       sheets.map(({ properties }) => [properties.sheetId, properties]),
     );
     const titles = new Set(sheets.map(({ properties }) => properties.title));
+    // Stripes mark a styled tab; tabs made before the looks existed have none.
+    const striped = new Set(
+      sheets
+        .filter(({ bandedRanges }) => bandedRanges?.length)
+        .map(({ properties }) => properties.sheetId),
+    );
 
     let batch: typeof tabs = [];
     let cells = 0;
@@ -457,6 +475,30 @@ export class RegistrationSheetsService
       if (cells >= CELLS_PER_CALL) await flush();
     }
     await flush();
+
+    // The looks go in a call of their own, so a styling error never holds
+    // the data back.
+    const plain = tabs.filter(({ event }) => {
+      const id = sheetIdFor(event.id);
+      return !striped.has(id) && !this.styled.has(id);
+    });
+    if (!plain.length) return;
+    const requests = plain.flatMap(({ event, table }) => {
+      const id = sheetIdFor(event.id);
+      this.styled.add(id);
+      const grid = existing.get(id)?.gridProperties;
+      return styleRequests(
+        id,
+        table[0],
+        Math.max(grid?.rowCount ?? 1000, table.length),
+        Math.max(grid?.columnCount ?? 26, table[0].length),
+      );
+    });
+    await this.call(token, ':batchUpdate', { requests }).catch((err: unknown) =>
+      this.logger.warn(
+        `Could not style the Google Sheets tabs: ${errorText(err)}`,
+      ),
+    );
   }
 
   private async call<T>(
