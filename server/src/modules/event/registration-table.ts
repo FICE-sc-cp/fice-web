@@ -18,6 +18,9 @@ const SOURCE_LABEL: Record<RegistrationSource, string> = {
   ADMIN: 'Додано вручну',
 };
 
+export const PRESENT = 'Присутній';
+export const EXPECTED = 'Очікується';
+
 const kyivTime = new Intl.DateTimeFormat('uk-UA', {
   day: '2-digit',
   month: '2-digit',
@@ -97,7 +100,7 @@ export function registrationTable(
       // The number printed under the QR on the ticket.
       reg.ticketCode.slice(0, 8).toUpperCase(),
       kyivTime.format(reg.createdAt),
-      reg.attended ? 'ТАК' : 'НІ',
+      reg.attended ? PRESENT : EXPECTED,
       reg.attendedAt ? kyivTime.format(reg.attendedAt) : '',
       reg.attendedBy ?? '',
       ...event.questions.map((q) => answers.get(q.id) ?? ''),

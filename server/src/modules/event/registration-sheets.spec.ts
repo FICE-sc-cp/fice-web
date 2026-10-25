@@ -67,6 +67,7 @@ describe('registrationTable', () => {
     // Kyiv time: summer time on 20 Oct, winter time from 25 Oct.
     expect(row[10]).toContain('20.10.2026');
     expect(row[10]).toContain('12:30');
+    expect(row[11]).toBe('Присутній');
     expect(row[12]).toContain('16:05');
     expect(row.slice(14)).toEqual(['Вампір', 'Так']);
   });
@@ -114,13 +115,31 @@ describe('tabRequests', () => {
     });
   });
 
-  it('gives a new tab stripes, filters and an edit warning', () => {
+  it('gives a new tab stripes, filters, the attendance dropdown and row colors', () => {
     const requests = tabRequests(event(), table, undefined, new Set());
     const find = (key: string) =>
       requests.filter((r) => key in r) as Record<string, any>[];
 
     expect(find('addBanding')).toHaveLength(1);
     expect(find('setBasicFilter')).toHaveLength(1);
+    const [validation] = find('setDataValidation');
+    // «Присутність» is the 12th column (L).
+    expect(validation.setDataValidation.range).toMatchObject({
+      startRowIndex: 1,
+      startColumnIndex: 11,
+      endColumnIndex: 12,
+    });
+    expect(validation.setDataValidation.rule.condition.values).toEqual([
+      { userEnteredValue: 'Присутній' },
+      { userEnteredValue: 'Очікується' },
+    ]);
+    const rules = find('addConditionalFormatRule').map(
+      (r) => r.addConditionalFormatRule,
+    );
+    expect(rules.map((r) => r.index)).toEqual([0, 1, 2, 3]);
+    expect(rules[3].rule.booleanRule.condition.values).toEqual([
+      { userEnteredValue: '=$L2="Присутній"' },
+    ]);
     const [protection] = find('addProtectedRange');
     expect(protection.addProtectedRange.protectedRange).toMatchObject({
       warningOnly: true,

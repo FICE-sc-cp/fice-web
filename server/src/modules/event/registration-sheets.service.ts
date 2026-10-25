@@ -13,6 +13,8 @@ import { createHash } from 'crypto';
 import { PrismaService } from '../../database/prisma.service';
 import { GoogleSheetsService } from '../applicant/google-sheets.service';
 import {
+  EXPECTED,
+  PRESENT,
   RegistrationTableEvent,
   registrationTable,
 } from './registration-table';
@@ -56,10 +58,15 @@ const rgb = (hex: string) => ({
   green: parseInt(hex.slice(3, 5), 16) / 255,
   blue: parseInt(hex.slice(5, 7), 16) / 255,
 });
-// The site's violet over white and lavender stripes.
+// The site's violet over white and lavender stripes; a present guest's row turns mint.
 const WHITE = rgb('#ffffff');
 const VIOLET = rgb('#9810fa');
 const LAVENDER = rgb('#f6f0ff');
+const MINT = rgb('#d3f8e2');
+const GREEN = rgb('#0b8043');
+const AMBER = rgb('#8a5a00');
+const AMBER_BG = rgb('#fff4ce');
+const RED = rgb('#d93025');
 
 // Pixel widths of the base columns; question columns get 200.
 const WIDTH: Record<string, number> = {
@@ -92,7 +99,8 @@ function cell(value: string, header: boolean) {
 
 /**
  * The looks a new tab gets once: violet header, stripes, filter buttons,
- * column widths and a warning that edits here get overwritten.
+ * column widths, an attendance dropdown that colors the whole row, colored
+ * payment statuses and a warning that edits here get overwritten.
  */
 function decorate(
   sheetId: number,
@@ -107,6 +115,32 @@ function decorate(
     startColumnIndex: 0,
     endColumnIndex: columns,
   };
+  const body = { ...grid, startRowIndex: 1 };
+  const present = header.indexOf('Присутність');
+  const payment = header.indexOf('Статус оплати');
+  const status = {
+    ...body,
+    startColumnIndex: payment,
+    endColumnIndex: payment + 1,
+  };
+  const rule = (
+    index: number,
+    range: object,
+    type: string,
+    value: string,
+    format: object,
+  ) => ({
+    addConditionalFormatRule: {
+      index,
+      rule: {
+        ranges: [range],
+        booleanRule: {
+          condition: { type, values: [{ userEnteredValue: value }] },
+          format,
+        },
+      },
+    },
+  });
   return [
     {
       addBanding: {
@@ -121,6 +155,45 @@ function decorate(
       },
     },
     { setBasicFilter: { filter: { range: grid } } },
+    {
+      setDataValidation: {
+        range: {
+          ...body,
+          startColumnIndex: present,
+          endColumnIndex: present + 1,
+        },
+        rule: {
+          condition: {
+            type: 'ONE_OF_LIST',
+            values: [
+              { userEnteredValue: PRESENT },
+              { userEnteredValue: EXPECTED },
+            ],
+          },
+          showCustomUi: true,
+          strict: true,
+        },
+      },
+    },
+    // Only the first matching rule colors a cell, so the payment status keeps
+    // its color inside a present guest's mint row.
+    rule(0, status, 'TEXT_EQ', 'Підтверджено', {
+      textFormat: { bold: true, foregroundColor: GREEN },
+    }),
+    rule(1, status, 'TEXT_EQ', 'Очікує підтвердження', {
+      backgroundColor: AMBER_BG,
+      textFormat: { foregroundColor: AMBER },
+    }),
+    rule(2, status, 'TEXT_STARTS_WITH', 'Відхилено', {
+      textFormat: { bold: true, foregroundColor: RED },
+    }),
+    rule(
+      3,
+      body,
+      'CUSTOM_FORMULA',
+      `=$${String.fromCharCode(65 + present)}2="${PRESENT}"`,
+      { backgroundColor: MINT },
+    ),
     {
       updateDimensionProperties: {
         range: { sheetId, dimension: 'ROWS', startIndex: 0, endIndex: 1 },
