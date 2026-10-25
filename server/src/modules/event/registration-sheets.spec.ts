@@ -175,12 +175,16 @@ describe('styleRequests', () => {
     expect(rules[3].rule.booleanRule.condition.values).toEqual([
       { userEnteredValue: '=$L2="Присутній"' },
     ]);
+    // Everything the site fills is guarded, except attendance.
     expect(
       find('addProtectedRange').map((r) => {
         const { range, warningOnly } = r.addProtectedRange.protectedRange;
         return [range.startColumnIndex, range.endColumnIndex, warningOnly];
       }),
-    ).toEqual([[0, 16, true]]);
+    ).toEqual([
+      [0, 11, true],
+      [12, 16, true],
+    ]);
   });
 });
 
@@ -188,9 +192,30 @@ describe('RegistrationSheetsService', () => {
   const sheetId = sheetIdFor(EVENT_ID);
   let data = [event()];
   const findMany = jest.fn(async () => data);
+  const update = jest.fn(
+    async ({
+      where,
+      data: change,
+    }: {
+      where: { id: string };
+      data: object;
+    }) => {
+      data = [
+        event(
+          data[0].registrations.map((reg) =>
+            reg.id === where.id ? { ...reg, ...change } : reg,
+          ),
+        ),
+      ];
+      return {};
+    },
+  );
   const makeService = () =>
     new RegistrationSheetsService(
-      { event: { findMany } } as unknown as PrismaService,
+      {
+        event: { findMany },
+        eventRegistration: { update },
+      } as unknown as PrismaService,
       { getAccessToken: async () => 'token' } as unknown as GoogleSheetsService,
       {
         get: (key: string) =>
@@ -200,8 +225,10 @@ describe('RegistrationSheetsService', () => {
           })[key],
       } as unknown as ConfigService,
     );
-  // What the spreadsheet holds and whether a styling call fails.
+  // What the spreadsheet holds: its tabs, the attendance cells people see,
+  // and whether a styling call fails.
   let sheets: object[] = [];
+  let attendanceCells: string[][] = [];
   let failStyling = false;
   let fetchMock: jest.SpyInstance;
   const batches = () =>
@@ -219,14 +246,27 @@ describe('RegistrationSheetsService', () => {
   beforeEach(() => {
     data = [event()];
     sheets = [];
+    attendanceCells = [];
     failStyling = false;
+    update.mockClear();
     fetchMock = jest.spyOn(global, 'fetch').mockImplementation((async (
       url: string,
       init?: RequestInit,
     ) => {
       const styling =
         init?.method === 'POST' && String(init.body).includes('addBanding');
-      const reply = init?.method === 'POST' ? {} : { sheets };
+      const reply = String(url).includes('batchGetByDataFilter')
+        ? {
+            valueRanges: [
+              {
+                valueRange: { values: attendanceCells },
+                dataFilters: [{ gridRange: { sheetId } }],
+              },
+            ],
+          }
+        : init?.method === 'POST'
+          ? {}
+          : { sheets };
       return {
         ok: !(styling && failStyling),
         text: async () => 'bad request',
@@ -249,7 +289,9 @@ describe('RegistrationSheetsService', () => {
     fetchMock.mockClear();
     findMany.mockClear();
     await service.tick();
-    expect(fetchMock).not.toHaveBeenCalled();
+    // Only the attendance cells are read; nothing changed, nothing written.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(batches()).toHaveLength(0);
     // After the first pass only recent events are read.
     expect(findMany.mock.calls[0]).toEqual([
       expect.objectContaining({
@@ -260,6 +302,40 @@ describe('RegistrationSheetsService', () => {
     // A changed tab gets its data again but is not styled twice.
     data = [event([absent])];
     await service.tick();
+    expect(batches()).toHaveLength(1);
+  });
+
+  it('puts attendance set in the sheet on the site', async () => {
+    data = [event([absent])];
+    const service = makeService();
+    await service.tick();
+
+    fetchMock.mockClear();
+    attendanceCells = [['7CBC7288', '20.10.2026, 12:30', 'Присутній']];
+    await service.tick();
+    expect(update).toHaveBeenCalledWith({
+      where: { id: absent.id },
+      data: {
+        attended: true,
+        attendedAt: expect.any(Date),
+        attendedBy: 'Google Таблиця',
+      },
+    });
+    // The tab is written again with the site's new state.
+    expect(batches()).toHaveLength(1);
+  });
+
+  it('does not undo a scan the sheet has not shown yet', async () => {
+    data = [event([absent])];
+    const service = makeService();
+    await service.tick();
+
+    // The scanner marks the guest; the sheet still shows the old value.
+    data = [event()];
+    attendanceCells = [['7CBC7288', '20.10.2026, 12:30', 'Очікується']];
+    fetchMock.mockClear();
+    await service.tick();
+    expect(update).not.toHaveBeenCalled();
     expect(batches()).toHaveLength(1);
   });
 

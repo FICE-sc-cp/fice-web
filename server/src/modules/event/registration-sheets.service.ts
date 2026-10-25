@@ -25,6 +25,8 @@ export const TICK_MS = 30_000;
 // tick; older tabs are rewritten at the next start or from the admin button.
 const RECENT_MS = 7 * 24 * 60 * 60_000;
 const PAUSE_AFTER_ERROR_MS = 5 * 60_000;
+// Who the check-in list shows for attendance set in the sheet.
+const SHEET_EDITOR = 'Google Таблиця';
 // Keeps each batchUpdate far below Google's request size limit.
 const CELLS_PER_CALL = 50_000;
 const FIELDS =
@@ -229,17 +231,29 @@ export function styleRequests(
         fields: 'pixelSize',
       },
     })),
-    {
+    // Everything the site fills except attendance, which organizers may set.
+    ...[
+      [0, present],
+      [present + 1, header.length],
+    ].map(([start, end]) => ({
       addProtectedRange: {
         protectedRange: {
-          range: { ...grid, endColumnIndex: header.length },
+          range: { ...grid, startColumnIndex: start, endColumnIndex: end },
           description:
-            'Ці колонки заповнює сайт, правки тут перезапишуться. Присутність відмічає сканер на вході.',
+            'Ці колонки заповнює сайт, правки тут перезапишуться. Змінювати можна лише «Присутність».',
           warningOnly: true,
         },
       },
-    },
+    })),
   ];
+}
+
+/** Ticket number → attendance cell of a written table. */
+function attendanceOf(table: string[][]): Map<string, string> {
+  const [header, ...rows] = table;
+  const code = header.indexOf('Код квитка');
+  const present = header.indexOf('Присутність');
+  return new Map(rows.map((row) => [row[code], row[present]]));
 }
 
 /**
@@ -318,7 +332,8 @@ export function tabRequests(
 /**
  * Mirrors registrations into one Google spreadsheet, a tab per event. The
  * first pass after a start copies every event; then changed tabs are
- * rewritten every 30 s. Needs GOOGLE_EVENTS_SPREADSHEET_ID and the service
+ * rewritten every 30 s, and attendance flipped in the sheet goes back to
+ * the site first. Needs GOOGLE_EVENTS_SPREADSHEET_ID and the service
  * account of the join applications sheet, with edit access to the file.
  */
 @Injectable()
@@ -335,6 +350,9 @@ export class RegistrationSheetsService
   private readonly written = new Map<string, string>();
   // Tabs this process already tried to style; a failed try waits for a restart.
   private readonly styled = new Set<number>();
+  // Attendance cells as last written, by event and ticket number: a cell
+  // that differs was changed by a person, not by a scan made since.
+  private readonly attendance = new Map<string, Map<string, string>>();
 
   constructor(
     private readonly prisma: PrismaService,
@@ -368,14 +386,16 @@ export class RegistrationSheetsService
         const recent = this.backfilled
           ? { date: { gte: new Date(Date.now() - RECENT_MS) } }
           : {};
-        const events = await this.load({
+        const where = {
           ...recent,
           OR: [
             { registrations: { some: {} } },
             // A tab whose last registration was deleted still needs clearing.
             { id: { in: [...this.written.keys()] } },
           ],
-        });
+        };
+        let events = await this.load(where);
+        if (await this.pullAttendance(events)) events = await this.load(where);
         await this.write(events, false);
         this.backfilled = true;
       });
@@ -397,12 +417,17 @@ export class RegistrationSheetsService
       );
     }
     const found = await this.exclusive(async () => {
-      const events = await this.load({ id: eventId });
-      await this.write(events, true).catch((err: unknown) => {
+      let events = await this.load({ id: eventId });
+      try {
+        if (await this.pullAttendance(events)) {
+          events = await this.load({ id: eventId });
+        }
+        await this.write(events, true);
+      } catch (err) {
         throw new BadGatewayException(
           `Google Таблиця не прийняла дані: ${errorText(err)}`,
         );
-      });
+      }
       return events.length > 0;
     });
     if (!found) throw new NotFoundException(`Event ${eventId} not found`);
@@ -424,6 +449,76 @@ export class RegistrationSheetsService
         },
       },
     });
+  }
+
+  /**
+   * Organizers may flip «Присутність» in the sheet. A cell that no longer
+   * says what the sync wrote there is their edit and goes to the site like
+   * a mark from the check-in list. Returns whether anything changed.
+   */
+  private async pullAttendance(events: SheetEvent[]): Promise<boolean> {
+    const watched = events.filter((event) => this.attendance.has(event.id));
+    if (!watched.length) return false;
+    const [header] = registrationTable(watched[0]);
+    const code = header.indexOf('Код квитка');
+    const present = header.indexOf('Присутність');
+    const token = await this.google.getAccessToken();
+    const { valueRanges = [] } = await this.call<{
+      valueRanges?: {
+        valueRange?: { values?: string[][] };
+        dataFilters?: { gridRange?: { sheetId?: number } }[];
+      }[];
+    }>(token, '/values:batchGetByDataFilter', {
+      dataFilters: watched.map((event) => ({
+        gridRange: {
+          sheetId: sheetIdFor(event.id),
+          startRowIndex: 1,
+          startColumnIndex: code,
+          endColumnIndex: present + 1,
+        },
+      })),
+    });
+    const cells = new Map(
+      valueRanges.map((range) => [
+        range.dataFilters?.[0]?.gridRange?.sheetId,
+        range.valueRange?.values ?? [],
+      ]),
+    );
+
+    let changed = false;
+    for (const event of watched) {
+      const written = this.attendance.get(event.id)!;
+      const byTicket = new Map(
+        event.registrations.map((reg) => [
+          reg.ticketCode.slice(0, 8).toUpperCase(),
+          reg,
+        ]),
+      );
+      for (const row of cells.get(sheetIdFor(event.id)) ?? []) {
+        const ticket = row[0];
+        const value = row[present - code] ?? '';
+        if (value !== PRESENT && value !== EXPECTED) continue;
+        if (value === written.get(ticket)) continue;
+        const reg = byTicket.get(ticket);
+        const attended = value === PRESENT;
+        if (reg && reg.attended !== attended) {
+          await this.prisma.eventRegistration.update({
+            where: { id: reg.id },
+            data: {
+              attended,
+              attendedAt: attended ? new Date() : null,
+              attendedBy: attended ? SHEET_EDITOR : null,
+            },
+          });
+          this.logger.log(
+            `Attendance from Google Sheets: ${reg.fullName} → ${value}`,
+          );
+          changed = true;
+        }
+        written.set(ticket, value);
+      }
+    }
+    return changed;
   }
 
   private async write(events: SheetEvent[], force: boolean): Promise<void> {
@@ -465,7 +560,10 @@ export class RegistrationSheetsService
         tabRequests(event, table, existing.get(sheetIdFor(event.id)), titles),
       );
       await this.call(token, ':batchUpdate', { requests });
-      for (const { event, hash } of batch) this.written.set(event.id, hash);
+      for (const { event, hash, table } of batch) {
+        this.written.set(event.id, hash);
+        this.attendance.set(event.id, attendanceOf(table));
+      }
       batch = [];
       cells = 0;
     };
