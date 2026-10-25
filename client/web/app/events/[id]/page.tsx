@@ -273,7 +273,7 @@ export default async function EventDetailPage({
                   fees.anyAmount
                     ? "Довільна сума"
                     : fee > 0
-                      ? `${fee} грн`
+                      ? `від ${fee} грн`
                       : "Безкоштовно"
                 }
                 note={fees.onlineRequired ? "Донат на ЗСУ" : undefined}

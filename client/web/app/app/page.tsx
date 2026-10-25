@@ -2242,7 +2242,7 @@ function MiniAppContent() {
                   <span className="font-black text-brand-purple text-base">
                     {selectedEvent.donationAnyAmount
                       ? ANY_AMOUNT_VALUE
-                      : `${Number(selectedEvent.feeAmount)} грн`}
+                      : `від ${Number(selectedEvent.feeAmount)} грн`}
                   </span>
                 </div>
               )}
@@ -2731,7 +2731,7 @@ function MiniAppContent() {
                         <br />
                         {selectedEvent.donationAnyAmount
                           ? ANY_AMOUNT_VALUE
-                          : `${Number(selectedEvent.feeAmount)} грн`}
+                          : `від ${Number(selectedEvent.feeAmount)} грн`}
                       </button>
                       )}
                       {Number(selectedEvent.feeAtEventAmount ?? 0) > 0 && (
@@ -2746,7 +2746,7 @@ function MiniAppContent() {
                       >
                         На вході
                         <br />
-                        {Number(selectedEvent.feeAtEventAmount)} грн
+                        від {Number(selectedEvent.feeAtEventAmount)} грн
                       </button>
                       )}
                     </div>
@@ -2914,7 +2914,7 @@ function MiniAppContent() {
                             {ev.donationAnyAmount
                               ? 'Донат · довільна сума'
                               : ev.feeAmount && Number(ev.feeAmount) > 0
-                                ? `${Number(ev.feeAmount)} грн`
+                                ? `від ${Number(ev.feeAmount)} грн`
                                 : 'Вільний'}
                           </span>
                         </div>
@@ -2924,7 +2924,7 @@ function MiniAppContent() {
                             {ev.donationAnyAmount
                               ? 'Донат · довільна сума'
                               : ev.feeAmount && Number(ev.feeAmount) > 0
-                                ? `${Number(ev.feeAmount)} грн`
+                                ? `від ${Number(ev.feeAmount)} грн`
                                 : 'Вільний'}
                           </span>
                         </div>

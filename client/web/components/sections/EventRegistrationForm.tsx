@@ -602,7 +602,7 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
                     >
                       {fees.anyAmount
                         ? `Задонатив онлайн · ${ANY_AMOUNT_VALUE}`
-                        : `Задонатив онлайн · ${fee} грн`}
+                        : `Задонатив онлайн · від ${fee} грн`}
                     </button>
                   )}
                   {feeAtEvent > 0 && (
@@ -612,7 +612,7 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
                       aria-pressed={payment === 'AT_EVENT'}
                       className={chip(payment === 'AT_EVENT')}
                     >
-                      Оплачу на заході · {feeAtEvent} грн
+                      Оплачу на заході · від {feeAtEvent} грн
                     </button>
                   )}
                 </div>
@@ -664,7 +664,7 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
 
                 {payment === 'AT_EVENT' && (
                   <p className="rounded-xl border border-brand-orange/40 bg-brand-orange/10 px-4 py-3 text-sm text-muted">
-                    Не забудь взяти {feeAtEvent} грн готівкою — оплатиш на вході.
+                    Не забудь взяти від {feeAtEvent} грн готівкою — оплатиш на вході.
                   </p>
                 )}
                 {errors.payment && (

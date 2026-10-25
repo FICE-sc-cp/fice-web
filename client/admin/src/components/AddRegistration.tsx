@@ -19,7 +19,7 @@ function paymentChoices(event: EventItem): { value: RegistrationPayment; label: 
       ? [
           {
             value: 'DONATED' as const,
-            label: `Оплатив онлайн${amount(event.feeAmount) > 0 ? ` · ${amount(event.feeAmount)} грн` : ''}`,
+            label: `Оплатив онлайн${amount(event.feeAmount) > 0 ? ` · від ${amount(event.feeAmount)} грн` : ''}`,
           },
         ]
       : []),
@@ -27,7 +27,7 @@ function paymentChoices(event: EventItem): { value: RegistrationPayment; label: 
       ? [
           {
             value: 'AT_EVENT' as const,
-            label: `Оплатить на вході · ${amount(event.feeAtEventAmount)} грн`,
+            label: `Оплатить на вході · від ${amount(event.feeAtEventAmount)} грн`,
           },
         ]
       : []),
