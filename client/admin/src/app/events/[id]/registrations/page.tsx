@@ -299,7 +299,7 @@ export default function EventRegistrationsPage() {
         title={event ? `Реєстрації · ${event.name}` : 'Зареєстровані'}
         backHref={`/events/${id}`}
         action={
-          <div className="flex flex-wrap items-center justify-end gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <AddRegistration eventId={id} event={event} />
             {sheet.url ? (
               <a
@@ -525,10 +525,10 @@ export default function EventRegistrationsPage() {
         {/* Filter Pills Groups */}
         <div className="flex items-center gap-2 flex-wrap text-xs">
           {/* Payment & Review status filter */}
-          <div className="flex items-center rounded-xl border border-border bg-bg-soft p-1">
+          <div className="flex flex-wrap items-center rounded-xl border border-border bg-bg-soft p-1">
             <button
               onClick={() => setPaymentFilter('ALL')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition-colors ${
+              className={`whitespace-nowrap px-2.5 py-1 rounded-lg font-bold transition-colors ${
                 paymentFilter === 'ALL'
                   ? 'bg-surface text-fg shadow-sm'
                   : 'text-subtle hover:text-fg'
@@ -538,7 +538,7 @@ export default function EventRegistrationsPage() {
             </button>
             <button
               onClick={() => setPaymentFilter('PENDING')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition-colors flex items-center gap-1 ${
+              className={`whitespace-nowrap px-2.5 py-1 rounded-lg font-bold transition-colors flex items-center gap-1 ${
                 paymentFilter === 'PENDING'
                   ? 'bg-amber-500/25 text-amber-300 border border-amber-500/40'
                   : 'text-amber-300/80 hover:text-amber-200'
@@ -553,7 +553,7 @@ export default function EventRegistrationsPage() {
             </button>
             <button
               onClick={() => setPaymentFilter('CONFIRMED')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition-colors ${
+              className={`whitespace-nowrap px-2.5 py-1 rounded-lg font-bold transition-colors ${
                 paymentFilter === 'CONFIRMED'
                   ? 'bg-brand-green/20 text-brand-green border border-brand-green/30'
                   : 'text-subtle hover:text-fg'
@@ -563,7 +563,7 @@ export default function EventRegistrationsPage() {
             </button>
             <button
               onClick={() => setPaymentFilter('AT_EVENT')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition-colors ${
+              className={`whitespace-nowrap px-2.5 py-1 rounded-lg font-bold transition-colors ${
                 paymentFilter === 'AT_EVENT'
                   ? 'bg-brand-orange/20 text-brand-orange border border-brand-orange/30'
                   : 'text-subtle hover:text-fg'
@@ -573,7 +573,7 @@ export default function EventRegistrationsPage() {
             </button>
             <button
               onClick={() => setPaymentFilter('REJECTED')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition-colors ${
+              className={`whitespace-nowrap px-2.5 py-1 rounded-lg font-bold transition-colors ${
                 paymentFilter === 'REJECTED'
                   ? 'bg-red-500/20 text-red-400 border border-red-500/30'
                   : 'text-subtle hover:text-fg'
@@ -587,7 +587,7 @@ export default function EventRegistrationsPage() {
           <div className="flex items-center rounded-xl border border-border bg-bg-soft p-1">
             <button
               onClick={() => setSourceFilter('ALL')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition-colors ${
+              className={`whitespace-nowrap px-2.5 py-1 rounded-lg font-bold transition-colors ${
                 sourceFilter === 'ALL'
                   ? 'bg-surface text-fg shadow-sm'
                   : 'text-subtle hover:text-fg'
@@ -597,7 +597,7 @@ export default function EventRegistrationsPage() {
             </button>
             <button
               onClick={() => setSourceFilter('WEB')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition-colors ${
+              className={`whitespace-nowrap px-2.5 py-1 rounded-lg font-bold transition-colors ${
                 sourceFilter === 'WEB'
                   ? 'bg-brand-cyan/20 text-brand-cyan border border-brand-cyan/30'
                   : 'text-subtle hover:text-fg'
@@ -607,7 +607,7 @@ export default function EventRegistrationsPage() {
             </button>
             <button
               onClick={() => setSourceFilter('BOT')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition-colors ${
+              className={`whitespace-nowrap px-2.5 py-1 rounded-lg font-bold transition-colors ${
                 sourceFilter === 'BOT'
                   ? 'bg-white/10 text-fg border border-white/20'
                   : 'text-subtle hover:text-fg'
@@ -621,7 +621,7 @@ export default function EventRegistrationsPage() {
           <div className="flex items-center rounded-xl border border-border bg-bg-soft p-1">
             <button
               onClick={() => setAttendanceFilter('ALL')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition-colors ${
+              className={`whitespace-nowrap px-2.5 py-1 rounded-lg font-bold transition-colors ${
                 attendanceFilter === 'ALL'
                   ? 'bg-surface text-fg shadow-sm'
                   : 'text-subtle hover:text-fg'
@@ -631,7 +631,7 @@ export default function EventRegistrationsPage() {
             </button>
             <button
               onClick={() => setAttendanceFilter('ATTENDED')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition-colors ${
+              className={`whitespace-nowrap px-2.5 py-1 rounded-lg font-bold transition-colors ${
                 attendanceFilter === 'ATTENDED'
                   ? 'bg-brand-cyan/20 text-brand-cyan'
                   : 'text-subtle hover:text-fg'
@@ -641,7 +641,7 @@ export default function EventRegistrationsPage() {
             </button>
             <button
               onClick={() => setAttendanceFilter('NOT_ATTENDED')}
-              className={`px-2.5 py-1 rounded-lg font-bold transition-colors ${
+              className={`whitespace-nowrap px-2.5 py-1 rounded-lg font-bold transition-colors ${
                 attendanceFilter === 'NOT_ATTENDED'
                   ? 'bg-white/10 text-subtle'
                   : 'text-subtle hover:text-fg'
@@ -708,7 +708,7 @@ export default function EventRegistrationsPage() {
                       <span className="shrink-0 rounded-lg bg-surface px-2 py-0.5 text-xs font-mono text-subtle border border-border">
                         #{i + 1}
                       </span>
-                      <h3 className="font-bold text-base text-fg truncate">
+                      <h3 className="min-w-0 font-bold text-base text-fg break-words">
                         {r.fullName}
                       </h3>
                       <span

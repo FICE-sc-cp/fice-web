@@ -26,7 +26,8 @@ export function PageHeader({
   useBackButton(goUp);
 
   return (
-    <div className="mb-5 flex items-center justify-between gap-3">
+    // On a phone the actions drop under the title instead of squeezing it.
+    <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
       <div className="flex min-w-0 items-center gap-2">
         <button
           type="button"
