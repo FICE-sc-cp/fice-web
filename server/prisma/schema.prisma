@@ -49,6 +49,9 @@ model News {
   // event registration (registrationLink without eventDate).
   buttonText       String?   @db.VarChar(64)
   isDraft          Boolean   @default(false)
+  // The big card on the news page, one post at a time. When none is chosen,
+  // or the chosen one is a draft or scheduled, the latest post takes it.
+  isFeatured       Boolean   @default(false)
 }
 
 enum ChannelPostStatus {

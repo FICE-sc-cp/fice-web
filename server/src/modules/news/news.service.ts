@@ -62,12 +62,51 @@ export class NewsService {
     };
   }
 
+  /**
+   * The big card on the news page: the chosen post, else the latest one.
+   * Drafts and scheduled posts never count, so a chosen one that is hidden
+   * gives way to the latest published post.
+   */
+  async findFeatured() {
+    const news = await this.prisma.news.findFirst({
+      where: { isDraft: false, publishDate: { lte: new Date() } },
+      orderBy: [{ isFeatured: 'desc' }, { publishDate: 'desc' }],
+    });
+    if (!news) {
+      throw new NotFoundException('No published news');
+    }
+    return news;
+  }
+
   async findOne(id: string) {
     const news = await this.prisma.news.findUnique({ where: { id } });
     if (!news) {
       throw new NotFoundException(`News ${id} not found`);
     }
     return news;
+  }
+
+  /** Makes the post the main one on the news page, unsetting the previous one. */
+  async feature(id: string) {
+    await this.findOne(id);
+    // ponytail: two admins clicking at the same moment can leave two chosen
+    // posts; the site then shows the newer one and the next click clears it.
+    const [, news] = await this.prisma.$transaction([
+      this.prisma.news.updateMany({
+        where: { isFeatured: true, id: { not: id } },
+        data: { isFeatured: false },
+      }),
+      this.prisma.news.update({ where: { id }, data: { isFeatured: true } }),
+    ]);
+    return news;
+  }
+
+  async unfeature(id: string) {
+    await this.findOne(id);
+    return this.prisma.news.update({
+      where: { id },
+      data: { isFeatured: false },
+    });
   }
 
   async update(id: string, dto: UpdateNewsDto) {

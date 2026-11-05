@@ -26,7 +26,10 @@ const INITIAL_PAGE_SIZE = 10;
 const MORE_PAGE_SIZE = 9;
 
 export default async function NewsCatalogPage() {
-  const { items, total } = await safe(fice.news(INITIAL_PAGE_SIZE, 1), EMPTY);
+  const [{ items, total }, main] = await Promise.all([
+    safe(fice.news(INITIAL_PAGE_SIZE, 1), EMPTY),
+    safe<News | null>(fice.featuredNews(), null),
+  ]);
 
   return (
     <>
@@ -57,6 +60,7 @@ export default async function NewsCatalogPage() {
         {items.length > 0 ? (
           <MoreNews
             initial={items}
+            main={main}
             total={total}
             pageSize={MORE_PAGE_SIZE}
           />

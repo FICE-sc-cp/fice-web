@@ -88,6 +88,17 @@ export default function NewsListPage() {
     },
   });
 
+  // The big card on the site's news page; the latest post when none is chosen.
+  const feature = useMutation({
+    mutationFn: (n: News) =>
+      n.isFeatured ? api.unfeatureNews(n.id) : api.featureNews(n.id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['news'] });
+      hapticNotify('success');
+    },
+    onError: () => hapticNotify('error'),
+  });
+
   return (
     <main className="mx-auto max-w-xl px-4 py-6">
       <PageHeader
@@ -100,6 +111,10 @@ export default function NewsListPage() {
       />
 
       <NewsStatsCard />
+
+      {feature.error && (
+        <p className="mb-3 text-sm text-brand-red">{feature.error.message}</p>
+      )}
 
       {isLoading ? (
         <div className="flex justify-center py-12">
@@ -153,6 +168,33 @@ export default function NewsListPage() {
                         })}`
                       : new Date(n.publishDate).toLocaleDateString('uk-UA')}
                   </p>
+                  {n.isFeatured ? (
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                      <span className="rounded-full bg-gradient-main px-2.5 py-1 font-bold text-black">
+                        {n.isDraft || new Date(n.publishDate).getTime() > now
+                          ? '★ Головна після публікації'
+                          : '★ Головна новина'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => feature.mutate(n)}
+                        disabled={feature.isPending}
+                        aria-label="Зняти з головної"
+                        className="rounded-lg border border-border px-2.5 py-1 text-muted transition-colors hover:text-fg disabled:pointer-events-none disabled:opacity-50"
+                      >
+                        Зняти
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => feature.mutate(n)}
+                      disabled={feature.isPending}
+                      className="mt-2 rounded-lg border border-border px-2.5 py-1 text-xs text-muted transition-colors hover:text-fg disabled:pointer-events-none disabled:opacity-50"
+                    >
+                      ☆ Зробити головною
+                    </button>
+                  )}
                 </div>
                 <div className="flex shrink-0 items-center gap-3">
                   <Link

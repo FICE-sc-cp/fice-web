@@ -12,4 +12,5 @@ export class NewsEntity {
   registrationLink: string | null;
   buttonText: string | null;
   isDraft: boolean;
+  isFeatured: boolean;
 }

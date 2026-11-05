@@ -9,6 +9,7 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  Put,
   Query,
 } from '@nestjs/common';
 import {
@@ -61,6 +62,15 @@ export class NewsController {
     return this.newsService.stats(query);
   }
 
+  @Get('featured')
+  @ApiOperation({
+    summary: 'The main news item: the chosen one, else the latest',
+  })
+  @ApiOkResponse({ type: NewsEntity })
+  findFeatured() {
+    return this.newsService.findFeatured();
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get a news item by id' })
   @ApiOkResponse({ type: NewsEntity })
@@ -82,6 +92,22 @@ export class NewsController {
   @ApiOkResponse({ type: NewsEntity })
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateNewsDto) {
     return this.newsService.update(id, dto);
+  }
+
+  @Put(':id/featured')
+  @Admin()
+  @ApiOperation({ summary: 'Make a news item the main one (admin)' })
+  @ApiOkResponse({ type: NewsEntity })
+  feature(@Param('id', ParseUUIDPipe) id: string) {
+    return this.newsService.feature(id);
+  }
+
+  @Delete(':id/featured')
+  @Admin()
+  @ApiOperation({ summary: 'Stop showing a news item as the main one (admin)' })
+  @ApiOkResponse({ type: NewsEntity })
+  unfeature(@Param('id', ParseUUIDPipe) id: string) {
+    return this.newsService.unfeature(id);
   }
 
   @Delete(':id')

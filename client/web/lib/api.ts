@@ -409,6 +409,8 @@ export const fice = {
         `${filters?.category ? `&category=${filters.category}` : ''}`,
     ),
   newsItem: (id: string) => request<News>(`/news/${id}`),
+  // The chosen main post, else the latest; 404 while nothing is published.
+  featuredNews: () => request<News>('/news/featured'),
 
   applyPartner: (body: unknown) =>
     request<Partner>('/partner/apply', {

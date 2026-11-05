@@ -53,10 +53,13 @@ function CardImage({
 
 export function MoreNews({
   initial,
+  main,
   total,
   pageSize,
 }: {
   initial: News[];
+  /** The post chosen in the admin as the main one, else the latest. */
+  main: News | null;
   total: number;
   pageSize: number;
 }) {
@@ -126,8 +129,12 @@ export function MoreNews({
 
   const clean = filter === "all" && !query.trim();
 
-  const featured = clean ? items[0] : null;
-  const visible = clean ? items.slice(1) : items;
+  const featured = clean ? (main ?? items[0]) : null;
+  const rest = clean ? items.filter((n) => n.id !== featured?.id) : items;
+  // A chosen post from outside the first page leaves one card too many: while more can load,
+  // hold the last one back so the grid ends in a full row; the next page brings it.
+  const visible =
+    clean && rest.length === items.length && items.length < count ? rest.slice(0, -1) : rest;
 
   return (
     <>

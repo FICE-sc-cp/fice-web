@@ -280,6 +280,8 @@ export interface News {
   /** Label of the button under a news item that is not an event. */
   buttonText: string | null;
   isDraft: boolean;
+  /** The big card on the site's news page (one post at a time). */
+  isFeatured: boolean;
 }
 
 export interface Applicant {
@@ -600,6 +602,8 @@ export const api = {
   updateNews: (id: string, body: Partial<NewsInput>) =>
     request<News>(`/news/${id}`, { method: 'PATCH', ...json(body) }),
   deleteNews: (id: string) => request<News>(`/news/${id}`, { method: 'DELETE' }),
+  featureNews: (id: string) => request<News>(`/news/${id}/featured`, { method: 'PUT' }),
+  unfeatureNews: (id: string) => request<News>(`/news/${id}/featured`, { method: 'DELETE' }),
 
   events: (page = 1, limit = 20) =>
     request<Paginated<EventItem>>(`/event?page=${page}&limit=${limit}&draft=true`),
