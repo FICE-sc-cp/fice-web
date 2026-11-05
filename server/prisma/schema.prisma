@@ -698,6 +698,322 @@ model InterviewNote {
   @@index([candidateId])
 }
 
+// ---- Merch shop (@merch_ficebot, /merch, /merch-app) -----------------------
+// Integer ids are deliberate: order and product numbers live on Telegram
+// buttons, in customers' chats and in the Google Sheet.
+
+enum MerchOrderStatus {
+  PENDING
+  IN_PROCESS
+  READY_FOR_PICKUP
+  COMPLETED
+  CANCELLED
+}
+
+enum MerchDeliveryMethod {
+  NOVA_POSHTA
+  CAMPUS // legacy, imported orders only
+  DAYF
+  LATER_CAMPUS
+}
+
+// One row, id = 1 (CHECK in the migration): shop settings and the admin chat.
+model MerchConfig {
+  id              Int      @id @default(1)
+  welcomeText     String   @default("Вітаємо у нашому магазині мерчу! 🖤") @db.Text
+  currency        String   @default("UAH") @db.VarChar(10)
+  monoJarUrl      String   @default("https://send.monobank.ua/") @db.VarChar(255)
+  cardNumber      String?  @db.VarChar(20)
+  dayfEnabled     Boolean  @default(false)
+  adminChatId     BigInt?
+  adminChatTitle  String?  @db.VarChar(255)
+  ordersThreadId  Int?
+  supportThreadId Int?
+  updatedAt       DateTime @default(now()) @updatedAt
+}
+
+// Someone who started the merch bot, opened its Mini App or linked the site.
+// Not BotUser: that row means "started the user bot" and feeds its broadcasts.
+model MerchCustomer {
+  telegramId  BigInt    @id
+  // Lowercase, without @.
+  username    String?   @db.VarChar(255)
+  firstName   String?   @db.VarChar(255)
+  lastName    String?   @db.VarChar(255)
+  // Last known: the bot cannot write to this person. /start clears it.
+  blockedBot  Boolean   @default(false)
+  // What their next private message answers: support, mono, card, welcome, broadcast.
+  prompt      String?   @db.VarChar(20)
+  promptUntil DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now()) @updatedAt
+
+  links      MerchLink[]
+  recipients MerchRecipient[]
+  orders     MerchOrder[]
+}
+
+// One browser. First a one-time link token for /start link_<token>, then, once
+// confirmed in the bot and polled, the session that browser sends as x-merch-token.
+model MerchLink {
+  id          Int      @id @default(autoincrement())
+  linkToken   String?  @unique @db.VarChar(32)
+  // sha256 hex of the session token. The token itself is never stored.
+  sessionHash String?  @unique @db.VarChar(64)
+  telegramId  BigInt?
+  // 15 minutes while pending, 180 days once claimed.
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  customer MerchCustomer? @relation(fields: [telegramId], references: [telegramId], onDelete: Cascade)
+
+  @@index([telegramId])
+  @@index([expiresAt])
+}
+
+model MerchRecipient {
+  id         Int      @id @default(autoincrement())
+  telegramId BigInt
+  fullName   String   @db.VarChar(255)
+  // +380XXXXXXXXX on new rows.
+  phone      String   @db.VarChar(50)
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  customer MerchCustomer @relation(fields: [telegramId], references: [telegramId], onDelete: Cascade)
+
+  @@unique([telegramId, fullName, phone])
+}
+
+model MerchCategory {
+  id    Int    @id @default(autoincrement())
+  name  String @unique @db.VarChar(50)
+  order Int    @default(0)
+
+  products  MerchProduct[]
+  templates MerchTemplate[]
+}
+
+model MerchTag {
+  id    Int    @id @default(autoincrement())
+  name  String @unique @db.VarChar(50)
+  order Int    @default(0)
+
+  products MerchProductTag[]
+}
+
+model MerchProduct {
+  id          Int      @id @default(autoincrement())
+  title       String   @db.VarChar(255)
+  description String   @db.Text
+  // false means archived.
+  isActive    Boolean  @default(true)
+  // Lower shows first. A new product takes min - 1, the import seeds -id.
+  order       Int      @default(0)
+  categoryId  Int?
+  // Client key of the last admin save: spots a retry and a form that went stale.
+  saveKey     String?  @unique @db.VarChar(36)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  category   MerchCategory?      @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  variants   MerchVariant[]
+  photos     MerchPhoto[]
+  tags       MerchProductTag[]
+  groups     MerchProductGroup[]
+  orderItems MerchOrderItem[]
+
+  @@index([isActive, order])
+  @@index([categoryId])
+}
+
+model MerchProductTag {
+  productId Int
+  tagId     Int
+
+  product MerchProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  tag     MerchTag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([productId, tagId])
+  @@index([tagId])
+}
+
+// One row per (size, colour). Updated in place, never deleted and re-inserted.
+model MerchVariant {
+  id        Int     @id @default(autoincrement())
+  productId Int
+  // NO_SIZE ("-") for products without sizes; never shown.
+  size      String  @db.VarChar(20)
+  // '' means no colour, so the unique key below really holds.
+  color     String  @default("") @db.VarChar(30)
+  price     Decimal @db.Decimal(10, 2)
+  // Null means no stock limit. CHECK >= 0 in the migration.
+  stock     Int?
+  // sizeIndex * 100 + colorIndex: keeps both matrix axes in their order.
+  order     Int     @default(0)
+
+  product    MerchProduct     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderItems MerchOrderItem[]
+
+  @@unique([productId, size, color])
+}
+
+// One photo per colour; color '' is the photo of a product without colours.
+model MerchPhoto {
+  id           Int     @id @default(autoincrement())
+  productId    Int
+  color        String  @default("") @db.VarChar(30)
+  url          String
+  thumbUrl     String
+  // Telegram file id it was imported from, so a repeated import skips the download.
+  sourceFileId String? @db.VarChar(255)
+
+  product MerchProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, color])
+}
+
+// Values copied into a new product form; later edits touch no product.
+// Stock is not part of a template.
+model MerchTemplate {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique @db.VarChar(100)
+  categoryId  Int?
+  description String   @default("") @db.Text
+  // Plain ints, no foreign keys. A dead group raises a warning in the form.
+  tagIds      Int[]    @default([])
+  groupIds    Int[]    @default([])
+  sizes       String[] @default([])
+  colors      String[] @default([])
+  // [{ size, color, price }]; a missing pair is a combination not sold.
+  prices      Json     @default("[]")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  category MerchCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([categoryId])
+}
+
+model MerchGroup {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique @db.VarChar(255)
+  createdAt DateTime @default(now())
+
+  members  MerchGroupMember[]
+  products MerchProductGroup[]
+}
+
+// Exactly one of telegramId and username (CHECK in the migration).
+model MerchGroupMember {
+  id         Int      @id @default(autoincrement())
+  groupId    Int
+  telegramId BigInt?
+  // Lowercase, without @.
+  username   String?  @db.VarChar(255)
+  createdAt  DateTime @default(now())
+
+  group MerchGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, telegramId])
+  @@unique([groupId, username])
+  @@index([telegramId])
+  @@index([username])
+}
+
+// No rows for a product: everyone sees it.
+model MerchProductGroup {
+  productId Int
+  groupId   Int
+
+  product MerchProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  group   MerchGroup   @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([productId, groupId])
+  @@index([groupId])
+}
+
+model MerchPickupSlot {
+  id        Int      @id @default(autoincrement())
+  date      DateTime @db.Date
+  // HH:MM, Kyiv time.
+  startTime String   @db.VarChar(5)
+  endTime   String   @db.VarChar(5)
+  // A slot with orders is deactivated instead of deleted.
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  orders MerchOrder[]
+
+  @@index([date])
+}
+
+model MerchOrder {
+  id                    Int                  @id @default(autoincrement())
+  telegramId            BigInt
+  status                MerchOrderStatus     @default(PENDING)
+  deliveryMethod        MerchDeliveryMethod?
+  address               String               @db.Text
+  phone                 String               @db.VarChar(50)
+  recipientName         String?              @db.VarChar(255)
+  totalAmount           Decimal              @db.Decimal(10, 2)
+  currency              String               @default("UAH") @db.VarChar(10)
+  // New orders: /uploads URL, kept alive by the upload GC union.
+  receiptUrl            String?
+  // Imported orders: Telegram file id, valid for this bot only.
+  receiptFileId         String?              @db.VarChar(255)
+  // Client generated; a repeated submit returns the same order. Null on imports.
+  clientKey             String?              @db.VarChar(64)
+  // Lines shown on the card: short stock, changed total, gone items.
+  warnings              String[]             @default([])
+  adminMessageId        Int?
+  // Who took it in work, shown when completed.
+  processedByAdmin      String?              @db.VarChar(255)
+  // Who pressed the last status button; the card and the sheet show it.
+  statusBy              String?              @db.VarChar(255)
+  pickupSlotId          Int?
+  needsIndividualPickup Boolean              @default(false)
+  // Work the sync loop still owes. Imported orders keep false, so they are
+  // never re-sent. Set in the same write that changes the order.
+  cardDirty             Boolean              @default(false)
+  notifyDirty           Boolean              @default(false)
+  pickupDirty           Boolean              @default(false)
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @default(now()) @updatedAt
+
+  customer   MerchCustomer    @relation(fields: [telegramId], references: [telegramId], onDelete: Restrict)
+  pickupSlot MerchPickupSlot? @relation(fields: [pickupSlotId], references: [id], onDelete: Restrict)
+  items      MerchOrderItem[]
+
+  @@unique([telegramId, clientKey])
+  @@index([telegramId, createdAt])
+  @@index([status])
+  @@index([pickupSlotId])
+}
+
+// Snapshot lines: history survives a deleted product or variant.
+model MerchOrderItem {
+  id         Int     @id @default(autoincrement())
+  orderId    Int
+  productId  Int?
+  variantId  Int?
+  title      String  @db.VarChar(255)
+  size       String  @db.VarChar(20)
+  color      String  @default("") @db.VarChar(30)
+  unitPrice  Decimal @db.Decimal(10, 2)
+  quantity   Int
+  // Units really taken from stock (floor at 0). A cancel returns exactly this.
+  stockTaken Int     @default(0)
+
+  order   MerchOrder    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product MerchProduct? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  variant MerchVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([productId])
+  @@index([variantId])
+}
+
 // ---- Шари: teachers' bonuses for students (FICE birthday) -----------------
 // Teachers work through a personal link (token); starostas and the presidium
 // sign in with the Telegram Login Widget of the user bot. Each award's random
