@@ -14,7 +14,7 @@ const NOW = new Date('2026-12-01T12:00:00Z');
 const ago = (ms: number) => new Date(NOW.getTime() - ms);
 
 function setup(rows: any[], referenced: string[] = [], usedBytes = 0) {
-  const prisma: any = {
+  const prisma = {
     publicUpload: {
       aggregate: jest.fn().mockResolvedValue({ _sum: { size: usedBytes } }),
       findMany: jest.fn().mockResolvedValueOnce(rows).mockResolvedValue([]),
@@ -24,7 +24,7 @@ function setup(rows: any[], referenced: string[] = [], usedBytes = 0) {
     },
     $queryRaw: jest.fn().mockResolvedValue(referenced.map((url) => ({ url }))),
   };
-  return { prisma, service: new PublicUploadService(prisma) };
+  return { prisma, service: new PublicUploadService(prisma as never) };
 }
 
 describe('PublicUploadService quota', () => {
@@ -92,6 +92,19 @@ describe('PublicUploadService.collectGarbage', () => {
       where: { id: '1' },
       data: { unreferencedSince: null },
     });
+  });
+
+  it('asks the merch tables about receipts and product photos', async () => {
+    const { prisma, service } = setup([
+      { id: '1', filename: 'a.jpg', unreferencedSince: null },
+    ]);
+    await service.collectGarbage(NOW);
+
+    const [sql] = prisma.$queryRaw.mock.calls[0] as [{ strings: string[] }];
+    const query = sql.strings.join('?');
+    expect(query).toContain('"receiptUrl" FROM "MerchOrder"');
+    expect(query).toContain('"url" FROM "MerchPhoto"');
+    expect(query).toContain('"thumbUrl" FROM "MerchPhoto"');
   });
 
   it('starts the 24-hour clock when a reference disappears', async () => {

@@ -13,7 +13,7 @@ const partsFormatter = new Intl.DateTimeFormat('en-CA', {
   hourCycle: 'h23',
 });
 
-function kyivParts(at: Date) {
+export function kyivParts(at: Date) {
   const parts: Record<string, number> = {};
   for (const p of partsFormatter.formatToParts(at)) {
     if (p.type !== 'literal') parts[p.type] = Number(p.value);

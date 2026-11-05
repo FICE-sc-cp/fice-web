@@ -5,11 +5,13 @@ const serviceWith = (
   admin: PollingStatus,
   user: PollingStatus,
   interview: PollingStatus = 'disabled',
+  merch: PollingStatus = 'disabled',
 ) =>
   new AppService(
     { pollingStatus: () => admin } as never,
     { pollingStatus: () => user } as never,
     { pollingStatus: () => interview } as never,
+    { pollingStatus: () => merch } as never,
   );
 
 describe('AppService.getHealth', () => {
@@ -20,6 +22,7 @@ describe('AppService.getHealth', () => {
       admin: 'running',
       user: 'disabled',
       interview: 'disabled',
+      merch: 'disabled',
     });
   });
 
@@ -29,6 +32,10 @@ describe('AppService.getHealth', () => {
     );
     expect(
       serviceWith('running', 'running', 'retrying').getHealth().status,
+    ).toBe('degraded');
+    expect(
+      serviceWith('running', 'running', 'running', 'retrying').getHealth()
+        .status,
     ).toBe('degraded');
   });
 });

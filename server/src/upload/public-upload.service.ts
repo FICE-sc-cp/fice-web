@@ -153,6 +153,9 @@ export class PublicUploadService implements OnModuleInit, OnModuleDestroy {
         UNION SELECT "logoImage" FROM "EventPartner" WHERE "logoImage" = ANY(${urls})
         UNION SELECT "photo" FROM "ProjectParticipant" WHERE "photo" = ANY(${urls})
         UNION SELECT "imageUrl" FROM "BroadcastMessage" WHERE "imageUrl" = ANY(${urls})
+        UNION SELECT "receiptUrl" FROM "MerchOrder" WHERE "receiptUrl" = ANY(${urls})
+        UNION SELECT "url" FROM "MerchPhoto" WHERE "url" = ANY(${urls})
+        UNION SELECT "thumbUrl" FROM "MerchPhoto" WHERE "thumbUrl" = ANY(${urls})
       ) refs
     `);
     return new Set(rows.map((r) => r.url));

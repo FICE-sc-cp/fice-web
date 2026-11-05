@@ -114,7 +114,7 @@ function validateMagicBytes(filePath: string, ext: string): boolean {
   }
 }
 
-function uploadInterceptor(
+export function uploadInterceptor(
   allowed: Record<string, string[]>,
   maxBytes: number,
   rejection: string,
@@ -151,7 +151,7 @@ const adminUpload = uploadInterceptor(
   'Дозволені зображення (JPEG, PNG, WEBP, GIF), відео (MP4, WEBM) або PDF.',
 );
 
-function toResult(file?: Express.Multer.File) {
+export function toResult(file?: Express.Multer.File) {
   if (!file) {
     throw new BadRequestException('No file uploaded (field name: "file")');
   }
@@ -159,7 +159,9 @@ function toResult(file?: Express.Multer.File) {
   if (!validateMagicBytes(file.path, ext)) {
     try {
       unlinkSync(file.path);
-    } catch {}
+    } catch {
+      // Best effort: the upload is refused either way.
+    }
     throw new BadRequestException(
       'Вміст файлу не відповідає дозволеному формату або файл пошкоджено (перевірка сигнатури не пройдена)',
     );
@@ -184,7 +186,9 @@ async function processUpload(
   } catch {
     try {
       unlinkSync(uploaded.path);
-    } catch {}
+    } catch {
+      // Best effort: the upload is refused either way.
+    }
     throw new BadRequestException(
       'Не вдалося обробити зображення. Спробуйте інший файл.',
     );

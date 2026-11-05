@@ -62,6 +62,27 @@ describe('validateEnv', () => {
     ).toEqual([]);
   });
 
+  it('keeps the merch bot optional but separate', () => {
+    expect(
+      productionEnvErrors({ ...PROD, MERCH_BOT_TOKEN: '444:merch' }),
+    ).toEqual([]);
+    for (const taken of ['111:admin', '222:user', '333:interview']) {
+      expect(() =>
+        validateEnv({
+          ...PROD,
+          INTERVIEW_BOT_TOKEN: '333:interview',
+          MERCH_BOT_TOKEN: taken,
+        }),
+      ).toThrow('MERCH_BOT_TOKEN must be a separate bot');
+    }
+  });
+
+  it('refuses the local Telegram fake', () => {
+    expect(() =>
+      validateEnv({ ...PROD, MERCH_BOT_API_ROOT: 'http://127.0.0.1:8081' }),
+    ).toThrow('MERCH_BOT_API_ROOT is not allowed in production');
+  });
+
   it('rejects malformed values', () => {
     const errors = productionEnvErrors({
       ...PROD,

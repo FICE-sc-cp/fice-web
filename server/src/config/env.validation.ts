@@ -50,6 +50,16 @@ export function productionEnvErrors(env: Env): string[] {
   if (interviewToken && [adminToken, userToken].includes(interviewToken)) {
     errors.push('INTERVIEW_BOT_TOKEN must be a separate bot');
   }
+  const merchToken = str(env.MERCH_BOT_TOKEN);
+  if (
+    merchToken &&
+    [adminToken, userToken, interviewToken].includes(merchToken)
+  ) {
+    errors.push('MERCH_BOT_TOKEN must be a separate bot');
+  }
+  if (str(env.MERCH_BOT_API_ROOT)) {
+    errors.push('MERCH_BOT_API_ROOT is not allowed in production');
+  }
 
   const groupId = str(env.ADMIN_GROUP_CHAT_ID);
   if (groupId && !/^-?\d+$/.test(groupId)) {

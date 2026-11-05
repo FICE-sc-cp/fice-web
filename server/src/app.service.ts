@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { BotService } from './bot/bot.service';
 import { InterviewBotService } from './bot/interview-bot.service';
+import { MerchBotService } from './bot/merch-bot.service';
 import { PollingStatus } from './bot/polling';
 import { UserBotService } from './bot/user-bot.service';
 
@@ -8,7 +9,12 @@ export interface Health {
   status: 'ok' | 'degraded';
   service: string;
   timestamp: string;
-  bots: { admin: PollingStatus; user: PollingStatus; interview: PollingStatus };
+  bots: {
+    admin: PollingStatus;
+    user: PollingStatus;
+    interview: PollingStatus;
+    merch: PollingStatus;
+  };
 }
 
 @Injectable()
@@ -17,6 +23,7 @@ export class AppService {
     private readonly botService: BotService,
     private readonly userBotService: UserBotService,
     private readonly interviewBotService: InterviewBotService,
+    private readonly merchBotService: MerchBotService,
   ) {}
 
   getHealth(): Health {
@@ -24,6 +31,7 @@ export class AppService {
       admin: this.botService.pollingStatus(),
       user: this.userBotService.pollingStatus(),
       interview: this.interviewBotService.pollingStatus(),
+      merch: this.merchBotService.pollingStatus(),
     };
     const degraded = Object.values(bots).includes('retrying');
     return {
