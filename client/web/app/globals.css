@@ -302,7 +302,7 @@
     transition:
       opacity 0.6s cubic-bezier(0.22, 0.7, 0.2, 1),
       transform 0.6s cubic-bezier(0.22, 0.7, 0.2, 1);
-    transition-delay: var(--reveal-delay, 0ms);
+    transition-delay: calc(var(--reveal-wait, 0ms) + var(--reveal-delay, 0ms));
     will-change: opacity, transform;
   }
   .reveal.is-visible {
@@ -335,10 +335,71 @@
   .reveal-stagger.is-visible > *:nth-child(7) { animation-delay: 420ms; }
   .reveal-stagger.is-visible > *:nth-child(8) { animation-delay: 490ms; }
 
+  /* RevealEach: each child rises on its own as it scrolls in; the script sets its delay. */
+  .reveal-each > * {
+    opacity: 0;
+  }
+  .reveal-each > [data-in] {
+    opacity: 1;
+    animation: rise 0.55s cubic-bezier(0.22, 0.7, 0.2, 1) backwards;
+  }
+
   .animate-rise  { animation: rise 0.7s cubic-bezier(0.22, 0.7, 0.2, 1) both; }
   .animate-fade  { animation: fade-in 0.9s ease-out both; }
   .animate-pop   { animation: pop-in 0.6s cubic-bezier(0.22, 0.7, 0.2, 1) both; }
   .animate-float { animation: float-y 4s ease-in-out infinite; }
+
+  /* A page hero's frog hops in after the title, and its bubble pops out of the tail as it lands. */
+  .animate-frog-in {
+    transform-origin: 50% 100%;
+    animation: frog-in 0.7s linear 0.12s both;
+  }
+  .animate-bubble-in {
+    animation: bubble-in 0.5s cubic-bezier(0.22, 0.7, 0.2, 1) 0.42s both;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise,
+  .animate-fade,
+  .animate-pop,
+  .animate-frog-in,
+  .animate-bubble-in {
+    animation: none;
+  }
+  .reveal-stagger > *,
+  .reveal-each > * {
+    opacity: 1;
+    animation: none;
+  }
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* Up from a crouch, a hop, down with a squash, settled. */
+@keyframes frog-in {
+  0% {
+    opacity: 0;
+    transform: translateY(30%) scale(1.05, 0.9);
+    animation-timing-function: cubic-bezier(0.2, 0.6, 0.4, 1);
+  }
+  38% {
+    opacity: 1;
+    transform: translateY(-14%) scale(0.96, 1.05);
+    animation-timing-function: cubic-bezier(0.6, 0, 0.8, 0.4);
+  }
+  60% { transform: none; animation-timing-function: ease-out; }
+  74% { transform: scale(1.07, 0.92); animation-timing-function: ease-in-out; }
+  88% { transform: scale(0.98, 1.02); }
+  100% { transform: none; }
+}
+@keyframes bubble-in {
+  0% { opacity: 0; transform: scale(0.6); }
+  60% { opacity: 1; transform: scale(1.04); }
+  100% { opacity: 1; transform: none; }
 }
 
 @keyframes rise {

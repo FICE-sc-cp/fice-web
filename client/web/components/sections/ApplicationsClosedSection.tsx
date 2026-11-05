@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 import { Glow } from "@/components/ui/Glow";
+import { Reveal } from "@/components/ui/Reveal";
 import { SleepingFrog } from "@/components/ui/SleepingFrog";
 import { TelegramIcon } from "@/components/ui/icons";
 
@@ -15,7 +16,7 @@ export function ApplicationsClosedSection() {
       />
 
       <Container>
-        <div className="mx-auto flex max-w-3xl flex-col items-center rounded-3xl border border-white/5 bg-surface/40 p-6 text-center sm:p-10 lg:p-12">
+        <Reveal className="mx-auto flex max-w-3xl flex-col items-center rounded-3xl border border-white/5 bg-surface/40 p-6 text-center sm:p-10 lg:p-12">
           <SleepingFrog className="h-auto w-48 sm:w-56" />
           <h2 className="mt-4 text-3xl font-bold sm:text-4xl">
             Подачу заявок зараз закрито
@@ -42,7 +43,7 @@ export function ApplicationsClosedSection() {
           >
             А поки що — познайомся з департаментами
           </Link>
-        </div>
+        </Reveal>
       </Container>
     </section>
   );

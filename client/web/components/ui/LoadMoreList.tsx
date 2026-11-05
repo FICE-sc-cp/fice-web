@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { RevealEach } from "@/components/ui/Reveal";
 
 // Client-side "показати ще" over server-rendered cards: items arrive fully
 // rendered, we just reveal them page by page.
@@ -17,7 +18,7 @@ export function LoadMoreList({
 
   return (
     <>
-      <div className={className}>{items.slice(0, shown)}</div>
+      <RevealEach className={className}>{items.slice(0, shown)}</RevealEach>
       {shown < items.length && (
         <div className="mt-10 flex justify-center">
           <button

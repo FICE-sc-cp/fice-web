@@ -5,6 +5,7 @@ import { Container } from '@/components/ui/Container';
 import { Glow } from '@/components/ui/Glow';
 import { GradientText } from '@/components/ui/GradientText';
 import { PageHero } from '@/components/ui/PageHero';
+import { Reveal } from '@/components/ui/Reveal';
 import { SectionTitle } from '@/components/ui/SectionTitle';
 import { FundraiserCard } from '@/components/charity/FundraiserCard';
 import { LoadMoreList } from '@/components/ui/LoadMoreList';
@@ -63,11 +64,11 @@ export default async function CharityCatalogPage() {
           <Container className="flex flex-col gap-14 pt-6">
             {active.length > 0 && (
               <div>
-                <div className="mb-8">
+                <Reveal className="mb-8">
                   <SectionTitle className="text-3xl sm:text-4xl lg:text-4xl">
                     Активні збори
                   </SectionTitle>
-                </div>
+                </Reveal>
                 <LoadMoreList
                   pageSize={9}
                   className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
@@ -79,14 +80,14 @@ export default async function CharityCatalogPage() {
             )}
             {closed.length > 0 && (
               <div>
-                <div className="mb-8">
+                <Reveal className="mb-8">
                   <SectionTitle
                     className="text-3xl sm:text-4xl lg:text-4xl"
                     gradient="bg-neutral-600"
                   >
                     Завершені
                   </SectionTitle>
-                </div>
+                </Reveal>
                 <ClosedFundraisers
                   initial={closed}
                   total={closedData.total}

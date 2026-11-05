@@ -7,6 +7,7 @@ import { fice, mediaUrl, type News, type NewsCategory } from "@/lib/api";
 import { Container } from "@/components/ui/Container";
 import { ViewAllButton } from "@/components/ui/ViewAllLink";
 import { FilterTabs } from "@/components/ui/FilterTabs";
+import { Reveal, RevealEach } from "@/components/ui/Reveal";
 import { cn } from "@/lib/utils";
 import {
   NEWS_CATEGORIES,
@@ -141,7 +142,7 @@ export function MoreNews({
     <>
       <section className="relative z-10 py-4">
         <Container>
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <Reveal className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
             <div className="min-w-0">
               <FilterTabs
                 label="Категорія новин"
@@ -164,41 +165,43 @@ export function MoreNews({
                 className="flex-1 bg-transparent py-3 text-[15px] text-fg outline-none placeholder:text-subtle"
               />
             </label>
-          </div>
+          </Reveal>
         </Container>
       </section>
 
       {featured && (
         <section className="relative z-[1] py-7">
           <Container>
-            <Link
-              href={`/news/${featured.id}`}
-              className="group grid overflow-hidden rounded-3xl border border-white/10 bg-surface/45 transition-all duration-300 hover:-translate-y-1.5 hover:border-brand-cyan/60 hover:shadow-2xl hover:shadow-black/40 lg:grid-cols-[1.15fr_1fr]"
-            >
-              <CardImage
-                item={featured}
-                className="aspect-[4/3]"
-                sizes="(min-width: 1024px) 40rem, 100vw"
+            <Reveal>
+              <Link
+                href={`/news/${featured.id}`}
+                className="group grid overflow-hidden rounded-3xl border border-white/10 bg-surface/45 transition-all duration-300 hover:-translate-y-1.5 hover:border-brand-cyan/60 hover:shadow-2xl hover:shadow-black/40 lg:grid-cols-[1.15fr_1fr]"
               >
-                <span className="absolute left-[18px] top-[18px] inline-flex items-center rounded-full bg-gradient-main px-3.5 py-1.5 text-[12.5px] font-extrabold uppercase tracking-wide text-stone-950">
-                  {categoryLabel(featured.category)}
-                </span>
-              </CardImage>
-              <div className="flex flex-col justify-center gap-4 p-9 lg:p-10">
-                <span className="text-[13px] font-bold uppercase tracking-wide text-brand-cyan">
-                  Головна новина · {formatNewsDate(featured.publishDate)}
-                </span>
-                <h2 className="text-3xl font-extrabold leading-tight tracking-tight">
-                  {featured.title}
-                </h2>
-                <p className="line-clamp-3 text-[17px] leading-relaxed text-subtle">
-                  {excerpt(featured.details, 220)}
-                </p>
-                <span className="mt-1.5 inline-flex items-center gap-2 text-base font-extrabold text-brand-green">
-                  Читати повністю →
-                </span>
-              </div>
-            </Link>
+                <CardImage
+                  item={featured}
+                  className="aspect-[4/3]"
+                  sizes="(min-width: 1024px) 40rem, 100vw"
+                >
+                  <span className="absolute left-[18px] top-[18px] inline-flex items-center rounded-full bg-gradient-main px-3.5 py-1.5 text-[12.5px] font-extrabold uppercase tracking-wide text-stone-950">
+                    {categoryLabel(featured.category)}
+                  </span>
+                </CardImage>
+                <div className="flex flex-col justify-center gap-4 p-9 lg:p-10">
+                  <span className="text-[13px] font-bold uppercase tracking-wide text-brand-cyan">
+                    Головна новина · {formatNewsDate(featured.publishDate)}
+                  </span>
+                  <h2 className="text-3xl font-extrabold leading-tight tracking-tight">
+                    {featured.title}
+                  </h2>
+                  <p className="line-clamp-3 text-[17px] leading-relaxed text-subtle">
+                    {excerpt(featured.details, 220)}
+                  </p>
+                  <span className="mt-1.5 inline-flex items-center gap-2 text-base font-extrabold text-brand-green">
+                    Читати повністю →
+                  </span>
+                </div>
+              </Link>
+            </Reveal>
           </Container>
         </section>
       )}
@@ -206,7 +209,7 @@ export function MoreNews({
       <section className="relative z-[1] pb-16 pt-3">
         <Container>
           {visible.length > 0 ? (
-            <div className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">
+            <RevealEach className="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3">
               {visible.map((item) => (
                 <Link
                   key={item.id}
@@ -238,7 +241,7 @@ export function MoreNews({
                   </div>
                 </Link>
               ))}
-            </div>
+            </RevealEach>
           ) : !clean ? (
             <div className="flex flex-col items-center gap-2.5 px-4 py-20 text-center">
               <span className="text-4xl">🔍</span>

@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { Container } from "@/components/ui/Container";
 import { Glow } from "@/components/ui/Glow";
+import { Reveal, RevealEach } from "@/components/ui/Reveal";
 import { TelegramIcon } from "@/components/ui/icons";
 import {
   FocusedPhoto,
@@ -72,15 +73,15 @@ export async function TeamSection() {
         ) : (
           groups.map((g) => (
             <div key={g.title} className="flex flex-col gap-8">
-              <div className="inline-flex flex-col items-center gap-3 self-center text-center">
+              <Reveal className="inline-flex flex-col items-center gap-3 self-center text-center">
                 <h2 className="text-2xl font-bold sm:text-3xl">{g.title}</h2>
                 <span className="h-1.5 w-full rounded-full bg-gradient-main" />
-              </div>
-              <div className="flex flex-wrap justify-center gap-x-6 gap-y-10">
+              </Reveal>
+              <RevealEach className="flex flex-wrap justify-center gap-x-6 gap-y-10">
                 {g.cards.map((c) => (
                   <TeamCardView key={c.id} card={c} />
                 ))}
-              </div>
+              </RevealEach>
             </div>
           ))
         )}

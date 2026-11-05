@@ -7,6 +7,7 @@ import { z } from 'zod';
 import { Container } from '@/components/ui/Container';
 import { Glow } from '@/components/ui/Glow';
 import { SectionHeader } from '@/components/ui/SectionHeader';
+import { Reveal } from '@/components/ui/Reveal';
 import { Input } from '@/components/ui/Input';
 import { Textarea } from '@/components/ui/Textarea';
 import { Button } from '@/components/ui/Button';
@@ -376,7 +377,7 @@ export function ApplicationFormSection() {
       />
 
       <Container>
-        <div className="relative mx-auto max-w-3xl overflow-hidden rounded-3xl border border-white/5 bg-surface/40 p-6 sm:p-10 lg:p-12">
+        <Reveal className="relative mx-auto max-w-3xl overflow-hidden rounded-3xl border border-white/5 bg-surface/40 p-6 sm:p-10 lg:p-12">
           <div
             className={submittedName !== null ? 'invisible' : undefined}
             aria-hidden={submittedName !== null}
@@ -635,7 +636,7 @@ export function ApplicationFormSection() {
               </p>
             </div>
           )}
-        </div>
+        </Reveal>
       </Container>
     </section>
   );

@@ -6,6 +6,7 @@ import { PageHero } from "@/components/ui/PageHero";
 import { Glow } from "@/components/ui/Glow";
 import { GradientText } from "@/components/ui/GradientText";
 import { SectionHeader } from "@/components/ui/SectionHeader";
+import { Reveal, RevealEach } from "@/components/ui/Reveal";
 import { AccentCard, type Accent } from "@/components/ui/AccentCard";
 import { ApplicationFormSection } from "@/components/sections/ApplicationFormSection";
 import {
@@ -121,12 +122,14 @@ export default async function JoinPage() {
         {/* why us */}
         <section className="relative isolate scroll-mt-28 py-16 lg:py-24">
           <Container>
-            <SectionHeader
-              title="Чому саме ми"
-              subtitle="Чотири причини, чому студенти обирають Студраду — і залишаються."
-              gradient="bg-gradient-green"
-            />
-            <div className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <Reveal>
+              <SectionHeader
+                title="Чому саме ми"
+                subtitle="Чотири причини, чому студенти обирають Студраду — і залишаються."
+                gradient="bg-gradient-green"
+              />
+            </Reveal>
+            <RevealEach className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2">
               {REASONS.map((r) => (
                 <AccentCard
                   key={r.num}
@@ -147,7 +150,7 @@ export default async function JoinPage() {
                   </p>
                 </AccentCard>
               ))}
-            </div>
+            </RevealEach>
           </Container>
         </section>
 
