@@ -67,6 +67,12 @@ export function Glow({
   useEffect(() => {
     const el = ref.current;
     if (!el || !parallax) return;
+    // Phones scroll on the compositor while this moves the glow from the main thread, so the glow
+    // trails the page and jerks; the parallax is for a mouse or trackpad only.
+    if (!matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    // Its own layer: the blur is painted once and then only moved.
+    el.style.willChange = "transform";
     return register(el, parallax);
   }, [parallax]);
 
