@@ -27,8 +27,8 @@ const TABS = [
   ['teachers', 'Викладачі'],
   ['import', 'Імпорт'],
 ] as const;
-/** "mine": the group of a presidium member who is also a starosta. */
-type Tab = (typeof TABS)[number][0] | 'mine';
+/** "mine": the group of an admin who is also a starosta; "access": presidium only. */
+type Tab = (typeof TABS)[number][0] | 'mine' | 'access';
 
 const FILTERS = [
   ['all', 'Усі'],
@@ -43,7 +43,7 @@ const fileButton =
 
 type Reload = () => Promise<void>;
 
-/** Presidium: stages, progress, teacher links, imports and any group. */
+/** Presidium and added admins: stages, progress, teacher links, imports and any group. */
 export function AdminPanel({ api, me }: { api: StaffApi; me: StaffMe }) {
   const [tab, setTab] = useState<Tab>('overview');
   const [view, setView] = useState<AdminView | null>(null);
@@ -85,8 +85,12 @@ export function AdminPanel({ api, me }: { api: StaffApi; me: StaffMe }) {
 
   return (
     <>
-      <Tabs
-        items={me.group ? [['mine', `Моя група ${me.group}`] as const, ...TABS] : TABS}
+      <Tabs<Tab>
+        items={[
+          ...(me.group ? [['mine', `Моя група ${me.group}`] as const] : []),
+          ...TABS,
+          ...(me.isPresidium ? [['access', 'Доступ'] as const] : []),
+        ]}
         value={tab}
         onChange={open}
       />
@@ -95,6 +99,7 @@ export function AdminPanel({ api, me }: { api: StaffApi; me: StaffMe }) {
       {tab === 'groups' && <Groups view={view} open={setGroup} />}
       {tab === 'teachers' && <Teachers view={view} api={api} reload={reload} />}
       {tab === 'import' && <Imports api={api} reload={reload} />}
+      {tab === 'access' && me.isPresidium && <Access view={view} api={api} reload={reload} />}
     </>
   );
 }
@@ -138,7 +143,7 @@ function Overview({ view, api, reload }: { view: AdminView; api: StaffApi; reloa
           />
         </div>
         <p className="mt-3 text-sm text-subtle">
-          Президія може змінювати все й тоді, коли етапи закриті.
+          Президія й адміни шар можуть змінювати все й тоді, коли етапи закриті.
         </p>
         <ErrorText>{settings.error}</ErrorText>
       </Panel>
@@ -435,6 +440,88 @@ function AddTeacher({ api, reload }: { api: StaffApi; reload: Reload }) {
       </div>
       {link && <p className="break-all text-sm text-brand-green sm:col-span-3">Додано. Посилання: {link}</p>}
     </form>
+  );
+}
+
+/** Presidium only: who else gets the admin without joining the presidium. */
+function Access({ view, api, reload }: { view: AdminView; api: StaffApi; reload: Reload }) {
+  const [tag, setTag] = useState('');
+  const { busy, error, run } = useAction();
+
+  const add = (e: React.FormEvent) => {
+    e.preventDefault();
+    run(async () => {
+      await api.addAdmin(tag);
+      setTag('');
+      await reload();
+    });
+  };
+  const remove = (telegramTag: string) => {
+    if (!window.confirm(`Забрати доступ до адмінки шар у ${telegramTag}?`)) return;
+    run(async () => {
+      await api.removeAdmin(telegramTag);
+      await reload();
+    });
+  };
+
+  return (
+    <Panel title="Доступ до адмінки" icon={<Sphere color="purple" size={34} className="text-base">🔑</Sphere>}>
+      <p className="max-w-2xl text-muted">
+        Президія має доступ завжди. Тут його можна дати ще комусь, не додаючи в
+        президію: людина бачить і змінює все те саме, крім цього списку.
+      </p>
+      <form onSubmit={add} className="mt-4 flex flex-wrap items-end gap-3">
+        <div className="w-full sm:w-72">
+          <Input
+            label="@тег у Telegram"
+            placeholder="@username"
+            value={tag}
+            onChange={(e) => setTag(e.target.value)}
+            maxLength={80}
+          />
+        </div>
+        <Button type="submit" disabled={busy || !tag.trim()}>
+          Дати доступ
+        </Button>
+      </form>
+      <p className="mt-3 text-sm text-subtle">
+        Доступ привʼяжеться до Telegram-акаунта, коли людина вперше увійде сюди,
+        тож попросіть її зайти одразу після додавання.
+      </p>
+      <div className="mt-2">
+        <ErrorText>{error}</ErrorText>
+      </div>
+      {view.admins.length > 0 && (
+        <ul className="mt-4 divide-y divide-white/[0.07]">
+          {view.admins.map((a) => (
+            <li key={a.telegramTag} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
+              <div className="min-w-[12rem] flex-1">
+                <div className="font-semibold">{a.telegramTag}</div>
+                <div className="text-sm text-subtle">додали: {a.addedBy}</div>
+              </div>
+              <span
+                className={cn(
+                  'rounded-full border px-3 py-1 text-xs font-bold',
+                  a.signedIn
+                    ? 'border-brand-green/40 bg-brand-green/10 text-brand-green'
+                    : 'border-white/10 bg-white/[0.04] text-subtle',
+                )}
+              >
+                {a.signedIn ? 'вже входили' : 'ще не входили'}
+              </span>
+              <Button
+                variant="ghost"
+                className="px-3 py-1.5 text-brand-red"
+                onClick={() => remove(a.telegramTag)}
+                disabled={busy}
+              >
+                Забрати доступ
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Panel>
   );
 }
 

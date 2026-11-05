@@ -25,6 +25,7 @@ import {
   AddTeacherDto,
   AwardsDto,
   CreateShariDto,
+  ShariAdminDto,
   ShariSettingsDto,
   TeacherContactsDto,
   UpdateSharaDto,
@@ -161,6 +162,20 @@ export class ShariController {
   @ApiOperation({ summary: 'Open or close teacher input and starosta edits' })
   setSettings(@Req() req: Request, @Body() dto: ShariSettingsDto) {
     return this.shari.setSettings(this.user(req), dto);
+  }
+
+  @Post('admin/admins')
+  @ApiOperation({
+    summary: 'Give someone outside the presidium the shari admin (presidium)',
+  })
+  addAdmin(@Req() req: Request, @Body() dto: ShariAdminDto) {
+    return this.shari.addAdmin(this.user(req), dto.telegramTag);
+  }
+
+  @Delete('admin/admins/:tag')
+  @ApiOperation({ summary: 'Take the shari admin away (presidium)' })
+  removeAdmin(@Req() req: Request, @Param('tag') tag: string) {
+    return this.shari.removeAdmin(this.user(req), tag);
   }
 
   @Post('admin/teachers/import')

@@ -90,7 +90,7 @@ export function StaffApp() {
             {me.user.name}
             {me.user.username && <span className="font-normal text-subtle"> @{me.user.username}</span>}
           </span>
-          {me.isAdmin && <Role>президія</Role>}
+          {me.isAdmin && <Role>{me.isPresidium ? 'президія' : 'адмін шар'}</Role>}
           {me.group && <Role>староста {me.group}</Role>}
         </span>
         <Button variant="ghost" onClick={logout}>

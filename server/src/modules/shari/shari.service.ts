@@ -259,26 +259,29 @@ export class ShariService {
   // ---- Starostas & presidium: Telegram Login Widget -------------------------
 
   /**
-   * Admin = presidium member by tag who is also in the admin Telegram group;
-   * starosta = the group set for this tag (bound to the account on first sign-in).
+   * Presidium = presidium member by tag who is also in the admin Telegram
+   * group. Admin = presidium or someone the presidium added to the shari
+   * admins; starosta = the group set for this tag. Added admins and starostas
+   * are bound to the account on first sign-in, so a tag renamed away later
+   * can't be taken over.
    */
   private async access(user: User) {
     const username = tagUsername(user.username);
-    const [presidium, starosta] = await Promise.all([
+    const thisAccount = {
+      OR: [
+        { telegramId: user.telegramId },
+        ...(username
+          ? [{ telegramId: null, telegramTag: telegramTagOf(username) }]
+          : []),
+      ],
+    };
+    const [presidium, starosta, added] = await Promise.all([
       this.prisma.departmentMember.findMany({
         where: { role: { in: PRESIDIUM_ROLES }, telegramTag: { not: null } },
         select: { telegramTag: true },
       }),
-      this.prisma.shariStarosta.findFirst({
-        where: {
-          OR: [
-            { telegramId: user.telegramId },
-            ...(username
-              ? [{ telegramId: null, telegramTag: telegramTagOf(username) }]
-              : []),
-          ],
-        },
-      }),
+      this.prisma.shariStarosta.findFirst({ where: thisAccount }),
+      this.prisma.shariAdmin.findFirst({ where: thisAccount }),
     ]);
     if (starosta && starosta.telegramId === null) {
       await this.prisma.shariStarosta.update({
@@ -286,12 +289,20 @@ export class ShariService {
         data: { telegramId: user.telegramId },
       });
     }
+    if (added && added.telegramId === null) {
+      await this.prisma.shariAdmin.update({
+        where: { telegramTag: added.telegramTag },
+        data: { telegramId: user.telegramId },
+      });
+    }
     const tagged =
       !!username &&
       presidium.some((m) => tagUsername(m.telegramTag) === username);
+    const isPresidium =
+      tagged && (await inAdminGroup(this.config, this.bot, user.telegramId));
     return {
-      isAdmin:
-        tagged && (await inAdminGroup(this.config, this.bot, user.telegramId)),
+      isAdmin: isPresidium || !!added,
+      isPresidium,
       group: starosta?.group ?? null,
     };
   }
@@ -309,7 +320,15 @@ export class ShariService {
   }
 
   private async requireAdmin(user: User) {
-    if (!(await this.access(user)).isAdmin) {
+    const access = await this.access(user);
+    if (!access.isAdmin) {
+      throw new ForbiddenException('Це доступно лише адмінам шар');
+    }
+    return access;
+  }
+
+  private async requirePresidium(user: User) {
+    if (!(await this.access(user)).isPresidium) {
       throw new ForbiddenException('Це доступно лише президії');
     }
   }
@@ -431,7 +450,7 @@ export class ShariService {
   // ---- Presidium -----------------------------------------------------------
 
   async adminView(user: User) {
-    await this.requireAdmin(user);
+    const { isPresidium } = await this.requireAdmin(user);
     const [teachers, shari, starostas, students, groups, settings] =
       await Promise.all([
         this.prisma.shariTeacher.findMany({
@@ -516,7 +535,52 @@ export class ShariService {
       },
       teachers: teacherRows,
       groups: [...rows.values()],
+      // Only the presidium manages who else is an admin.
+      admins: isPresidium ? await this.adminList() : [],
     };
+  }
+
+  private async adminList() {
+    const rows = await this.prisma.shariAdmin.findMany({
+      orderBy: { createdAt: 'asc' },
+    });
+    return rows.map((a) => ({
+      telegramTag: a.telegramTag,
+      signedIn: a.telegramId !== null,
+      addedBy: a.addedBy,
+    }));
+  }
+
+  /** Gives someone outside the presidium the same access, except this list. */
+  async addAdmin(user: User, rawTag: string) {
+    await this.requirePresidium(user);
+    const username = tagUsername(rawTag);
+    if (!username) throw new BadRequestException('Вкажіть @тег у Telegram');
+    const telegramTag = telegramTagOf(username);
+    if (await this.prisma.shariAdmin.findUnique({ where: { telegramTag } })) {
+      throw new ConflictException('У цієї людини вже є доступ');
+    }
+    await this.prisma.shariAdmin.create({
+      data: {
+        telegramTag,
+        addedBy: (user.username ? `@${user.username}` : user.staffName).slice(
+          0,
+          120,
+        ),
+      },
+    });
+    return this.adminList();
+  }
+
+  async removeAdmin(user: User, rawTag: string) {
+    await this.requirePresidium(user);
+    const username = tagUsername(rawTag);
+    if (username) {
+      await this.prisma.shariAdmin.deleteMany({
+        where: { telegramTag: telegramTagOf(username) },
+      });
+    }
+    return this.adminList();
   }
 
   async setSettings(user: User, dto: ShariSettingsDto) {

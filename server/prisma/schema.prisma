@@ -1069,6 +1069,15 @@ model ShariStarosta {
   telegramId  BigInt?
 }
 
+/// Shari admins outside the presidium, added by the presidium on /shari.
+/// Bound to the Telegram account on first sign-in, like starostas.
+model ShariAdmin {
+  telegramTag String   @id @db.VarChar(50)
+  telegramId  BigInt?
+  addedBy     String   @db.VarChar(120)
+  createdAt   DateTime @default(now())
+}
+
 model ShariStudent {
   id       String @id @default(uuid()) @db.Uuid
   group    String @db.VarChar(20)

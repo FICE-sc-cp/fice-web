@@ -318,7 +318,9 @@ Teachers' bonuses for students (FICE birthday). Three pages on the public site:
   of the user bot. In @BotFather run `/setdomain` for `USER_BOT_USERNAME` and
   set `fice-sc.kpi.ua`, or the widget shows "Bot domain invalid". The presidium
   (department members with a presidium role and a Telegram tag) sees every
-  group, imports data and downloads the Excel.
+  group, imports data and downloads the Excel. On the «Доступ» tab it can give
+  the same admin to someone outside the presidium by @tag (bound to the account
+  on first sign-in); only the presidium manages that list.
 - `/shari/check/<id>`: where a certificate's QR code leads.
 
 A presidium tag only counts for an account that is also in the admin group

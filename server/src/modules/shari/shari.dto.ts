@@ -73,6 +73,13 @@ export class AddTeacherDto extends TeacherContactsDto {
   fullName: string;
 }
 
+export class ShariAdminDto {
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(80)
+  telegramTag!: string;
+}
+
 export class ShariSettingsDto {
   @IsOptional()
   @IsBoolean()

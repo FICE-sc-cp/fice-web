@@ -35,7 +35,9 @@ export interface ShariSettings {
 
 export interface StaffMe {
   user: { name: string; username: string | null };
+  /** The presidium, or someone the presidium added to the shari admins. */
   isAdmin: boolean;
+  isPresidium: boolean;
   group: string | null;
   settings: ShariSettings;
 }
@@ -119,6 +121,14 @@ export interface AdminView {
   };
   teachers: AdminTeacher[];
   groups: AdminGroup[];
+  /** Added admins; empty unless the viewer is the presidium. */
+  admins: ShariAdminEntry[];
+}
+
+export interface ShariAdminEntry {
+  telegramTag: string;
+  signedIn: boolean;
+  addedBy: string;
 }
 
 export interface ImportResult {
@@ -190,6 +200,10 @@ export function staffApi(login: string, dev = '') {
     admin: () => call<AdminView>('GET', '/admin'),
     setSettings: (body: Partial<ShariSettings>) =>
       call<ShariSettings>('PATCH', '/admin/settings', body),
+    addAdmin: (telegramTag: string) =>
+      call<ShariAdminEntry[]>('POST', '/admin/admins', { telegramTag }),
+    removeAdmin: (telegramTag: string) =>
+      call<ShariAdminEntry[]>('DELETE', `/admin/admins/${encodeURIComponent(telegramTag)}`),
     importTeachers: (csv: string) => upload('/admin/teachers/import', csv),
     addTeacher: (body: { fullName: string; email: string; telegram: string }) =>
       call<{ id: string; token: string }>('POST', '/admin/teachers', body),
