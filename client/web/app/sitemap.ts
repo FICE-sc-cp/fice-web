@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { fice, safe, type Paginated } from '@/lib/api';
 import { departmentSlugs } from '@/lib/departments';
+import { merchCatalog } from '@/lib/merch';
 import { absoluteUrl } from '@/lib/seo';
 
 export const dynamic = 'force-dynamic';
@@ -11,6 +12,7 @@ const STATIC_PATHS = [
   '/',
   '/news',
   '/events',
+  '/merch',
   '/charity',
   '/team',
   '/join',
@@ -29,10 +31,11 @@ async function loadAll<T>(load: (page: number) => Promise<Paginated<T>>): Promis
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [news, events, fundraisers] = await Promise.all([
+  const [news, events, fundraisers, merch] = await Promise.all([
     loadAll((page) => fice.news(PAGE_SIZE, page)),
     loadAll((page) => fice.events(PAGE_SIZE, page)),
     loadAll((page) => fice.fundraisers(PAGE_SIZE, page)),
+    safe(merchCatalog(), null),
   ]);
 
   return [
@@ -43,5 +46,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
     ...events.map((event) => ({ url: absoluteUrl(`/events/${event.id}`) })),
     ...fundraisers.map((fundraiser) => ({ url: absoluteUrl(`/charity/${fundraiser.id}`) })),
+    ...(merch?.products ?? []).map((product) => ({ url: absoluteUrl(`/merch/${product.id}`) })),
   ];
 }

@@ -16,6 +16,7 @@ const NAV = [
   { label: "Благодійність", href: "/charity" },
   { label: "Заходи", href: "/events" },
   { label: "Новини", href: "/news" },
+  { label: "Мерч", href: "/merch" },
 ];
 
 // The header frog dresses for the section it is on.
