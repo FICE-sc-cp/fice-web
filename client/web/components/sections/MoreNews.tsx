@@ -6,6 +6,7 @@ import Link from "next/link";
 import { fice, mediaUrl, type News, type NewsCategory } from "@/lib/api";
 import { Container } from "@/components/ui/Container";
 import { ViewAllButton } from "@/components/ui/ViewAllLink";
+import { FilterTabs } from "@/components/ui/FilterTabs";
 import { cn } from "@/lib/utils";
 import {
   NEWS_CATEGORIES,
@@ -140,23 +141,20 @@ export function MoreNews({
     <>
       <section className="relative z-10 py-4">
         <Container>
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <FilterChip
-                active={filter === "all"}
-                onClick={() => changeFilter("all")}
-                label="Усі"
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0">
+              <FilterTabs
+                label="Категорія новин"
+                center={false}
+                options={[
+                  { value: "all" as Filter, label: "Усі" },
+                  ...NEWS_CATEGORIES.map((c) => ({ value: c.key as Filter, label: c.label })),
+                ]}
+                value={filter}
+                onChange={changeFilter}
               />
-              {NEWS_CATEGORIES.map((c) => (
-                <FilterChip
-                  key={c.key}
-                  active={filter === c.key}
-                  onClick={() => changeFilter(c.key)}
-                  label={c.label}
-                />
-              ))}
             </div>
-            <label className="flex min-w-[16rem] flex-[0_1_20rem] items-center gap-2.5 rounded-xl border border-border bg-surface px-3.5 focus-within:border-brand-cyan">
+            <label className="flex min-h-[52px] items-center gap-2.5 rounded-2xl border border-white/10 bg-white/[0.03] px-4 transition-colors focus-within:border-brand-cyan lg:w-80">
               <SearchIcon />
               <input
                 type="text"
@@ -285,30 +283,6 @@ export function MoreNews({
   );
 }
 
-function FilterChip({
-  active,
-  onClick,
-  label,
-}: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "rounded-full px-4 py-2 text-sm font-extrabold transition-all",
-        active
-          ? "bg-gradient-main text-stone-950"
-          : "border border-border bg-surface/50 text-muted hover:text-fg",
-      )}
-    >
-      {label}
-    </button>
-  );
-}
 
 function SearchIcon() {
   return (
