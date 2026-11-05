@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Container } from "@/components/ui/Container";
 import { DebugFrog } from "@/components/ui/DebugFrog";
+import type { FrogOutfit } from "@/components/ui/ThemedFrogs";
 import { MenuIcon, CloseIcon } from "@/components/ui/icons";
 import { cn } from "@/lib/utils";
 
@@ -17,10 +18,21 @@ const NAV = [
   { label: "Новини", href: "/news" },
 ];
 
+// The header frog dresses for the section it is on.
+const OUTFIT_BY_PATH: [string, FrogOutfit][] = [
+  ["/team", "team"],
+  ["/charity", "charity"],
+  ["/events", "events"],
+  ["/news", "news"],
+  ["/merch", "merch"],
+  ["/join", "join"],
+];
+
 export function Header() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const isJoinPage = pathname === "/join";
+  const outfit = OUTFIT_BY_PATH.find(([prefix]) => pathname.startsWith(prefix))?.[1];
   const ctaHref = isJoinPage ? "/" : "/join";
   const ctaLabel = isJoinPage ? "На головну" : "Приєднатись до нас";
 
@@ -30,7 +42,7 @@ export function Header() {
         <div className="relative">
           <span className="pointer-events-none absolute right-0 top-1/2 hidden h-14 w-14 -translate-y-1/2 translate-x-[70%] rotate-12 drop-shadow-md lg:block">
             <span className="block h-full w-full animate-float">
-              <DebugFrog className="h-full w-full" />
+              <DebugFrog className="h-full w-full" outfit={outfit} />
             </span>
           </span>
           <div className="relative flex items-center justify-between gap-4 rounded-2xl bg-gradient-main px-4 py-3 shadow-lg shadow-black/20 sm:px-6">

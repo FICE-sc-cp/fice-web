@@ -5,6 +5,7 @@ import { Footer } from "@/components/layout/Footer";
 import { Container } from "@/components/ui/Container";
 import { Glow } from "@/components/ui/Glow";
 import { GradientText } from "@/components/ui/GradientText";
+import { PageHero } from "@/components/ui/PageHero";
 import { MoreNews } from "@/components/sections/MoreNews";
 import { fice, safe, type News, type Paginated } from "@/lib/api";
 
@@ -45,16 +46,16 @@ export default async function NewsCatalogPage() {
           className="right-[-12rem] top-[32rem] h-[32rem] w-[40rem] opacity-60"
         />
 
-        <section className="relative z-[1] px-4 pb-6 pt-16 text-center sm:px-6 lg:pt-20">
-          <Container>
-            <h1 className="mx-auto max-w-3xl text-5xl font-extrabold leading-[1.05] tracking-tight sm:text-6xl">
-              <GradientText>Новини</GradientText>
-            </h1>
-            <p className="mx-auto mt-5 max-w-xl text-lg text-muted sm:text-xl">
-              Події, досягнення, партнерства та все, чим живе факультет. Стеж за
-              оновленнями, щоб нічого не пропустити.
-            </p>
-          </Container>
+        <section className="relative z-[1] pb-10 pt-16 lg:pt-24">
+          <PageHero
+            title={
+              <>
+                Чим живе <GradientText>Студрада ФІОТ</GradientText>
+              </>
+            }
+            scene="reader"
+            says="Анонси, підсумки заходів і важливі оновлення від Студради — коротко й по суті."
+          />
         </section>
 
         {items.length > 0 ? (

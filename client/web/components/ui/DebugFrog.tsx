@@ -7,6 +7,12 @@ import {
   Pixels,
   toRuns,
 } from "@/components/ui/FrogMascot";
+import {
+  OUTFITS,
+  SceneParts,
+  buildScene,
+  type FrogOutfit,
+} from "@/components/ui/ThemedFrogs";
 import { cn } from "@/lib/utils";
 
 // All in the frog's 14×14 grid. The catch happens under the frog: the header
@@ -19,8 +25,21 @@ const BUG = toRuns(
 const LOOK = toRuns(["wk"], FROG_COLORS);
 const EYELIDS = toRuns(["gg....gg", "dd....dd"], FROG_COLORS);
 
-/** Double-click the frog and it catches a bug with its tongue: debugging. */
-export function DebugFrog({ className }: { className?: string }) {
+const OUTFIT_PARTS = Object.fromEntries(
+  (Object.keys(OUTFITS) as FrogOutfit[]).map((k) => [k, buildScene(OUTFITS[k]).parts]),
+) as Record<FrogOutfit, ReturnType<typeof buildScene>["parts"]>;
+
+/**
+ * The header's frog, dressed for the section it is on (`outfit`). Double-click it and it
+ * catches a bug with its tongue: debugging.
+ */
+export function DebugFrog({
+  className,
+  outfit,
+}: {
+  className?: string;
+  outfit?: FrogOutfit;
+}) {
   const [catches, setCatches] = useState(0);
 
   return (
@@ -46,6 +65,8 @@ export function DebugFrog({ className }: { className?: string }) {
         <g className="dbg-blink" transform="translate(3 1)">
           <Pixels runs={EYELIDS} />
         </g>
+        {/* Worn over the eyes too: shades stay on through a blink. */}
+        {outfit && <SceneParts parts={OUTFIT_PARTS[outfit]} />}
       </g>
       <rect
         className="dbg-tongue"

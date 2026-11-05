@@ -4,6 +4,7 @@ import { Footer } from '@/components/layout/Footer';
 import { Container } from '@/components/ui/Container';
 import { Glow } from '@/components/ui/Glow';
 import { GradientText } from '@/components/ui/GradientText';
+import { PageHero } from '@/components/ui/PageHero';
 import { SectionTitle } from '@/components/ui/SectionTitle';
 import { FundraiserCard } from '@/components/charity/FundraiserCard';
 import { LoadMoreList } from '@/components/ui/LoadMoreList';
@@ -32,7 +33,7 @@ export default async function CharityCatalogPage() {
     <>
       <Header />
       <main className="overflow-x-clip pb-8">
-        <section className="relative isolate pb-4 pt-16 lg:pt-24">
+        <section className="relative isolate pb-10 pt-16 lg:pt-24">
           <Glow
             color="#FF8904"
             className="left-0 top-6 h-[22rem] w-[26rem] -translate-x-1/2"
@@ -41,17 +42,15 @@ export default async function CharityCatalogPage() {
             color="#FF8904"
             className="right-0 top-16 h-[22rem] w-[26rem] translate-x-1/2"
           />
-          <Container>
-            <div className="flex flex-col items-center gap-4 text-center">
-              <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-                <GradientText>Благодійність</GradientText>
-              </h1>
-              <p className="max-w-xl text-lg text-muted">
-                Кожен донат — це конкретна допомога. Долучайся до активних зборів і
-                наближай нашу спільну перемогу.
-              </p>
-            </div>
-          </Container>
+          <PageHero
+            title={
+              <>
+                Кожна гривня <GradientText>має адресу</GradientText>
+              </>
+            }
+            scene="donor"
+            says="Збираємо на конкретні потреби й звітуємо про кожен закритий збір. Долучайся будь-якою сумою."
+          />
         </section>
 
         {!hasAny ? (

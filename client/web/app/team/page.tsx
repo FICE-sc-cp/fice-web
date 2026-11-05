@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { TeamSection } from "@/components/sections/TeamSection";
-import { Container } from "@/components/ui/Container";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { GradientText } from "@/components/ui/GradientText";
+import { PageHero } from "@/components/ui/PageHero";
 import { Marquee } from "@/components/sections/Marquee";
 import { Glow } from "@/components/ui/Glow";
 
@@ -28,18 +28,15 @@ export default function TeamPage() {
             color="#30c3e0"
             className="right-0 top-4 h-[28rem] w-[36rem] translate-x-1/4"
           />
-          <Container>
-            <div className="mx-auto flex max-w-3xl flex-col items-center gap-5 text-center">
-              <h1 className="text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
-                Команда <GradientText>Студради ФІОТ</GradientText>
-              </h1>
-              <p className="max-w-xl text-lg text-muted sm:text-xl">
-                Ті, хто створює майбутнє нашого факультету вже сьогодні. Твоє
-                самоврядування, твій простір, твоя команда. Лідери, які роблять
-                зміни
-              </p>
-            </div>
-          </Container>
+          <PageHero
+            title={
+              <>
+                Люди, які творять <GradientText>Студраду ФІОТ</GradientText>
+              </>
+            }
+            scene="crew"
+            says="Одна команда, яка організовує заходи, запускає проєкти й відстоює інтереси студентів ФІОТ. Знайомся з нами."
+          />
         </section>
 
         {/* team section */}

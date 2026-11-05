@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Container } from "@/components/ui/Container";
+import { PageHero } from "@/components/ui/PageHero";
 import { Glow } from "@/components/ui/Glow";
 import { GradientText } from "@/components/ui/GradientText";
 import { SectionHeader } from "@/components/ui/SectionHeader";
@@ -11,7 +12,7 @@ import {
   ApplicationsClosedSection,
   FICE_TIME_URL,
 } from "@/components/sections/ApplicationsClosedSection";
-import { LockIcon, TelegramIcon } from "@/components/ui/icons";
+import { TelegramIcon } from "@/components/ui/icons";
 import { fice, safe } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -69,7 +70,7 @@ export default async function JoinPage() {
       <Header />
       <main className="overflow-x-clip">
         {/* hero */}
-        <section className="relative isolate pb-8 pt-20 lg:pt-28">
+        <section className="relative isolate pb-8 pt-16 lg:pt-24">
           <Glow
             color="#2EFF97"
             className="left-0 top-4 h-[26rem] w-[36rem] -translate-x-1/4"
@@ -78,53 +79,43 @@ export default async function JoinPage() {
             color="#AD46FF"
             className="right-0 top-16 h-[28rem] w-[36rem] translate-x-1/4"
           />
-          <Container>
-            <div className="mx-auto flex max-w-3xl flex-col items-center gap-5 text-center">
-              {!open && (
-                <span className="inline-flex items-center gap-3 rounded-full border border-white/10 bg-white/5 py-1.5 pl-1.5 pr-5 text-base font-semibold text-white backdrop-blur">
-                  <span className="flex size-8 items-center justify-center rounded-full bg-gradient-orange text-black shadow-[0_0_1.25rem_rgba(255,137,4,0.45)]">
-                    <span className="size-4">
-                      <LockIcon />
-                    </span>
-                  </span>
-                  Набір зараз закрито
-                </span>
-              )}
-              <h1 className="text-4xl font-bold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
+          <PageHero
+            title={
+              <>
                 Стань частиною{" "}
                 <GradientText className="whitespace-nowrap">
                   Студради&nbsp;ФІОТ
                 </GradientText>
-              </h1>
-              <p className="max-w-xl text-lg text-muted sm:text-xl">
-                Тут твої ідеї перетворюються на реальні проєкти, а факультет —
-                на спільноту, у якій хочеться залишатись.{" "}
-                {open
-                  ? "Заповни заявку — і ми звʼяжемось з тобою."
-                  : "Зараз набір закрито — про наступний оголосимо у FICE Time."}
-              </p>
-              {open ? (
-                <a
-                  href="#form"
-                  className="mt-2 inline-flex items-center justify-center rounded-2xl bg-gradient-main px-10 py-4 text-lg font-bold text-black transition-opacity hover:opacity-90"
-                >
-                  Подати заявку
-                </a>
-              ) : (
-                <a
-                  href={FICE_TIME_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-2 inline-flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-main px-10 py-4 text-lg font-bold text-black transition-opacity hover:opacity-90"
-                >
-                  <span className="size-5 shrink-0">
-                    <TelegramIcon />
-                  </span>
-                  Стежити за анонсами
-                </a>
-              )}
-            </div>
-          </Container>
+              </>
+            }
+            scene="herald"
+            says={
+              open
+                ? "Шукаємо тих, хто хоче не лише вчитися, а й змінювати. Заповни заявку — ми звʼяжемося з тобою в Telegram."
+                : "Зараз набір закрито, але це ненадовго. Стеж за анонсами у FICE Time — і готуй заявку."
+            }
+          >
+            {open ? (
+              <a
+                href="#form"
+                className="inline-flex items-center justify-center rounded-2xl bg-gradient-main px-10 py-4 text-lg font-bold text-black transition-opacity hover:opacity-90"
+              >
+                Подати заявку
+              </a>
+            ) : (
+              <a
+                href={FICE_TIME_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center gap-2.5 rounded-2xl bg-gradient-main px-10 py-4 text-lg font-bold text-black transition-opacity hover:opacity-90"
+              >
+                <span className="size-5 shrink-0">
+                  <TelegramIcon />
+                </span>
+                Стежити за анонсами
+              </a>
+            )}
+          </PageHero>
         </section>
 
         {/* why us */}

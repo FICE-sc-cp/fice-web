@@ -4,6 +4,7 @@ import { Footer } from "@/components/layout/Footer";
 import { Container } from "@/components/ui/Container";
 import { Glow } from "@/components/ui/Glow";
 import { GradientText } from "@/components/ui/GradientText";
+import { PageHero } from "@/components/ui/PageHero";
 import { SectionTitle } from "@/components/ui/SectionTitle";
 import { EventCard } from "@/components/sections/EventCard";
 import { LoadMoreList } from "@/components/ui/LoadMoreList";
@@ -38,7 +39,7 @@ export default async function EventsCatalogPage() {
     <>
       <Header />
       <main className="overflow-x-clip pb-8">
-        <section className="relative isolate pb-4 pt-16 lg:pt-24">
+        <section className="relative isolate pb-10 pt-16 lg:pt-24">
           <Glow
             color="#00E3F3"
             className="left-0 top-6 h-[22rem] w-[26rem] -translate-x-1/2"
@@ -47,17 +48,15 @@ export default async function EventsCatalogPage() {
             color="#00E3F3"
             className="right-0 top-16 h-[22rem] w-[26rem] translate-x-1/2"
           />
-          <Container>
-            <div className="flex flex-col items-center gap-4 text-center">
-              <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-                <GradientText>Заходи</GradientText>
-              </h1>
-              <p className="max-w-xl text-lg text-muted">
-                Приєднуйся до найцікавіших подій факультету — від нетворкінгу до
-                благодійних ініціатив.
-              </p>
-            </div>
-          </Container>
+          <PageHero
+            title={
+              <>
+                Життя <GradientText>поза парами</GradientText>
+              </>
+            }
+            scene="party"
+            says="Усе, що Студрада готує для студентів ФІОТ, в одному місці. Обирай захід і реєструйся за кілька кліків."
+          />
         </section>
 
         {!hasAny ? (
