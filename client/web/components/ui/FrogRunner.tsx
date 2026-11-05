@@ -1,27 +1,21 @@
+import { FROG_COLORS } from "@/components/ui/FrogMascot";
 import { cn } from "@/lib/utils";
 
-const COLORS: Record<string, string> = {
-  d: "#2f7a45",
-  g: "#57c06e",
-  l: "#7ad98c",
-  b: "#d8f3d2",
-  w: "#ffffff",
-  k: "#243b2e",
-  p: "#ff9ecf",
-};
+const COLORS = FROG_COLORS;
 
+// Side view, facing right, in the mascot's palette: shaded on the back, lit at the snout.
 const BODY = [
   "......ddd.....",
   ".....dwwwd....",
   ".....dwwkd....",
   ".dggggggggggd.",
-  "dgggggggggggg.",
-  "dgllggggggpgd.",
-  "dggggggbbbggd.",
-  "dgggggbbbbdgd.",
-  "dgggggbbbbggd.",
-  ".dgggbbbbggd..",
-  "..dgggggggd...",
+  "dgllggggggggg.",
+  "dglgggggggpgd.",
+  "dmgggggbbbggd.",
+  "dmggggbbbbdgd.",
+  "dmggggbbbbggd.",
+  ".dmggbbbbcgd..",
+  "..dmgggggggd..",
 ];
 
 const LEGS_A = ["...d...dd.....", "..dd...dd.....", ".......ddd...."];
