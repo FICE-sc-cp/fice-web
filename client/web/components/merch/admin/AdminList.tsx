@@ -203,8 +203,8 @@ function List({
   const tools = [
     { href: 'templates', label: 'Шаблони' },
     { href: 'labels', label: 'Категорії і теги' },
-    { href: 'groups', label: '👥 Групи користувачів' },
-    { href: 'slots', label: '🗓 Слоти видачі' },
+    { href: 'groups', label: 'Групи користувачів' },
+    { href: 'slots', label: 'Слоти видачі' },
   ];
 
   return (
@@ -225,13 +225,14 @@ function List({
         + Додати товар
       </Button>
 
-      <nav aria-label="Налаштування" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+      {/* Two by two: all four in sight, none cut off at the edge. */}
+      <nav aria-label="Налаштування" className="grid grid-cols-2 gap-2">
         {tools.map((tool) => (
           <Link
             key={tool.href}
             href={`${base}/admin/${tool.href}`}
             className={cn(
-              'flex min-h-11 shrink-0 items-center rounded-full border border-border bg-surface px-4 text-sm font-bold text-muted transition-all hover:border-brand-cyan/50 hover:text-fg active:scale-95',
+              'flex min-h-11 items-center justify-center rounded-full border border-border bg-surface px-3 text-center text-sm font-bold text-muted transition-all hover:border-brand-cyan/50 hover:text-fg active:scale-95',
               CONTROL,
             )}
           >
