@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
+import { useState } from "react";
 import Image from "next/image";
+import { Lightbox } from "@/components/ui/Lightbox";
 import { cn } from "@/lib/utils";
 import type { Project } from "@/lib/departments";
 
@@ -14,20 +14,6 @@ export function ProjectsGrid({
   gradient: string;
 }) {
   const [active, setActive] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!active) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setActive(null);
-    };
-    window.addEventListener("keydown", onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.body.style.overflow = prev;
-    };
-  }, [active]);
 
   return (
     <>
@@ -114,34 +100,19 @@ export function ProjectsGrid({
         })}
       </div>
 
-      {active &&
-        createPortal(
-          <div
-            role="dialog"
-            aria-modal="true"
-            onClick={() => setActive(null)}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
-          >
-            <button
-              type="button"
-              onClick={() => setActive(null)}
-              aria-label="Закрити"
-              className="absolute right-5 top-5 z-10 flex size-11 cursor-pointer items-center justify-center rounded-full bg-white/10 text-2xl text-white transition-colors hover:bg-white/20"
-            >
-              ✕
-            </button>
-            <div className="relative h-[88vh] w-[92vw]">
-              <Image
-                src={active}
-                alt=""
-                fill
-                sizes="92vw"
-                className="object-contain"
-              />
-            </div>
-          </div>,
-          document.body,
-        )}
+      {active && (
+        <Lightbox onClose={() => setActive(null)}>
+          <div className="relative h-[88vh] w-[92vw]">
+            <Image
+              src={active}
+              alt=""
+              fill
+              sizes="92vw"
+              className="object-contain"
+            />
+          </div>
+        </Lightbox>
+      )}
     </>
   );
 }
