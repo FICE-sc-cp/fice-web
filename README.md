@@ -186,6 +186,9 @@ is in [`.env.example`](.env.example). When the API runs on the host it reads
 | `CORS_ORIGIN` | prod | `https://fice-sc.kpi.ua` |
 | `USER_MINI_APP_NAME` | no (`app`) | Short name of the student Mini App in @BotFather |
 | `INTERVIEW_BOT_TOKEN` | no | Interview booking bot (a third bot); opens `${PUBLIC_WEB_URL}/interview` |
+| `MERCH_BOT_TOKEN` | no | Merch shop bot (a fourth bot); opens `${PUBLIC_WEB_URL}/merch-app`. Setting it takes the bot over at once |
+| `MERCH_OWNER_IDS` | no | Ids allowed to run `/bind_admin_chat`, comma-separated; empty means nobody |
+| `GOOGLE_MERCH_SPREADSHEET_ID` | no | Spreadsheet mirrored with merch orders; share it with the service account |
 | `TELEGRAM_CHANNEL_ID` | no | Channel for announcements (bot must be admin) |
 | `PARTNERSHIP_CHAT_ID` | no | Chat for partner applications (`chatId/threadId` for a topic) |
 | `MEDIA_POST_CHAT_ID` | no | Media chat topic (`chatId/threadId`) for `/post`, `/site`, `/queue`; see [Публікації](#публікації) |
@@ -261,6 +264,48 @@ docker compose exec server npm run uploads:reencode
 It re-encodes oversized JPEG and PNG files in place, keeping their names and
 URLs, and keeps the original when the new file would not be smaller. Add
 `-- --dry-run` to only list the files it would change.
+
+### Мерч
+
+The merch shop. Anyone can browse `/merch` on the public site without logging in;
+the same screens run as a Telegram Mini App at `/merch-app`, opened from
+@merch_ficebot. To order on the site a buyer links Telegram through a one-time
+deep link, because status updates reach them through the bot. Payment is manual:
+the buyer pays, attaches a receipt, and an admin checks it by eye on the order
+card in the bound admin chat. Stock, prices and order rules are in
+`server/src/modules/merch/merch-rules.ts`.
+
+| Variable | Meaning |
+|---|---|
+| `MERCH_BOT_TOKEN` | The bot's token. Without it the server still boots, `/health` shows `"merch":"disabled"` and `/merch` stays read-only |
+| `MERCH_OWNER_IDS` | Telegram ids allowed to run `/bind_admin_chat`, comma-separated. Empty means nobody |
+| `GOOGLE_MERCH_SPREADSHEET_ID` | Optional mirror of orders. Share the sheet with the service account |
+
+**Setting `MERCH_BOT_TOKEN` takes the bot over at once: the first start deletes
+the old webhook. Never put the real token on a laptop.** Outside production the
+bot refuses to poll as `merch_ficebot`. For local runs use a made-up token and
+`MERCH_BOT_API_ROOT` pointing at `server/scripts/fake-telegram.ts`; that variable
+is refused in production and is not in compose.
+
+Admins work in the Mini App: `/admin` in the bot opens the panel, and
+`📦 Управління товарами` opens products, templates, categories, tags, groups and
+pickup slots. The panel itself keeps the Monobank jar, card number, welcome text,
+DayF toggle and broadcast. Anyone who is an administrator of the bound chat is a
+shop admin; `/setthreads` picks the forum topics for orders and support.
+
+Moving the old shop in, repeatable and safe to rerun. Without `--apply` it is a
+dry run that only prints a report:
+
+```bash
+read -rs OLD_DB; read -rs OLD_TOKEN   # typed, so they stay out of shell history and .env
+docker compose run --rm --no-deps \
+  -e OLD_MERCH_DATABASE_URL="$OLD_DB" -e OLD_MERCH_BOT_TOKEN="$OLD_TOKEN" \
+  server npx ts-node --transpile-only scripts/import-merch.ts
+# read the report, then the same line with --apply
+unset OLD_DB OLD_TOKEN
+```
+
+The order of the whole move, rollback included, is in `ops/merch-cutover.md`.
 
 ### Шари
 
@@ -355,6 +400,7 @@ is public; `POST`/`PATCH`/`PUT`/`DELETE` require admin auth unless noted.
 | Uploads | `POST /upload` | Upload an image, GIF or MP4/WEBM video (admin) → returns `{ url }`; files served at `/uploads/...` |
 | Interviews | `/interview` | Interview bot mini-app; auth by the interview bot's init data, roles from the DB |
 | Шари | `/shari` | Teachers call with their personal link token (`x-shari-token`), starostas and the presidium with Telegram Login Widget data (`x-telegram-login`); `GET /shari/check/:id` is public |
+| Мерч | `/merch` | Public catalog; customers by the merch bot's init data or `x-merch-token`; admin routes for admins of the bound chat |
 
 The **facts & results** section is computed from the database (events held,
 money raised, charity amount, visitors reached, partners, departments, members)
