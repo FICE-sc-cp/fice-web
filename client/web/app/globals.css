@@ -137,6 +137,14 @@
   0% { transform: translateY(22px); opacity: 0; }
   100% { transform: translateY(0); opacity: 1; }
 }
+/* Merch cart: the side drawer on wide screens, and the page under an open cart stays still. */
+@keyframes merch-drawer-in {
+  0% { transform: translateX(48px); opacity: 0; }
+  100% { transform: none; opacity: 1; }
+}
+html:has(dialog[data-scroll-lock][open]) {
+  overflow: hidden;
+}
 /* Pixel UI: the frames the page frogs talk in (PixelFrame, SpeechBubble). Corners are
    cut in two steps of --px-step, like the frogs' own curves; the line is the outer layer's fill. */
 :root {
@@ -289,6 +297,13 @@
   .fs-five-spark {
     animation: none;
   }
+}
+/* The cart bar's bag when an added product lands in it. */
+@keyframes merch-bump {
+  0% { transform: none; }
+  30% { transform: scale(1.3) rotate(-10deg); }
+  60% { transform: scale(0.92) rotate(5deg); }
+  100% { transform: none; }
 }
 @keyframes su-glow {
   0%, 100% { opacity: 0.35; transform: scale(1); }

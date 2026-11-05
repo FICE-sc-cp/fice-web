@@ -10,6 +10,8 @@ declare global {
         expand: () => void;
         close: () => void;
         openTelegramLink?: (url: string) => void;
+        openLink?: (url: string) => void;
+        requestWriteAccess?: (cb?: (granted: boolean) => void) => void;
         initData: string;
         initDataUnsafe: {
           user?: {
@@ -17,6 +19,7 @@ declare global {
             first_name?: string;
             last_name?: string;
             username?: string;
+            allows_write_to_pm?: boolean;
           };
           start_param?: string;
         };
