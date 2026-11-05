@@ -73,6 +73,7 @@ services:
       MERCH_BOT_TOKEN: ${MERCH_BOT_TOKEN:-}
       MERCH_OWNER_IDS: ${MERCH_OWNER_IDS:-}
       GOOGLE_MERCH_SPREADSHEET_ID: ${GOOGLE_MERCH_SPREADSHEET_ID:-}
+      GOOGLE_SHARI_SPREADSHEET_ID: ${GOOGLE_SHARI_SPREADSHEET_ID:-}
       # Only members of this Telegram group may change content.
       ADMIN_GROUP_CHAT_ID: ${ADMIN_GROUP_CHAT_ID:-}
       # Channel the bot posts announcements to (bot must be its admin).

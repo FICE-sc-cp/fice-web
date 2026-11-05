@@ -189,6 +189,7 @@ is in [`.env.example`](.env.example). When the API runs on the host it reads
 | `MERCH_BOT_TOKEN` | no | Merch shop bot (a fourth bot); opens `${PUBLIC_WEB_URL}/merch-app`. Setting it takes the bot over at once |
 | `MERCH_OWNER_IDS` | no | Ids allowed to run `/bind_admin_chat`, comma-separated; empty means nobody |
 | `GOOGLE_MERCH_SPREADSHEET_ID` | no | Spreadsheet mirrored with merch orders; share it with the service account |
+| `GOOGLE_SHARI_SPREADSHEET_ID` | no | Spreadsheet with teacher names and personal shari links (first tab, every 30 s); keep it private, share it with the service account |
 | `TELEGRAM_CHANNEL_ID` | no | Channel for announcements (bot must be admin) |
 | `PARTNERSHIP_CHAT_ID` | no | Chat for partner applications (`chatId/threadId` for a topic) |
 | `MEDIA_POST_CHAT_ID` | no | Media chat topic (`chatId/threadId`) for `/post`, `/site`, `/queue`; see [Публікації](#публікації) |
