@@ -15,7 +15,7 @@ export async function FundraisersSection() {
   return (
     <section id="charity" className="relative isolate scroll-mt-36 py-12 lg:py-16">
       <Glow
-        color="#FF791B"
+        color="#2EFF97"
         className="bottom-0 left-1/2 h-[24rem] w-[40rem] -translate-x-1/2 translate-y-1/2 ml-[16rem] -rotate-30"
       />
       <Container>

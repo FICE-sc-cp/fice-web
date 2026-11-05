@@ -35,11 +35,11 @@ export default async function CharityCatalogPage() {
       <main className="overflow-x-clip pb-8">
         <section className="relative isolate pb-10 pt-16 lg:pt-24">
           <Glow
-            color="#FF8904"
+            color="#2EFF97"
             className="left-0 top-6 h-[22rem] w-[26rem] -translate-x-1/2"
           />
           <Glow
-            color="#FF8904"
+            color="#00E3F3"
             className="right-0 top-16 h-[22rem] w-[26rem] translate-x-1/2"
           />
           <PageHero
