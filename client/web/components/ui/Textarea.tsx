@@ -5,10 +5,12 @@ interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
   label?: string;
   hint?: React.ReactNode;
   error?: string;
+  // Adds a quiet «необовʼязково» after the label.
+  optional?: boolean;
 }
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ label, hint, error, className, id, ...props }, ref) => {
+  ({ label, hint, error, optional, className, id, ...props }, ref) => {
     const autoId = useId();
     const textareaId = id ?? autoId;
     const errorId = `${textareaId}-error`;
@@ -17,6 +19,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
         {label && (
           <label htmlFor={textareaId} className="text-sm font-semibold text-muted">
             {label}
+              {optional && <span className="font-normal"> · необовʼязково</span>}
           </label>
         )}
         {hint}

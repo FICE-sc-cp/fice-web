@@ -4,10 +4,12 @@ import { cn } from '@/lib/utils';
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string;
   error?: string;
+  // Adds a quiet «необовʼязково» after the label.
+  optional?: boolean;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, className, id, ...props }, ref) => {
+  ({ label, error, optional, className, id, ...props }, ref) => {
     const autoId = useId();
     const inputId = id ?? autoId;
     const errorId = `${inputId}-error`;
@@ -15,6 +17,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
       <div className="flex w-full flex-col gap-1.5">
         <label htmlFor={inputId} className="text-sm font-semibold text-muted">
           {label}
+          {optional && <span className="font-normal"> · необовʼязково</span>}
         </label>
         <input
           ref={ref}

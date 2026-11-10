@@ -2597,6 +2597,7 @@ function MiniAppContent() {
                     onChange={(e) => setRegFullName(e.target.value)}
                     error={regErrors.fullName}
                     required={baseQuestionsOf(selectedEvent).fullName?.required !== false}
+                    optional={baseQuestionsOf(selectedEvent).fullName?.required === false}
                   />
                 )}
 
@@ -2619,6 +2620,7 @@ function MiniAppContent() {
                           baseQuestionsOf(selectedEvent).group?.required !== false &&
                           !regOutsider
                         }
+                        optional={baseQuestionsOf(selectedEvent).group?.required === false}
                       />
                       {allowsNotKpi(selectedEvent) && (
                         <label className="flex cursor-pointer select-none items-center gap-2 text-xs text-muted">
@@ -2649,6 +2651,7 @@ function MiniAppContent() {
                       onChange={(e) => setRegBirthDate(e.target.value)}
                       error={regErrors.birthDate}
                       required={!!baseQuestionsOf(selectedEvent).birthDate?.required}
+                      optional={!baseQuestionsOf(selectedEvent).birthDate?.required}
                     />
                   )}
                   {baseQuestionsOf(selectedEvent).phone?.enabled === true && (
@@ -2660,6 +2663,7 @@ function MiniAppContent() {
                       onChange={(e) => setRegPhone(e.target.value)}
                       error={regErrors.phone}
                       required={!!baseQuestionsOf(selectedEvent).phone?.required}
+                      optional={!baseQuestionsOf(selectedEvent).phone?.required}
                     />
                   )}
                 </div>
@@ -2670,7 +2674,7 @@ function MiniAppContent() {
                     {q.type === 'FILE' ? (
                       <FileAnswerField
                         question={q}
-                        label={`${q.label}${q.required ? ' *' : ''}`}
+                        label={`${q.label}${q.required ? '' : ' · необовʼязково'}`}
                         files={regFiles[q.id] ?? []}
                         onChange={(update) =>
                           setRegFiles((prev) => ({
@@ -2688,7 +2692,9 @@ function MiniAppContent() {
                       <div className="space-y-1.5">
                         <label className="text-sm font-semibold text-muted">
                           {q.label}
-                          {q.required ? ' *' : ''}
+                          {!q.required && (
+                            <span className="font-normal"> · необовʼязково</span>
+                          )}
                         </label>
                         <div className="flex flex-wrap gap-2">
                           {choiceOptions(q)!.map((opt) => (
@@ -2726,6 +2732,7 @@ function MiniAppContent() {
                         }
                         error={regErrors[`q_${q.id}`]}
                         required={q.required}
+                        optional={!q.required}
                       />
                     ) : (
                       <Input
@@ -2739,6 +2746,7 @@ function MiniAppContent() {
                         }
                         error={regErrors[`q_${q.id}`]}
                         required={q.required}
+                        optional={!q.required}
                       />
                     )}
                   </div>

@@ -485,6 +485,7 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
                     error={outsider ? undefined : errors.group}
                     disabled={outsider}
                     className={cn(outsider && 'cursor-not-allowed opacity-50')}
+                    optional={baseConfig.group?.required === false}
                   />
                   {canBeNotKpi && (
                     <label className="flex cursor-pointer items-center gap-2.5 text-sm text-subtle">
@@ -537,6 +538,7 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
                   value={birthDate}
                   onChange={(e) => setBirthDate(e.target.value)}
                   error={errors.birthDate}
+                  optional={!baseConfig.birthDate?.required}
                 />
               )}
 
@@ -547,6 +549,7 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   error={errors.phone}
+                  optional={!baseConfig.phone?.required}
                 />
               )}
             </div>
@@ -559,7 +562,7 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
                   <FileAnswerField
                     key={q.id}
                     question={q}
-                    label={q.label}
+                    label={`${q.label}${q.required ? '' : ' · необовʼязково'}`}
                     files={files[q.id] ?? []}
                     onChange={(update) =>
                       setFiles((prev) => ({ ...prev, [q.id]: update(prev[q.id] ?? []) }))
@@ -579,6 +582,7 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
                     value={answers[q.id] ?? ''}
                     onChange={(e) => setAnswer(q.id, e.target.value)}
                     error={err}
+                    optional={!q.required}
                   />
                 );
               }
@@ -586,7 +590,10 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
                 const opts = choiceOptions(q) ?? [];
                 return (
                   <div key={q.id} className="flex flex-col gap-2">
-                    <label className="text-sm font-semibold text-muted">{q.label}</label>
+                    <label className="text-sm font-semibold text-muted">
+                      {q.label}
+                      {!q.required && <span className="font-normal"> · необовʼязково</span>}
+                    </label>
                     <div className="flex flex-wrap gap-2">
                       {opts.map((opt) => (
                         <button
@@ -613,6 +620,7 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
                   value={answers[q.id] ?? ''}
                   onChange={(e) => setAnswer(q.id, e.target.value)}
                   error={err}
+                  optional={!q.required}
                 />
               );
             })}
