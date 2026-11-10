@@ -6,6 +6,7 @@ export interface FeeEvent {
   feeAmount: Amount;
   feeAtEventAmount: Amount;
   donationAnyAmount?: boolean | null;
+  donationOptional?: boolean | null;
 }
 
 export function pendingPaymentSubject(event: {
@@ -53,6 +54,8 @@ export function paymentRuleViolation(
         ? null
         : 'Оплата на місці для цього заходу не передбачена.';
     default:
-      return 'Захід платний: оберіть спосіб оплати.';
+      return event.donationOptional
+        ? null
+        : 'Захід платний: оберіть спосіб оплати.';
   }
 }

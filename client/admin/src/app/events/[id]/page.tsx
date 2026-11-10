@@ -157,6 +157,7 @@ export default function EditEventPage() {
                       : '',
                   feeRequisites: event.feeRequisites ?? '',
                   donationAnyAmount: event.donationAnyAmount ?? false,
+                  donationOptional: event.donationOptional ?? false,
                   moneyCollected: event.details
                     ? String(event.details.moneyCollected)
                     : '',

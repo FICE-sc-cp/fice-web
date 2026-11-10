@@ -171,6 +171,7 @@ export interface EventItem {
   feeRequisites: string | null;
   isAbitfest: boolean;
   donationAnyAmount: boolean;
+  donationOptional: boolean;
   noRegistration: boolean;
   isDraft?: boolean;
   hasTime?: boolean;
@@ -399,6 +400,7 @@ export interface EventInput {
   feeRequisites?: string;
   isAbitfest?: boolean;
   donationAnyAmount?: boolean;
+  donationOptional?: boolean;
   noRegistration?: boolean;
   isDraft?: boolean;
   hasTime?: boolean;

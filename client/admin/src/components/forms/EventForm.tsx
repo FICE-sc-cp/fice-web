@@ -52,6 +52,7 @@ const schema = z.object({
   description: z.string().optional(),
   isAbitfest: z.boolean().optional(),
   donationAnyAmount: z.boolean().optional(),
+  donationOptional: z.boolean().optional(),
   noRegistration: z.boolean().optional(),
   isDraft: z.boolean().optional(),
   location: z.string().max(120, 'Максимум 120 символів').optional(),
@@ -157,6 +158,7 @@ export function eventValuesToInput(v: EventFormValues): EventInput {
         ? Number(v.feeAmount)
         : undefined,
     donationAnyAmount: v.donationAnyAmount ?? false,
+    donationOptional: v.donationOptional ?? false,
     feeAtEventAmount: v.feeAtEventAmount ? Number(v.feeAtEventAmount) : undefined,
     feeRequisites: v.feeRequisites?.trim() || undefined,
     isAbitfest: v.isAbitfest ?? false,
@@ -267,6 +269,7 @@ export function EventForm({
       description: '',
       isAbitfest: false,
       donationAnyAmount: false,
+      donationOptional: false,
       noRegistration: false,
       isDraft: false,
       location: '',
@@ -679,6 +682,23 @@ export function EventForm({
                 «Благодійний внесок · довільна сума». Квитанція обовʼязкова,
                 сума не перевіряється. Оплата на заході доступна, лише якщо
                 заповнено «Внесок на заході».
+              </span>
+            </span>
+          </label>
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-bg px-4 py-3 transition-colors hover:border-white/20">
+            <input
+              type="checkbox"
+              {...register('donationOptional')}
+              className="mt-0.5 size-5 shrink-0 accent-brand-cyan"
+            />
+            <span className="min-w-0">
+              <span className="block text-sm font-bold text-fg">
+                Необовʼязковий внесок
+              </span>
+              <span className="mt-1 block text-xs text-subtle">
+                Учасник може зареєструватися без оплати: пункт про внесок у
+                формі можна пропустити, а обрану кнопку оплати вимкнути
+                повторним натисканням.
               </span>
             </span>
           </label>

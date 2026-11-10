@@ -175,7 +175,7 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
       }
     }
 
-    if (hasFee && !payment) e.payment = 'Обери спосіб оплати';
+    if (hasFee && !fees.optional && !payment) e.payment = 'Обери спосіб оплати';
     if (payment === 'DONATED' && !receiptUrl) e.receipt = 'Додай скриншот або PDF квитанції';
 
     for (const q of questions) {
@@ -222,7 +222,7 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
         group: normalizedGrp,
         birthDate: birthDate || undefined,
         phoneNumber: phone.trim() || undefined,
-        payment: hasFee ? (payment as RegistrationPayment) : 'NONE',
+        payment: hasFee && payment ? payment : 'NONE',
         receiptUrl: receiptUrl ?? undefined,
         answers: questions.flatMap<RegistrationAnswer>((q) => {
           if (q.type === 'FILE') {
@@ -246,7 +246,7 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
           group: outsider ? NOT_KPI_GROUP : group.trim(),
           telegram: `@${telegram.trim().replace(/^@+/, '')}`,
           birthDate: birthDate || undefined,
-          payment: hasFee ? payment : 'NONE',
+          payment: hasFee && payment ? payment : 'NONE',
         });
       }
     } catch (err: any) {
@@ -274,7 +274,7 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
             group: outsider ? NOT_KPI_GROUP : group.trim(),
             telegram: `@${telegram.trim().replace(/^@+/, '')}`,
             birthDate: birthDate || undefined,
-            payment: hasFee ? payment : 'NONE',
+            payment: hasFee && payment ? payment : 'NONE',
           });
         }
       } catch (err) {
@@ -624,12 +624,13 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
                   {fees.anyAmount
                     ? `${ANY_AMOUNT_TITLE} (${ANY_AMOUNT_VALUE}): спосіб оплати`
                     : 'Спосіб оплати внеску'}
+                  {fees.optional && <span className="font-normal"> · необовʼязково</span>}
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {fees.onlineRequired && (
                     <button
                       type="button"
-                      onClick={() => setPayment('DONATED')}
+                      onClick={() => setPayment((p) => (p === 'DONATED' && fees.optional ? '' : 'DONATED'))}
                       aria-pressed={payment === 'DONATED'}
                       className={chip(payment === 'DONATED')}
                     >
@@ -641,7 +642,7 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
                   {feeAtEvent > 0 && (
                     <button
                       type="button"
-                      onClick={() => setPayment('AT_EVENT')}
+                      onClick={() => setPayment((p) => (p === 'AT_EVENT' && fees.optional ? '' : 'AT_EVENT'))}
                       aria-pressed={payment === 'AT_EVENT'}
                       className={chip(payment === 'AT_EVENT')}
                     >

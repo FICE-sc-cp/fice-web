@@ -848,8 +848,8 @@ function MiniAppContent() {
     if (askPhone && base.phone?.required && !regPhone.trim())
       errs.phone = 'Вкажи номер телефону';
 
-    const hasFee = feeInfo(selectedEvent).hasFee;
-    if (hasFee && !regPayment) errs.payment = 'Обери спосіб оплати';
+    const { hasFee, optional } = feeInfo(selectedEvent);
+    if (hasFee && !optional && !regPayment) errs.payment = 'Обери спосіб оплати';
     if (regPayment === 'DONATED' && !regReceiptUrl) {
       errs.receipt = 'Додай скриншот оплати';
     }
@@ -886,7 +886,7 @@ function MiniAppContent() {
             ? NOT_KPI_GROUP
             : (askGroup && regGroup.trim()) || 'ФІОТ',
           birthDate: (askBirthDate && regBirthDate) || undefined,
-          payment: hasFee ? (regPayment as RegistrationPayment) : 'NONE',
+          payment: hasFee && regPayment ? regPayment : 'NONE',
           receiptUrl: regReceiptUrl ?? undefined,
           telegramUserId: tgId,
           phoneNumber: (askPhone && regPhone.trim()) || undefined,
@@ -2750,12 +2750,15 @@ function MiniAppContent() {
                   <div className="space-y-2 pt-2 border-t border-border">
                     <label className="text-sm font-semibold text-fg">
                       Оплата благодійного внеску
+                      {feeInfo(selectedEvent).optional && (
+                        <span className="font-normal text-muted"> · необовʼязково</span>
+                      )}
                     </label>
                     <div className="grid grid-cols-2 gap-2.5">
                       {feeInfo(selectedEvent).onlineRequired && (
                       <button
                         type="button"
-                        onClick={() => setRegPayment('DONATED')}
+                        onClick={() => setRegPayment((p) => (p === 'DONATED' && feeInfo(selectedEvent).optional ? '' : 'DONATED'))}
                         className={`rounded-2xl border py-2.5 px-3 text-sm font-bold transition-all ${
                           regPayment === 'DONATED'
                             ? 'border-brand-cyan bg-brand-cyan/15 text-brand-cyan'
@@ -2772,7 +2775,7 @@ function MiniAppContent() {
                       {Number(selectedEvent.feeAtEventAmount ?? 0) > 0 && (
                       <button
                         type="button"
-                        onClick={() => setRegPayment('AT_EVENT')}
+                        onClick={() => setRegPayment((p) => (p === 'AT_EVENT' && feeInfo(selectedEvent).optional ? '' : 'AT_EVENT'))}
                         className={`rounded-2xl border py-2.5 px-3 text-sm font-bold transition-all ${
                           regPayment === 'AT_EVENT'
                             ? 'border-brand-cyan bg-brand-cyan/15 text-brand-cyan'

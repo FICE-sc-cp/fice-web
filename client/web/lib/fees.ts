@@ -6,6 +6,8 @@ export interface FeeInfo {
   atEvent: number;
   onlineRequired: boolean;
   hasFee: boolean;
+  // People may register without paying.
+  optional: boolean;
 }
 
 const amount = (value: Amount) => {
@@ -17,6 +19,7 @@ export function feeInfo(event: {
   feeAmount?: Amount;
   feeAtEventAmount?: Amount;
   donationAnyAmount?: boolean | null;
+  donationOptional?: boolean | null;
 }): FeeInfo {
   const anyAmount = !!event.donationAnyAmount;
   const online = anyAmount ? 0 : amount(event.feeAmount);
@@ -28,6 +31,7 @@ export function feeInfo(event: {
     atEvent,
     onlineRequired,
     hasFee: onlineRequired || atEvent > 0,
+    optional: !!event.donationOptional,
   };
 }
 

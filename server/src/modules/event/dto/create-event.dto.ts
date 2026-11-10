@@ -198,6 +198,14 @@ export class CreateEventDto {
   donationAnyAmount?: boolean;
 
   @ApiPropertyOptional({
+    description:
+      'The contribution is optional: people may register without paying',
+  })
+  @IsOptional()
+  @IsBoolean()
+  donationOptional?: boolean;
+
+  @ApiPropertyOptional({
     maxLength: 255,
     description: 'Donate requisites shown when paying',
   })

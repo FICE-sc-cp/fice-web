@@ -37,8 +37,32 @@ describe('paymentRuleViolation', () => {
   });
 });
 
+describe('paymentRuleViolation with an optional contribution', () => {
+  const OPTIONAL = {
+    feeAmount: null,
+    feeAtEventAmount: null,
+    donationAnyAmount: true,
+    donationOptional: true,
+  };
+
+  it('lets people register without paying', () => {
+    expect(paymentRuleViolation(OPTIONAL, 'NONE', false)).toBeNull();
+  });
+
+  it('still wants a receipt from those who say they donated', () => {
+    expect(paymentRuleViolation(OPTIONAL, 'DONATED', false)).toMatch(
+      /квитанції/,
+    );
+    expect(paymentRuleViolation(OPTIONAL, 'DONATED', true)).toBeNull();
+  });
+});
+
 describe('paymentRuleViolation with a donation of any amount', () => {
-  const ANY = { feeAmount: null, feeAtEventAmount: null, donationAnyAmount: true };
+  const ANY = {
+    feeAmount: null,
+    feeAtEventAmount: null,
+    donationAnyAmount: true,
+  };
   const ANY_OR_DOOR = {
     feeAmount: null,
     feeAtEventAmount: '100.00',

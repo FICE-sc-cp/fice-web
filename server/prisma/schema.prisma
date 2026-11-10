@@ -254,6 +254,8 @@ model Event {
   feeAmount             Decimal?  @db.Decimal(10, 2)
   feeAtEventAmount      Decimal?  @db.Decimal(10, 2)
   donationAnyAmount     Boolean   @default(false)
+  // The contribution is welcome but people may register without it.
+  donationOptional      Boolean   @default(false)
   feeRequisites         String?   @db.VarChar(255)
   isAbitfest            Boolean   @default(false)
   noRegistration        Boolean   @default(false)
