@@ -4,6 +4,9 @@ const backendUrl = process.env.BACKEND_URL ?? process.env.INTERNAL_API_URL ?? 'h
 
 const nextConfig: NextConfig = {
   htmlLimitedBots: /.*/,
+  experimental: {
+    proxyClientMaxBodySize: '55mb',
+  },
   images: {
     remotePatterns: [
       {

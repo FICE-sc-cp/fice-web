@@ -69,6 +69,7 @@ describe('UserBotService /start reg_ confirmation', () => {
         }),
       },
       eventQuestion: { findMany: jest.fn().mockResolvedValue([]) },
+      publicUpload: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
       event: {
         findUnique: jest.fn().mockResolvedValue({
           date: new Date('2099-01-01T12:00:00Z'),
@@ -217,6 +218,33 @@ describe('UserBotService /start reg_ confirmation', () => {
     expect(ctx.reply).toHaveBeenCalledWith(
       expect.stringContaining('Реєстрацію на цей захід закрито'),
     );
+  });
+
+  it('keeps the files of a website registration confirmed in the bot', async () => {
+    const photo = '0e352379-dbd8-407f-98a5-38d60ab53528.jpg';
+    const files = JSON.stringify([{ url: `/uploads/${photo}`, name: 'я.jpg' }]);
+    prisma.eventQuestion.findMany.mockResolvedValue([{ id: 'f1' }]);
+    prisma.pendingWebRegistration.findUnique.mockResolvedValue({
+      ...(await prisma.pendingWebRegistration.findUnique()),
+      payload: {
+        fullName: 'Іван Іваненко',
+        group: 'ІП-31',
+        answers: [{ questionId: 'f1', value: files }],
+      },
+    });
+    await start(ctxFrom({ username: 'Victim' }));
+
+    expect(prisma.eventRegistration.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          answers: { create: [{ questionId: 'f1', value: files }] },
+        }),
+      }),
+    );
+    expect(prisma.publicUpload.updateMany).toHaveBeenCalledWith({
+      where: { filename: { in: [photo] } },
+      data: { unreferencedSince: null },
+    });
   });
 
   it('checks for an existing registration by exact tag, never with ILIKE', async () => {

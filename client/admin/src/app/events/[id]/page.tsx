@@ -177,6 +177,8 @@ export default function EditEventPage() {
                     type: q.type,
                     required: q.required,
                     optionsText: q.options.join(', '),
+                    fileKinds: q.fileKinds ?? [],
+                    maxFiles: q.maxFiles ?? 1,
                   })),
                 }
               : undefined

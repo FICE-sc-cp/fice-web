@@ -251,9 +251,29 @@ modes. The web app's `/_next/image` also needs sharp; without it, it serves the
 original file, so static images in `client/web/public` are kept small.
 
 Admins can also upload GIFs and MP4/WEBM videos (news covers) up to 50 MB;
-they are stored as they are. Other uploads stay limited to 5 MB. The admin's
-`/api-proxy` buffers request bodies up to `proxyClientMaxBodySize` in
-`client/admin/next.config.ts`, which must stay above that limit.
+they are stored as they are. Other admin uploads stay limited to 5 MB.
+
+`POST /upload/public` (receipts, costume photos and files attached to
+registration answers) takes photos (JPG, PNG, WEBP), PDF and Word (DOC, DOCX)
+up to 10 MB and videos (MP4, MOV, WEBM) up to 50 MB. Each file's content must
+match its type's signature. SVG, HTML and other types are always refused, and
+Word documents are served as downloads like PDFs. Each IP may upload 120 files
+a minute and keep at most 1 GB of uploads that no confirmed registration uses
+yet. A file stops counting once a registration confirmed in the bot or the
+Mini App attaches it; a website registration that waits for its confirmation
+does not.
+
+Both Next.js apps buffer `/api-proxy` request bodies up to
+`proxyClientMaxBodySize` in their `next.config.ts` and cut off anything
+longer, so the setting must stay above the 50 MB limit.
+
+An event can ask for files: a «Файл» question lists the allowed types and how
+many files fit (1–10), with at most 3 such questions per event. The answer
+stores the files' links and names as JSON, and the registrations sheet shows
+them as one clickable link per file. Public uploads that nothing in the
+database uses are deleted a day later. A website registration still waiting
+for its confirmation in the bot keeps its files from being deleted, but they
+keep counting towards the quota.
 
 To shrink uploads that were stored before this processing existed, back up the
 uploads volume and run:
@@ -400,7 +420,7 @@ is public; `POST`/`PATCH`/`PUT`/`DELETE` require admin auth unless noted.
 | Department members | `/department-member` | Assign via `/department-member/:id/assignments` |
 | Join applications | `/applicant` | Public submit via `POST /applicant`; listing is admin-only |
 | Admin users | `/user` | Admin-only |
-| Uploads | `POST /upload` | Upload an image, GIF or MP4/WEBM video (admin) → returns `{ url }`; files served at `/uploads/...` |
+| Uploads | `POST /upload` | Upload an image, GIF or MP4/WEBM video (admin) → returns `{ url }`; files served at `/uploads/...`. `POST /upload/public` takes receipts and answer files without auth |
 | Interviews | `/interview` | Interview bot mini-app; auth by the interview bot's init data, roles from the DB |
 | Шари | `/shari` | Teachers call with their personal link token (`x-shari-token`), starostas and the presidium with Telegram Login Widget data (`x-telegram-login`); `GET /shari/check/:id` is public |
 | Мерч | `/merch` | Public catalog; customers by the merch bot's init data or `x-merch-token`; admin routes for admins of the bound chat |

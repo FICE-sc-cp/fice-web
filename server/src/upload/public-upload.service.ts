@@ -14,7 +14,7 @@ import { errorMessage } from '../common/log-safe';
 import { PrismaService } from '../database/prisma.service';
 import { UPLOAD_DIR, UPLOAD_URL_PREFIX } from './upload.constants';
 
-export const PUBLIC_UPLOAD_DAILY_QUOTA_BYTES = 300 * 1024 * 1024;
+export const PUBLIC_UPLOAD_DAILY_QUOTA_BYTES = 1024 * 1024 * 1024;
 export const UNREFERENCED_GRACE_MS = 24 * 60 * 60_000;
 const GC_INTERVAL_MS = 60 * 60_000;
 const GC_FIRST_RUN_MS = 2 * 60_000;
@@ -45,17 +45,10 @@ export class PublicUploadService implements OnModuleInit, OnModuleDestroy {
     if (this.timer) clearInterval(this.timer);
   }
 
-  async assertQuota(
-    ipHash: string,
-    incomingBytes: number,
-    now: Date = new Date(),
-  ): Promise<void> {
+  async assertQuota(ipHash: string, incomingBytes: number): Promise<void> {
     const used = await this.prisma.publicUpload.aggregate({
       _sum: { size: true },
-      where: {
-        ipHash,
-        createdAt: { gt: new Date(now.getTime() - UNREFERENCED_GRACE_MS) },
-      },
+      where: { ipHash, unreferencedSince: { not: null } },
     });
     if (
       (used._sum.size ?? 0) + incomingBytes >
@@ -94,11 +87,15 @@ export class PublicUploadService implements OnModuleInit, OnModuleDestroy {
       cursor = batch[batch.length - 1].id;
 
       const urls = batch.map((u) => `${UPLOAD_URL_PREFIX}/${u.filename}`);
-      const referenced = await this.referencedUrls(urls, now);
+      const used = await this.usedUrls(urls);
+      const pending = await this.pendingUrls(
+        urls.filter((url) => !used.has(url)),
+        now,
+      );
 
       for (const upload of batch) {
         const url = `${UPLOAD_URL_PREFIX}/${upload.filename}`;
-        if (referenced.has(url)) {
+        if (used.has(url)) {
           result.referenced++;
           if (upload.unreferencedSince) {
             await this.prisma.publicUpload.update({
@@ -117,8 +114,9 @@ export class PublicUploadService implements OnModuleInit, OnModuleDestroy {
           continue;
         }
         if (
+          pending.has(url) ||
           now.getTime() - upload.unreferencedSince.getTime() <
-          UNREFERENCED_GRACE_MS
+            UNREFERENCED_GRACE_MS
         ) {
           result.waiting++;
           continue;
@@ -132,18 +130,17 @@ export class PublicUploadService implements OnModuleInit, OnModuleDestroy {
     return result;
   }
 
-  private async referencedUrls(
-    urls: string[],
-    now: Date,
-  ): Promise<Set<string>> {
+  private async usedUrls(urls: string[]): Promise<Set<string>> {
     if (urls.length === 0) return new Set();
     const rows = await this.prisma.$queryRaw<{ url: string }[]>(Prisma.sql`
       SELECT url FROM (
         SELECT "receiptUrl" AS url FROM "EventRegistration" WHERE "receiptUrl" = ANY(${urls})
         UNION SELECT "photoUrl" FROM "VotingCandidate" WHERE "photoUrl" = ANY(${urls})
-        UNION SELECT "payload"->>'receiptUrl' FROM "PendingWebRegistration"
-          WHERE "completed" = false AND "expiresAt" > ${now}
-            AND "payload"->>'receiptUrl' = ANY(${urls})
+        UNION SELECT u.url FROM unnest(${urls}::text[]) AS u(url)
+          JOIN (
+            SELECT "value" FROM "EventRegistrationAnswer"
+            WHERE "value" LIKE '[{"url":"/uploads/%'
+          ) a ON strpos(a."value", '"url":"' || u.url || '"') > 0
         UNION SELECT "image" FROM "News" WHERE "image" = ANY(${urls})
         UNION SELECT "imageUrl" FROM "Fundraiser" WHERE "imageUrl" = ANY(${urls})
         UNION SELECT "photo" FROM "DepartmentHead" WHERE "photo" = ANY(${urls})
@@ -157,6 +154,18 @@ export class PublicUploadService implements OnModuleInit, OnModuleDestroy {
         UNION SELECT "url" FROM "MerchPhoto" WHERE "url" = ANY(${urls})
         UNION SELECT "thumbUrl" FROM "MerchPhoto" WHERE "thumbUrl" = ANY(${urls})
       ) refs
+    `);
+    return new Set(rows.map((r) => r.url));
+  }
+
+  private async pendingUrls(urls: string[], now: Date): Promise<Set<string>> {
+    if (urls.length === 0) return new Set();
+    const rows = await this.prisma.$queryRaw<{ url: string }[]>(Prisma.sql`
+      SELECT DISTINCT u.url FROM unnest(${urls}::text[]) AS u(url)
+        JOIN (
+          SELECT "payload"::text AS body FROM "PendingWebRegistration"
+          WHERE "completed" = false AND "expiresAt" > ${now}
+        ) p ON strpos(p.body, u.url) > 0
     `);
     return new Set(rows.map((r) => r.url));
   }

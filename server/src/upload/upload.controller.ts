@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { closeSync, openSync, readSync, unlinkSync } from 'fs';
+import { unlinkSync } from 'fs';
 import { extname } from 'path';
 import {
   BadRequestException,
@@ -35,6 +35,14 @@ import {
   PUBLIC_IMAGE_PROFILE,
   reencodeImage,
 } from './image-processing';
+import { matchesSignature } from './file-signature';
+import {
+  KIND_MAX_BYTES,
+  kindOf,
+  MAX_PUBLIC_UPLOAD_BYTES,
+  PUBLIC_MIME_EXTENSIONS,
+  tooLargeMessage,
+} from './upload-types';
 
 const ALLOWED_MIME_EXTENSIONS: Record<string, string[]> = {
   'image/jpeg': ['.jpg', '.jpeg'],
@@ -51,66 +59,27 @@ const MEDIA_MIME_EXTENSIONS: Record<string, string[]> = {
 };
 const MEDIA_EXTENSIONS = Object.values(MEDIA_MIME_EXTENSIONS).flat();
 
-function getSafeExtension(
+export function getSafeExtension(
   mimetype: string,
   originalname: string,
   allowed: Record<string, string[]> = ALLOWED_MIME_EXTENSIONS,
 ): string | null {
-  const mime = mimetype.toLowerCase();
-  const allowedExts = allowed[mime];
-  if (!allowedExts) return null;
-
   const rawExt = extname(originalname).toLowerCase();
+  const allowedExts = allowed[mimetype.toLowerCase()];
+  if (!allowedExts) {
+    return Object.values(allowed).flat().includes(rawExt) ? rawExt : null;
+  }
   if (allowedExts.includes(rawExt)) {
     return rawExt;
   }
   return allowedExts[0];
 }
 
-function validateMagicBytes(filePath: string, ext: string): boolean {
+function removeQuietly(path: string) {
   try {
-    const fd = openSync(filePath, 'r');
-    const buf = Buffer.alloc(16);
-    const bytesRead = readSync(fd, buf, 0, 16, 0);
-    closeSync(fd);
-    if (bytesRead < 4) return false;
-
-    if (ext === '.jpg' || ext === '.jpeg') {
-      return buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff;
-    }
-    if (ext === '.png') {
-      return (
-        buf[0] === 0x89 &&
-        buf[1] === 0x50 &&
-        buf[2] === 0x4e &&
-        buf[3] === 0x47 &&
-        buf[4] === 0x0d &&
-        buf[5] === 0x0a &&
-        buf[6] === 0x1a &&
-        buf[7] === 0x0a
-      );
-    }
-    if (ext === '.webp') {
-      return (
-        buf.toString('ascii', 0, 4) === 'RIFF' &&
-        buf.toString('ascii', 8, 12) === 'WEBP'
-      );
-    }
-    if (ext === '.pdf') {
-      return buf.toString('ascii', 0, 4) === '%PDF';
-    }
-    if (ext === '.gif') {
-      return /^GIF8[79]a$/.test(buf.toString('ascii', 0, 6));
-    }
-    if (ext === '.mp4') {
-      return buf.toString('ascii', 4, 8) === 'ftyp';
-    }
-    if (ext === '.webm') {
-      return buf.readUInt32BE(0) === 0x1a45dfa3;
-    }
-    return false;
+    unlinkSync(path);
   } catch {
-    return false;
+    return;
   }
 }
 
@@ -139,10 +108,10 @@ export function uploadInterceptor(
   });
 }
 
-const imageOrPdfUpload = uploadInterceptor(
-  ALLOWED_MIME_EXTENSIONS,
-  MAX_UPLOAD_BYTES,
-  'Дозволені тільки безпечні зображення (JPEG, PNG, WEBP) або PDF-файли. SVG та виконувані файли заборонені.',
+const publicUpload = uploadInterceptor(
+  PUBLIC_MIME_EXTENSIONS,
+  MAX_PUBLIC_UPLOAD_BYTES,
+  'Дозволені фото (JPG, PNG, WEBP), відео (MP4, MOV, WEBM), PDF або документи Word (DOC, DOCX). SVG, HTML та виконувані файли заборонені.',
 );
 
 const adminUpload = uploadInterceptor(
@@ -156,12 +125,8 @@ export function toResult(file?: Express.Multer.File) {
     throw new BadRequestException('No file uploaded (field name: "file")');
   }
   const ext = extname(file.filename).toLowerCase();
-  if (!validateMagicBytes(file.path, ext)) {
-    try {
-      unlinkSync(file.path);
-    } catch {
-      // Best effort: the upload is refused either way.
-    }
+  if (!matchesSignature(file.path, ext)) {
+    removeQuietly(file.path);
     throw new BadRequestException(
       'Вміст файлу не відповідає дозволеному формату або файл пошкоджено (перевірка сигнатури не пройдена)',
     );
@@ -241,14 +206,20 @@ export class UploadController {
   })
   @ApiConsumes('multipart/form-data')
   @ApiOperation({
-    summary: 'Upload an image publicly (e.g. a payment receipt)',
+    summary:
+      'Upload a file publicly: a payment receipt, a costume photo or a registration answer',
   })
   @ApiBody(fileBody)
-  @UseInterceptors(PublicUploadQuotaInterceptor, imageOrPdfUpload)
+  @UseInterceptors(PublicUploadQuotaInterceptor, publicUpload)
   async uploadPublic(
     @Req() req: Request,
     @UploadedFile() file?: Express.Multer.File,
   ) {
+    const kind = file ? kindOf(extname(file.filename)) : null;
+    if (file && kind && file.size > KIND_MAX_BYTES[kind]) {
+      removeQuietly(file.path);
+      throw new PayloadTooLargeException(tooLargeMessage(kind));
+    }
     const { filename, url, size } = await processUpload(
       PUBLIC_IMAGE_PROFILE,
       file,

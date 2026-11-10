@@ -11,7 +11,7 @@ export const WRITE_LIMIT_PER_IP = 300;
 export const REGISTER_LIMIT_PER_IP = 60;
 export const APPLICANT_LIMIT_PER_IP = 30;
 export const PARTNER_LIMIT_PER_IP = 10;
-export const PUBLIC_UPLOAD_LIMIT_PER_IP = 30;
+export const PUBLIC_UPLOAD_LIMIT_PER_IP = 120;
 
 const READ_METHODS = new Set(['GET', 'HEAD']);
 

@@ -17,6 +17,7 @@ import {
 } from '@/lib/api';
 import { PageHeader } from '@/components/PageHeader';
 import { AddRegistration } from '@/components/AddRegistration';
+import { AnswerFiles, parseFileAnswer } from '@/components/AnswerFiles';
 import { Spinner } from '@/components/ui/Spinner';
 import { Button } from '@/components/ui/Button';
 import { hapticNotify } from '@/lib/telegram';
@@ -880,19 +881,26 @@ export default function EventRegistrationsPage() {
                       Відповіді на запитання:
                     </div>
                     <div className="space-y-1.5">
-                      {r.answers.map((a) => (
-                        <div
-                          key={a.id}
-                          className="rounded-xl border border-border/70 bg-surface/70 p-2.5 text-xs"
-                        >
-                          <span className="font-semibold text-subtle block text-[11px]">
-                            {questionLabel.get(a.questionId) ?? 'Питання'}:
-                          </span>
-                          <span className="text-fg font-medium mt-0.5 block whitespace-pre-wrap">
-                            {a.value}
-                          </span>
-                        </div>
-                      ))}
+                      {r.answers.map((a) => {
+                        const files = parseFileAnswer(a.value);
+                        return (
+                          <div
+                            key={a.id}
+                            className="rounded-xl border border-border/70 bg-surface/70 p-2.5 text-xs"
+                          >
+                            <span className="font-semibold text-subtle block text-[11px]">
+                              {questionLabel.get(a.questionId) ?? 'Питання'}:
+                            </span>
+                            {files ? (
+                              <AnswerFiles files={files} />
+                            ) : (
+                              <span className="text-fg font-medium mt-0.5 block whitespace-pre-wrap">
+                                {a.value}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}

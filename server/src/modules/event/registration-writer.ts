@@ -6,6 +6,8 @@ import type {
   RegistrationPayment,
   RegistrationSource,
 } from '@prisma/client';
+import { uploadFilenames } from '../../upload/own-upload';
+import { parseFileAnswer } from './registration-answers';
 import {
   registrationClosedMessage,
   registrationClosedReason,
@@ -98,6 +100,18 @@ export async function createRegistrationGuarded(
         answers: data.answers.length ? { create: data.answers } : undefined,
       },
     });
+    const uploads = uploadFilenames([
+      data.receiptUrl,
+      ...data.answers.flatMap(
+        (a) => parseFileAnswer(a.value)?.map((file) => file.url) ?? [],
+      ),
+    ]);
+    if (uploads.length) {
+      await tx.publicUpload.updateMany({
+        where: { filename: { in: uploads } },
+        data: { unreferencedSince: null },
+      });
+    }
     return { created };
   });
 }

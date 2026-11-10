@@ -13,10 +13,14 @@ import { createHash } from 'crypto';
 import { PrismaService } from '../../database/prisma.service';
 import { GoogleSheetsService } from '../applicant/google-sheets.service';
 import {
+  cellText,
   EXPECTED,
+  LinkList,
   PRESENT,
+  RegistrationTable,
   RegistrationTableEvent,
   registrationTable,
+  TableCell,
 } from './registration-table';
 
 const API = 'https://sheets.googleapis.com/v4/spreadsheets';
@@ -30,7 +34,8 @@ const SHEET_EDITOR = 'Google Таблиця';
 // Keeps each batchUpdate far below Google's request size limit.
 const CELLS_PER_CALL = 50_000;
 const FIELDS =
-  'userEnteredValue,userEnteredFormat.textFormat,userEnteredFormat.backgroundColor';
+  'userEnteredValue,userEnteredFormat.textFormat,userEnteredFormat.backgroundColor,textFormatRuns';
+const ABSOLUTE_URL = /^https?:\/\//;
 
 const eventDay = new Intl.DateTimeFormat('uk-UA', {
   day: '2-digit',
@@ -89,8 +94,26 @@ const WIDTH: Record<string, number> = {
   'Хто відмітив': 140,
 };
 
-function cell(value: string, header: boolean) {
-  const link = /^https?:\/\//.test(value) ? { uri: value } : undefined;
+function linksCell({ links }: LinkList) {
+  let text = '';
+  const runs: object[] = [];
+  links.forEach((link, i) => {
+    if (i > 0) {
+      runs.push({ startIndex: text.length, format: {} });
+      text += '\n';
+    }
+    runs.push({
+      startIndex: text.length,
+      format: ABSOLUTE_URL.test(link.uri) ? { link: { uri: link.uri } } : {},
+    });
+    text += link.label;
+  });
+  return { userEnteredValue: { stringValue: text }, textFormatRuns: runs };
+}
+
+function cell(value: TableCell, header: boolean) {
+  if (typeof value !== 'string') return linksCell(value);
+  const link = ABSOLUTE_URL.test(value) ? { uri: value } : undefined;
   // The header paints its own violet: white text must stay readable even on
   // a tab that has not got the looks yet.
   const format = header
@@ -249,11 +272,13 @@ export function styleRequests(
 }
 
 /** Ticket number → attendance cell of a written table. */
-function attendanceOf(table: string[][]): Map<string, string> {
+function attendanceOf(table: RegistrationTable): Map<string, string> {
   const [header, ...rows] = table;
   const code = header.indexOf('Код квитка');
   const present = header.indexOf('Присутність');
-  return new Map(rows.map((row) => [row[code], row[present]]));
+  return new Map(
+    rows.map((row) => [cellText(row[code]), cellText(row[present])]),
+  );
 }
 
 /**
@@ -262,7 +287,7 @@ function attendanceOf(table: string[][]): Map<string, string> {
  */
 export function tabRequests(
   event: { id: string; name: string; date: Date },
-  table: string[][],
+  table: RegistrationTable,
   sheet: SheetProperties | undefined,
   titles: Set<string>,
 ): object[] {

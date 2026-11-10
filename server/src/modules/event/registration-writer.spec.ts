@@ -50,6 +50,7 @@ function db(event: object | null, count = 0, existing: object | null = null) {
         return Promise.resolve({ id: 'r1' });
       }),
     },
+    publicUpload: { updateMany: jest.fn().mockResolvedValue({ count: 0 }) },
   };
   const prisma: any = { $transaction: jest.fn((fn: any) => fn(tx)) };
   return { prisma, tx, calls };
@@ -130,5 +131,67 @@ describe('createRegistrationGuarded', () => {
 
     expect(result.existing).toEqual({ id: 'old' });
     expect(tx.eventRegistration.create).not.toHaveBeenCalled();
+    expect(tx.publicUpload.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('marks the receipt and the answer files as used', async () => {
+    const receipt = '0e352379-dbd8-407f-98a5-38d60ab53528.jpg';
+    const photo = '1e352379-dbd8-407f-98a5-38d60ab53528.png';
+    const video = '2e352379-dbd8-407f-98a5-38d60ab53528.mov';
+    const { prisma, tx } = db(EVENT);
+    await createRegistrationGuarded(
+      prisma,
+      {
+        ...DATA,
+        receiptUrl: `/uploads/${receipt}`,
+        answers: [
+          { questionId: 'q1', value: 'Так' },
+          {
+            questionId: 'f1',
+            value: JSON.stringify([
+              { url: `/uploads/${photo}`, name: 'a.png' },
+              { url: `/uploads/${video}`, name: 'b.mov' },
+            ]),
+          },
+        ],
+      },
+      NOW,
+    );
+
+    expect(tx.publicUpload.updateMany).toHaveBeenCalledWith({
+      where: { filename: { in: [receipt, photo, video] } },
+      data: { unreferencedSince: null },
+    });
+  });
+
+  it('does not count a link typed into a text answer as a used file', async () => {
+    const { prisma, tx } = db(EVENT);
+    await createRegistrationGuarded(
+      prisma,
+      {
+        ...DATA,
+        answers: [
+          {
+            questionId: 'q1',
+            value:
+              'Моє відео: /uploads/0e352379-dbd8-407f-98a5-38d60ab53528.mp4',
+          },
+        ],
+      },
+      NOW,
+    );
+
+    expect(tx.publicUpload.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('leaves uploads alone when the registration has no files', async () => {
+    const { prisma, tx } = db(EVENT);
+    await createRegistrationGuarded(
+      prisma,
+      { ...DATA, answers: [{ questionId: 'q1', value: 'Так' }] },
+      NOW,
+    );
+
+    expect(tx.publicUpload.updateMany).not.toHaveBeenCalled();
   });
 });

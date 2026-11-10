@@ -114,7 +114,10 @@ export type EventQuestionType =
   | 'SHORT_TEXT'
   | 'LONG_TEXT'
   | 'SINGLE_CHOICE'
-  | 'YES_NO';
+  | 'YES_NO'
+  | 'FILE';
+
+export type QuestionFileKind = 'IMAGE' | 'VIDEO' | 'PDF' | 'WORD';
 
 export interface EventQuestion {
   id: string;
@@ -122,7 +125,14 @@ export interface EventQuestion {
   type: EventQuestionType;
   required: boolean;
   options: string[];
+  fileKinds?: QuestionFileKind[];
+  maxFiles?: number;
   order: number;
+}
+
+export interface AnswerFile {
+  url: string;
+  name: string;
 }
 
 export interface EventProgramItem {
@@ -316,7 +326,13 @@ export interface EventRegistrationPayload {
   telegramUserId?: string | number;
   saveProfile?: boolean;
   phoneNumber?: string;
-  answers?: { questionId: string; value: string }[];
+  answers?: RegistrationAnswer[];
+}
+
+export interface RegistrationAnswer {
+  questionId: string;
+  value?: string;
+  files?: AnswerFile[];
 }
 
 export interface EventRegistrationResult {
@@ -391,6 +407,54 @@ export const fice = {
     }
     return res.json() as Promise<{ url: string }>;
   },
+  uploadFile: (
+    file: File,
+    onProgress: (share: number) => void,
+    signal: AbortSignal,
+  ): Promise<{ url: string }> =>
+    new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      const form = new FormData();
+      form.append('file', file);
+      xhr.open('POST', `${apiBase()}/upload/public`);
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) onProgress(e.loaded / e.total);
+      };
+      xhr.onload = () => {
+        let data: { url?: string; message?: string | string[] } = {};
+        try {
+          data = JSON.parse(xhr.responseText);
+        } catch {}
+        if (xhr.status >= 200 && xhr.status < 300 && data.url) {
+          resolve({ url: data.url });
+          return;
+        }
+        const message = Array.isArray(data.message)
+          ? data.message.join(', ')
+          : data.message;
+        const throttled =
+          xhr.status === 429 &&
+          (!message || message.startsWith('ThrottlerException'));
+        reject(
+          new ApiError(
+            throttled
+              ? 'Забагато завантажень. Спробуйте трохи згодом.'
+              : message || `Не вдалося завантажити файл (${xhr.status})`,
+            xhr.status,
+          ),
+        );
+      };
+      xhr.onerror = () =>
+        reject(
+          new ApiError(
+            'Немає звʼязку з сервером. Перевірте інтернет і спробуйте ще раз.',
+            0,
+          ),
+        );
+      xhr.onabort = () => reject(new DOMException('Скасовано', 'AbortError'));
+      signal.addEventListener('abort', () => xhr.abort(), { once: true });
+      xhr.send(form);
+    }),
   fundraisers: (limit = 6, page = 1, status?: FundraiserStatus) =>
     request<Paginated<Fundraiser>>(
       `/fundraiser?limit=${limit}&page=${page}${status ? `&status=${status}` : ''}`,

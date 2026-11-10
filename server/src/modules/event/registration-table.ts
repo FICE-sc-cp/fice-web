@@ -5,6 +5,7 @@ import type {
   RegistrationPayment,
   RegistrationSource,
 } from '@prisma/client';
+import { cleanFileName, parseFileAnswer } from './registration-answers';
 
 const PAYMENT_LABEL: Record<RegistrationPayment, string> = {
   NONE: '—',
@@ -45,6 +46,20 @@ export interface RegistrationTableEvent {
   })[];
 }
 
+export interface LinkList {
+  links: { label: string; uri: string }[];
+}
+
+export type TableCell = string | LinkList;
+
+export type RegistrationTable = [string[], ...TableCell[][]];
+
+export function cellText(cell: TableCell): string {
+  return typeof cell === 'string'
+    ? cell
+    : cell.links.map((link) => link.label).join('\n');
+}
+
 function paymentStatus(reg: EventRegistration): string {
   switch (reg.paymentStatus) {
     case 'CONFIRMED':
@@ -65,8 +80,21 @@ function paymentStatus(reg: EventRegistration): string {
 export function registrationTable(
   event: RegistrationTableEvent,
   webUrl = '',
-): string[][] {
+): RegistrationTable {
   const site = webUrl.replace(/\/+$/, '');
+  const absolute = (url: string) =>
+    url && !/^https?:\/\//.test(url) ? `${site}${url}` : url;
+  const answerCell = (value: string): TableCell => {
+    const files = parseFileAnswer(value);
+    return files
+      ? {
+          links: files.map((f, i) => ({
+            label: cleanFileName(f.name, i),
+            uri: absolute(f.url),
+          })),
+        }
+      : value;
+  };
   const header = [
     'ПІБ',
     'Telegram',
@@ -84,9 +112,8 @@ export function registrationTable(
     'Хто відмітив',
     ...event.questions.map((q) => q.label),
   ];
-  const rows = event.registrations.map((reg) => {
+  const rows = event.registrations.map((reg): TableCell[] => {
     const answers = new Map(reg.answers.map((a) => [a.questionId, a.value]));
-    const receipt = reg.receiptUrl ?? '';
     return [
       reg.fullName,
       reg.telegramTag,
@@ -96,14 +123,14 @@ export function registrationTable(
       SOURCE_LABEL[reg.source],
       PAYMENT_LABEL[reg.payment],
       paymentStatus(reg),
-      receipt && !/^https?:\/\//.test(receipt) ? `${site}${receipt}` : receipt,
+      absolute(reg.receiptUrl ?? ''),
       // The number printed under the QR on the ticket.
       reg.ticketCode.slice(0, 8).toUpperCase(),
       kyivTime.format(reg.createdAt),
       reg.attended ? PRESENT : EXPECTED,
       reg.attendedAt ? kyivTime.format(reg.attendedAt) : '',
       reg.attendedBy ?? '',
-      ...event.questions.map((q) => answers.get(q.id) ?? ''),
+      ...event.questions.map((q) => answerCell(answers.get(q.id) ?? '')),
     ];
   });
   return [header, ...rows];

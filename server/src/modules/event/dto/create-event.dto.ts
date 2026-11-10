@@ -1,7 +1,8 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { EventQuestionType } from '@prisma/client';
+import { EventQuestionType, QuestionFileKind } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   IsArray,
   IsBoolean,
   IsDate,
@@ -13,10 +14,12 @@ import {
   IsString,
   IsUrl,
   IsUUID,
+  Max,
   MaxLength,
   Min,
   ValidateNested,
 } from 'class-validator';
+import { MAX_FILES_PER_QUESTION } from '../event-questions';
 import { AddEventPartnerDto } from './add-event-partner.dto';
 
 export class EventProgramItemDto {
@@ -70,6 +73,29 @@ export class EventQuestionDto {
   @IsArray()
   @IsString({ each: true })
   options?: string[];
+
+  @ApiPropertyOptional({
+    enum: QuestionFileKind,
+    isArray: true,
+    description: 'File types a FILE question accepts',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(4)
+  @IsEnum(QuestionFileKind, { each: true })
+  fileKinds?: QuestionFileKind[];
+
+  @ApiPropertyOptional({
+    minimum: 1,
+    maximum: MAX_FILES_PER_QUESTION,
+    default: 1,
+    description: 'How many files a FILE question accepts',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(MAX_FILES_PER_QUESTION)
+  maxFiles?: number;
 
   @ApiPropertyOptional()
   @IsOptional()

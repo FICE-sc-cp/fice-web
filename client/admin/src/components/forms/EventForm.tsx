@@ -4,7 +4,11 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { type EventInput, type EventQuestionType } from '@/lib/api';
+import {
+  type EventInput,
+  type EventQuestionType,
+  type QuestionFileKind,
+} from '@/lib/api';
 import { Input } from '../ui/Input';
 import { RichTextArea } from '../RichTextArea';
 import { Button } from '../ui/Button';
@@ -82,6 +86,8 @@ export interface QuestionItem {
   type: EventQuestionType;
   required: boolean;
   optionsText: string;
+  fileKinds?: QuestionFileKind[];
+  maxFiles?: number;
 }
 
 export interface BaseQuestionConfig {
@@ -176,6 +182,9 @@ export function eventValuesToInput(v: EventFormValues): EventInput {
                 .map((s) => s.trim())
                 .filter(Boolean)
             : [],
+        ...(q.type === 'FILE'
+          ? { fileKinds: q.fileKinds ?? [], maxFiles: q.maxFiles ?? 1 }
+          : {}),
         order: i,
       })),
     partners: v.partners
@@ -193,6 +202,22 @@ const QUESTION_TYPES: { value: EventQuestionType; label: string }[] = [
   { value: 'LONG_TEXT', label: 'Розгорнута відповідь' },
   { value: 'SINGLE_CHOICE', label: 'Один з варіантів' },
   { value: 'YES_NO', label: 'Так / Ні' },
+  { value: 'FILE', label: 'Файл' },
+];
+
+const MAX_FILE_QUESTIONS = 3;
+const MAX_FILES_PER_QUESTION = 10;
+
+const FILE_KIND_OPTIONS: {
+  value: QuestionFileKind;
+  label: string;
+  formats: string;
+  size: string;
+}[] = [
+  { value: 'IMAGE', label: 'Фото', formats: 'JPG, PNG, WEBP', size: 'до 10 МБ' },
+  { value: 'VIDEO', label: 'Відео', formats: 'MP4, MOV, WEBM', size: 'до 50 МБ' },
+  { value: 'PDF', label: 'PDF', formats: 'PDF', size: 'до 10 МБ' },
+  { value: 'WORD', label: 'Word', formats: 'DOC, DOCX', size: 'до 10 МБ' },
 ];
 
 export function EventForm({
@@ -354,11 +379,20 @@ export function EventForm({
         found[`program.${i}.title`] = 'Максимум 120 символів';
       }
     });
+    let fileQuestions = 0;
     questionItems.forEach((q, i) => {
       if (!q.label.trim()) {
         found[`questions.${i}.label`] = 'Вкажи текст питання';
       } else if (q.label.trim().length > 200) {
         found[`questions.${i}.label`] = 'Максимум 200 символів';
+      }
+      if (q.type !== 'FILE') return;
+      fileQuestions += 1;
+      if (fileQuestions > MAX_FILE_QUESTIONS) {
+        found[`questions.${i}.type`] =
+          `Можна додати не більше ${MAX_FILE_QUESTIONS} питань із файлами`;
+      } else if (!q.fileKinds?.length) {
+        found[`questions.${i}.fileKinds`] = 'Обери, які файли можна прикріпити';
       }
     });
     return found;
@@ -426,6 +460,24 @@ export function EventForm({
     setQuestionItems((q) => q.filter((_, idx) => idx !== i));
   const updateQuestion = (i: number, patch: Partial<QuestionItem>) =>
     setQuestionItems((q) => q.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
+  const fileQuestionCount = questionItems.filter((q) => q.type === 'FILE').length;
+  const toggleFileKind = (i: number, kind: QuestionFileKind) => {
+    clearItemError(`questions.${i}.fileKinds`);
+    setQuestionItems((q) =>
+      q.map((it, idx) => {
+        if (idx !== i) return it;
+        const kinds = it.fileKinds ?? [];
+        return {
+          ...it,
+          fileKinds: kinds.includes(kind)
+            ? kinds.filter((k) => k !== kind)
+            : FILE_KIND_OPTIONS.map((o) => o.value).filter(
+                (k) => k === kind || kinds.includes(k),
+              ),
+        };
+      }),
+    );
+  };
 
   const toggleFaculty = (fac: string) => {
     setAllowedFaculties((prev) =>
@@ -858,9 +910,16 @@ export function EventForm({
           {/* Питання реєстрації (кастомні) */}
           <div className="rounded-2xl border border-border bg-bg-soft p-4">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <p className="min-w-0 text-sm font-semibold text-muted">
-                Додаткові питання реєстрації
-              </p>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-muted">
+                  Додаткові питання реєстрації
+                </p>
+                {fileQuestionCount > 0 && (
+                  <p className="text-xs text-subtle">
+                    Питань із файлами: {fileQuestionCount} з {MAX_FILE_QUESTIONS}
+                  </p>
+                )}
+              </div>
               <button
                 type="button"
                 onClick={addQuestion}
@@ -899,20 +958,45 @@ export function EventForm({
                   </div>
                   <div className="grid grid-cols-1 items-end gap-3 sm:grid-cols-2">
                     <div className="flex min-w-0 flex-col gap-1.5">
-                      <label className="text-sm font-semibold text-muted">Тип</label>
-                      <select
-                        value={q.type}
-                        onChange={(e) =>
-                          updateQuestion(i, { type: e.target.value as EventQuestionType })
-                        }
-                        className="w-full rounded-xl border border-border bg-bg-soft px-4 py-3 text-fg outline-none"
+                      <label
+                        htmlFor={`question-${i}-type`}
+                        className="text-sm font-semibold text-muted"
                       >
-                        {QUESTION_TYPES.map((t) => (
-                          <option key={t.value} value={t.value}>
-                            {t.label}
-                          </option>
-                        ))}
+                        Тип
+                      </label>
+                      <select
+                        id={`question-${i}-type`}
+                        name={`questions.${i}.type`}
+                        value={q.type}
+                        onChange={(e) => {
+                          clearItemError(`questions.${i}.type`);
+                          updateQuestion(i, { type: e.target.value as EventQuestionType });
+                        }}
+                        className={`w-full rounded-xl border bg-bg-soft px-4 py-3 text-fg outline-none ${
+                          itemError(`questions.${i}.type`)
+                            ? 'border-brand-red'
+                            : 'border-border'
+                        }`}
+                      >
+                        {QUESTION_TYPES.map((t) => {
+                          const full =
+                            t.value === 'FILE' &&
+                            q.type !== 'FILE' &&
+                            fileQuestionCount >= MAX_FILE_QUESTIONS;
+                          return (
+                            <option key={t.value} value={t.value} disabled={full}>
+                              {full
+                                ? `${t.label} (уже ${MAX_FILE_QUESTIONS} з ${MAX_FILE_QUESTIONS})`
+                                : t.label}
+                            </option>
+                          );
+                        })}
                       </select>
+                      {itemError(`questions.${i}.type`) && (
+                        <span className="text-xs font-medium text-brand-red">
+                          {itemError(`questions.${i}.type`)}
+                        </span>
+                      )}
                     </div>
                     <label className="flex min-w-0 items-center gap-2 text-sm text-muted sm:mb-3">
                       <input
@@ -931,6 +1015,87 @@ export function EventForm({
                       value={q.optionsText}
                       onChange={(e) => updateQuestion(i, { optionsText: e.target.value })}
                     />
+                  )}
+                  {q.type === 'FILE' && (
+                    <div className="flex flex-col gap-3 rounded-xl border border-border bg-bg-soft p-3">
+                      <fieldset className="flex min-w-0 flex-col gap-2">
+                        <legend className="mb-2 text-sm font-semibold text-muted">
+                          Які файли можна прикріпити
+                        </legend>
+                        <div className="grid grid-cols-1 gap-2 min-[380px]:grid-cols-2">
+                          {FILE_KIND_OPTIONS.map((kind, k) => {
+                            const active = (q.fileKinds ?? []).includes(kind.value);
+                            return (
+                              <label
+                                key={kind.value}
+                                className={`flex min-w-0 cursor-pointer items-start gap-2.5 rounded-xl border px-3 py-2.5 transition-colors ${
+                                  active
+                                    ? 'border-brand-cyan bg-brand-cyan/10'
+                                    : itemError(`questions.${i}.fileKinds`)
+                                      ? 'border-brand-red/60 bg-surface'
+                                      : 'border-border bg-surface hover:border-white/20'
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  name={k === 0 ? `questions.${i}.fileKinds` : undefined}
+                                  checked={active}
+                                  onChange={() => toggleFileKind(i, kind.value)}
+                                  className="mt-0.5 size-4 shrink-0 accent-brand-cyan"
+                                />
+                                <span className="min-w-0">
+                                  <span
+                                    className={`block text-sm font-bold ${active ? 'text-brand-cyan' : 'text-fg'}`}
+                                  >
+                                    {kind.label}
+                                  </span>
+                                  <span className="block text-xs text-subtle">
+                                    {kind.formats}
+                                  </span>
+                                  <span className="block whitespace-nowrap text-xs text-subtle">
+                                    {kind.size}
+                                  </span>
+                                </span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                        {itemError(`questions.${i}.fileKinds`) && (
+                          <span className="text-xs font-medium text-brand-red">
+                            {itemError(`questions.${i}.fileKinds`)}
+                          </span>
+                        )}
+                      </fieldset>
+                      <div className="flex min-w-0 flex-col gap-1.5">
+                        <label
+                          htmlFor={`question-${i}-max-files`}
+                          className="text-sm font-semibold text-muted"
+                        >
+                          Скільки файлів можна додати
+                        </label>
+                        <select
+                          id={`question-${i}-max-files`}
+                          value={q.maxFiles ?? 1}
+                          onChange={(e) =>
+                            updateQuestion(i, { maxFiles: Number(e.target.value) })
+                          }
+                          className="w-full rounded-xl border border-border bg-surface px-4 py-3 text-fg outline-none sm:max-w-60"
+                        >
+                          {Array.from({ length: MAX_FILES_PER_QUESTION }, (_, n) => n + 1).map(
+                            (n) => (
+                              <option key={n} value={n}>
+                                {n === 1 ? 'Один файл' : `До ${n} файлів`}
+                              </option>
+                            ),
+                          )}
+                        </select>
+                      </div>
+                      <p className="text-xs leading-relaxed text-subtle">
+                        Учасник побачить ці обмеження під питанням. SVG, HTML, архіви
+                        та програми не приймаються ніколи, а вміст кожного файлу
+                        перевіряє сервер.
+                      </p>
+                    </div>
                   )}
                 </div>
               ))}

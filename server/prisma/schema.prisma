@@ -320,16 +320,26 @@ enum EventQuestionType {
   LONG_TEXT
   SINGLE_CHOICE
   YES_NO
+  FILE
+}
+
+enum QuestionFileKind {
+  IMAGE
+  VIDEO
+  PDF
+  WORD
 }
 
 model EventQuestion {
-  id       String            @id @default(uuid()) @db.Uuid
-  eventId  String            @db.Uuid
-  label    String            @db.VarChar(200)
-  type     EventQuestionType @default(SHORT_TEXT)
-  required Boolean           @default(false)
-  options  String[]
-  order    Int               @default(0)
+  id        String             @id @default(uuid()) @db.Uuid
+  eventId   String             @db.Uuid
+  label     String             @db.VarChar(200)
+  type      EventQuestionType  @default(SHORT_TEXT)
+  required  Boolean            @default(false)
+  options   String[]
+  fileKinds QuestionFileKind[] @default([])
+  maxFiles  Int                @default(1)
+  order     Int                @default(0)
 
   event   Event                     @relation(fields: [eventId], references: [id], onDelete: Cascade)
   answers EventRegistrationAnswer[]

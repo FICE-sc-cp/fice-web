@@ -72,7 +72,52 @@ describe('registrationTable', () => {
     expect(row[12]).toContain('16:05');
     expect(row.slice(14)).toEqual(['Вампір', 'Так']);
   });
+
+  it('turns a file answer into links to the site', () => {
+    const files = [
+      { url: '/uploads/front.jpg', name: 'Спереду.jpg' },
+      { url: '/uploads/back.jpg', name: 'Ззаду.jpg' },
+    ];
+    const [header, row] = registrationTable(
+      {
+        questions: [
+          { id: 'q1', label: 'Костюм' },
+          { id: 'f1', label: 'Фото костюма' },
+        ],
+        registrations: [
+          registration({
+            answers: [
+              { questionId: 'q1', value: '[не файл]' },
+              { questionId: 'f1', value: JSON.stringify(files) },
+            ],
+          }),
+        ],
+      },
+      'https://fice-sc.kpi.ua/',
+    );
+    expect(header.slice(14)).toEqual(['Костюм', 'Фото костюма']);
+    expect(row[14]).toBe('[не файл]');
+    expect(row[15]).toEqual({
+      links: [
+        {
+          label: 'Спереду.jpg',
+          uri: 'https://fice-sc.kpi.ua/uploads/front.jpg',
+        },
+        { label: 'Ззаду.jpg', uri: 'https://fice-sc.kpi.ua/uploads/back.jpg' },
+      ],
+    });
+  });
 });
+
+interface CellWrite {
+  fields: string;
+  rows?: { values: object[] }[];
+}
+
+const cellWrites = (requests: object[]): CellWrite[] =>
+  requests.flatMap((r) =>
+    'updateCells' in r ? [r.updateCells as CellWrite] : [],
+  );
 
 describe('tabRequests', () => {
   const table = registrationTable(event(), 'https://fice-sc.kpi.ua');
@@ -115,6 +160,70 @@ describe('tabRequests', () => {
     });
   });
 
+  it('links every file of a cell on its own', () => {
+    const files = [
+      { url: '/uploads/a.pdf', name: 'Резюме 📎.pdf' },
+      { url: '/uploads/b.docx', name: 'Лист.docx' },
+    ];
+    const withFiles = event([
+      registration({
+        answers: [{ questionId: 'q1', value: JSON.stringify(files) }],
+      }),
+    ]);
+    const [clear, write] = cellWrites(
+      tabRequests(
+        withFiles,
+        registrationTable(withFiles, 'https://fice-sc.kpi.ua'),
+        undefined,
+        new Set(),
+      ),
+    );
+    expect(clear.fields).toContain('textFormatRuns');
+    expect(write.fields).toContain('textFormatRuns');
+    expect(write.rows?.[1].values.slice(14)).toEqual([
+      {
+        userEnteredValue: { stringValue: 'Резюме 📎.pdf\nЛист.docx' },
+        textFormatRuns: [
+          {
+            startIndex: 0,
+            format: { link: { uri: 'https://fice-sc.kpi.ua/uploads/a.pdf' } },
+          },
+          { startIndex: 13, format: {} },
+          {
+            startIndex: 14,
+            format: { link: { uri: 'https://fice-sc.kpi.ua/uploads/b.docx' } },
+          },
+        ],
+      },
+      { userEnteredValue: { stringValue: '' } },
+    ]);
+  });
+
+  it('writes file names without links when the site address is unknown', () => {
+    const withFiles = event([
+      registration({
+        answers: [
+          {
+            questionId: 'q1',
+            value: JSON.stringify([{ url: '/uploads/a.pdf', name: 'a.pdf' }]),
+          },
+        ],
+      }),
+    ]);
+    const [, write] = cellWrites(
+      tabRequests(
+        withFiles,
+        registrationTable(withFiles),
+        undefined,
+        new Set(),
+      ),
+    );
+    expect(write.rows?.[1].values[14]).toEqual({
+      userEnteredValue: { stringValue: 'a.pdf' },
+      textFormatRuns: [{ startIndex: 0, format: {} }],
+    });
+  });
+
   it('grows an existing tab instead of adding one', () => {
     const requests = tabRequests(
       event(),
@@ -143,6 +252,118 @@ describe('tabRequests', () => {
       },
     ]);
     expect(requests).toHaveLength(4);
+  });
+});
+
+interface FilesCell {
+  userEnteredValue: { stringValue: string };
+  textFormatRuns: { startIndex: number; format: { link?: { uri: string } } }[];
+}
+
+describe('file links sent to the Sheets API', () => {
+  const site = 'https://fice-sc.kpi.ua';
+  const filesCell = (files: { url: string; name: string }[]): FilesCell => {
+    const withFiles = event([
+      registration({
+        answers: [{ questionId: 'q1', value: JSON.stringify(files) }],
+      }),
+    ]);
+    const [, write] = cellWrites(
+      tabRequests(
+        withFiles,
+        registrationTable(withFiles, site),
+        undefined,
+        new Set(),
+      ),
+    );
+    return write.rows?.[1].values[14] as FilesCell;
+  };
+
+  it('counts positions in UTF-16 code units, like the API', () => {
+    const cell = filesCell([
+      { url: '/uploads/1.jpg', name: 'фото 📎.jpg' },
+      { url: '/uploads/2.pdf', name: 'b.pdf' },
+    ]);
+    expect(cell.textFormatRuns.map((run) => run.startIndex)).toEqual([
+      0, 11, 12,
+    ]);
+  });
+
+  it('gives every run a start and a format, in order and inside the text', () => {
+    const names = [
+      'Резюме.pdf',
+      'фото 📎 костюма.jpg',
+      'й-комбінований.png',
+      '漢字ファイル.webp',
+      'ملف.docx',
+      '👩🏽 портфоліо.pdf',
+      'відео-візитка.MOV',
+      'x',
+      `${'я'.repeat(60)}.docx`,
+      'z',
+    ];
+    const files = names.map((name, i) => ({ url: `/uploads/${i}.pdf`, name }));
+    const cell = filesCell(files);
+    const text = cell.userEnteredValue.stringValue;
+    const runs = cell.textFormatRuns;
+
+    expect(text).toBe(names.join('\n'));
+    expect(runs).toHaveLength(names.length * 2 - 1);
+    for (const run of runs) {
+      expect(Object.keys(run).sort()).toEqual(['format', 'startIndex']);
+      expect(Number.isInteger(run.startIndex)).toBe(true);
+    }
+    expect(runs[0].startIndex).toBe(0);
+    runs.slice(1).forEach((run, i) => {
+      expect(run.startIndex).toBeGreaterThan(runs[i].startIndex);
+    });
+    expect(runs[runs.length - 1].startIndex).toBeLessThan(text.length);
+    const linked = runs.flatMap((run, i) =>
+      run.format.link
+        ? [
+            {
+              uri: run.format.link.uri,
+              text: text.slice(
+                run.startIndex,
+                runs[i + 1]?.startIndex ?? text.length,
+              ),
+            },
+          ]
+        : [],
+    );
+    expect(linked).toEqual(
+      files.map((file, i) => ({ uri: `${site}${file.url}`, text: names[i] })),
+    );
+  });
+
+  it('cleans names that were stored broken before they reach the sheet', () => {
+    const cell = filesCell([
+      { url: '/uploads/1.jpg', name: 'два\nрядки.jpg' },
+      { url: '/uploads/2.jpg', name: '' },
+      { url: '/uploads/3.jpg', name: '   ' },
+      { url: '/uploads/4.jpg', name: 'зламаний\ud83d.jpg' },
+      { url: '/uploads/5.jpg', name: `${'я'.repeat(119)}📎📎.jpg` },
+    ]);
+    expect(cell.userEnteredValue.stringValue.split('\n')).toEqual([
+      'два рядки.jpg',
+      'Файл 2',
+      'Файл 3',
+      'зламаний .jpg',
+      `${'я'.repeat(119)}…`,
+    ]);
+    expect(cell.textFormatRuns.filter((run) => run.format.link)).toHaveLength(
+      5,
+    );
+    expect(JSON.stringify(cell)).not.toMatch(/\\ud[89a-f]/i);
+  });
+
+  it('links a single file with one run at the start', () => {
+    expect(filesCell([{ url: '/uploads/1.pdf', name: 'a' }])).toEqual({
+      userEnteredValue: { stringValue: 'a' },
+      textFormatRuns: [
+        { startIndex: 0, format: { link: { uri: `${site}/uploads/1.pdf` } } },
+      ],
+    });
   });
 });
 

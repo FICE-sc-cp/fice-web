@@ -32,4 +32,18 @@ describe('setUploadHeaders', () => {
     expect(headers['Content-Security-Policy']).not.toContain('sandbox');
     expect(headers['X-Content-Type-Options']).toBe('nosniff');
   });
+
+  it('serves Word documents as downloads too', () => {
+    for (const file of ['/app/uploads/cv.doc', '/app/uploads/cv.DOCX']) {
+      expect(headersFor(file)['Content-Disposition']).toBe('attachment');
+    }
+  });
+
+  it('plays videos in place behind the sandbox CSP', () => {
+    for (const file of ['a.mp4', 'b.MOV', 'c.webm']) {
+      const headers = headersFor(file);
+      expect(headers['Content-Disposition']).toBeUndefined();
+      expect(headers['Content-Security-Policy']).toBe(SANDBOX_CSP);
+    }
+  });
 });

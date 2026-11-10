@@ -15,16 +15,42 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { OWN_UPLOAD_URL } from '../../../upload/own-upload';
+import { MAX_FILES_PER_QUESTION } from '../event-questions';
+
+export class EventAnswerFileDto {
+  @ApiProperty({ maxLength: 100, example: '/uploads/<uuid>.pdf' })
+  @IsString()
+  @MaxLength(100)
+  url: string;
+
+  @ApiPropertyOptional({ maxLength: 255, description: 'Original file name' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  name?: string;
+}
 
 export class EventAnswerDto {
   @ApiProperty({ format: 'uuid' })
   @IsUUID()
   questionId: string;
 
-  @ApiProperty({ maxLength: 2000 })
+  @ApiPropertyOptional({ maxLength: 2000 })
+  @IsOptional()
   @IsString()
   @MaxLength(2000)
-  value: string;
+  value?: string;
+
+  @ApiPropertyOptional({
+    type: [EventAnswerFileDto],
+    description: 'Uploaded files, for a FILE question',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(MAX_FILES_PER_QUESTION)
+  @ValidateNested({ each: true })
+  @Type(() => EventAnswerFileDto)
+  files?: EventAnswerFileDto[];
 }
 
 export class CreateEventRegistrationDto {

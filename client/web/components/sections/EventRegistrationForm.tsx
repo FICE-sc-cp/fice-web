@@ -8,8 +8,10 @@ import { cn, formatEventDateTime } from '@/lib/utils';
 import {
   ApiError,
   fice,
+  type AnswerFile,
   type EventItem,
   type EventRegistrationPayload,
+  type RegistrationAnswer,
   type RegistrationPayment,
 } from '@/lib/api';
 import { normalizeKpiGroup, parseKpiGroup } from '@/lib/kpi-groups';
@@ -22,6 +24,7 @@ import {
 import { MAX_UPLOAD_MB, RECEIPT_ACCEPT, uploadProblem } from '@/lib/uploads';
 import { ANY_AMOUNT_TITLE, ANY_AMOUNT_VALUE, feeInfo } from '@/lib/fees';
 import { FeeRequisites } from '@/components/ui/FeeRequisites';
+import { FileAnswerField } from '@/components/ui/FileAnswerField';
 
 function TelegramIcon({ className = 'size-5' }: { className?: string }) {
   return (
@@ -59,6 +62,9 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
   const [receiptUrl, setReceiptUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [files, setFiles] = useState<Record<string, AnswerFile[]>>({});
+  const [busyFiles, setBusyFiles] = useState<Record<string, boolean>>({});
+  const filesUploading = Object.values(busyFiles).some(Boolean);
   const [consent, setConsent] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -173,6 +179,10 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
     if (payment === 'DONATED' && !receiptUrl) e.receipt = 'Додай скриншот або PDF квитанції';
 
     for (const q of questions) {
+      if (q.type === 'FILE') {
+        if (q.required && !files[q.id]?.length) e[`q_${q.id}`] = 'Додай файл';
+        continue;
+      }
       const val = (answers[q.id] ?? '').trim();
       if (q.required && !val) {
         e[`q_${q.id}`] = 'Обовʼязкове поле';
@@ -214,9 +224,14 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
         phoneNumber: phone.trim() || undefined,
         payment: hasFee ? (payment as RegistrationPayment) : 'NONE',
         receiptUrl: receiptUrl ?? undefined,
-        answers: questions
-          .map((q) => ({ questionId: q.id, value: (answers[q.id] ?? '').trim() }))
-          .filter((a) => a.value.length > 0),
+        answers: questions.flatMap<RegistrationAnswer>((q) => {
+          if (q.type === 'FILE') {
+            const attached = files[q.id] ?? [];
+            return attached.length ? [{ questionId: q.id, files: attached }] : [];
+          }
+          const value = (answers[q.id] ?? '').trim();
+          return value ? [{ questionId: q.id, value }] : [];
+        }),
       };
 
       const res = await fice.registerEvent(event.id, payload);
@@ -290,6 +305,7 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
     setPayment('');
     setReceiptUrl(null);
     setAnswers({});
+    setFiles({});
     setConsent(false);
     setErrors({});
     setSubmitError(null);
@@ -538,6 +554,23 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
             {/* Custom Questions */}
             {questions.map((q) => {
               const err = errors[`q_${q.id}`];
+              if (q.type === 'FILE') {
+                return (
+                  <FileAnswerField
+                    key={q.id}
+                    question={q}
+                    label={q.label}
+                    files={files[q.id] ?? []}
+                    onChange={(update) =>
+                      setFiles((prev) => ({ ...prev, [q.id]: update(prev[q.id] ?? []) }))
+                    }
+                    onBusyChange={(busy) =>
+                      setBusyFiles((prev) => ({ ...prev, [q.id]: busy }))
+                    }
+                    error={err}
+                  />
+                );
+              }
               if (q.type === 'LONG_TEXT') {
                 return (
                   <Textarea
@@ -720,10 +753,14 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
             <Button
               type="submit"
               size="lg"
-              disabled={submitting || uploading}
+              disabled={submitting || uploading || filesUploading}
               className="mt-2 w-full rounded-2xl py-4 text-base sm:text-lg font-bold"
             >
-              {submitting ? 'Обробка реєстрації…' : 'Зареєструватися на захід'}
+              {submitting
+                ? 'Обробка реєстрації…'
+                : filesUploading
+                  ? 'Зачекай, файли ще завантажуються…'
+                  : 'Зареєструватися на захід'}
             </Button>
           </form>
         </div>

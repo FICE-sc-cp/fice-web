@@ -37,6 +37,7 @@ import {
 import { createRegistrationGuarded } from './registration-writer';
 import { paymentRuleViolation, pendingPaymentSubject } from './payment-rules';
 import { validateAnswers } from './registration-answers';
+import { assertQuestionsConfig, questionData } from './event-questions';
 import { registrationListWhere } from './registration-filters';
 import { RegistrationListQueryDto } from './dto/registration-list-query.dto';
 import { ageOf } from './age';
@@ -104,6 +105,7 @@ export class EventService {
       checkInStaffTags,
       ...rest
     } = dto;
+    if (questions) assertQuestionsConfig(questions);
     const staffTags = normalizeStaffTags(checkInStaffTags);
     const staff = await resolveStaffTags(this.prisma, staffTags);
     const event = await this.prisma.event.create({
@@ -131,15 +133,7 @@ export class EventService {
             }
           : undefined,
         questions: questions?.length
-          ? {
-              create: questions.map((q, i) => ({
-                label: q.label,
-                type: q.type,
-                required: q.required ?? false,
-                options: q.options ?? [],
-                order: q.order ?? i,
-              })),
-            }
+          ? { create: questions.map((q, i) => questionData(q, i)) }
           : undefined,
       },
       include: this.include,
@@ -220,6 +214,7 @@ export class EventService {
       checkInStaffTags,
       ...rest
     } = dto;
+    if (questions) assertQuestionsConfig(questions);
     const staffTags =
       checkInStaffTags !== undefined
         ? normalizeStaffTags(checkInStaffTags)
@@ -284,13 +279,7 @@ export class EventService {
           },
         });
         for (const [i, q] of questions.entries()) {
-          const data = {
-            label: q.label,
-            type: q.type,
-            required: q.required ?? false,
-            options: q.options ?? [],
-            order: q.order ?? i,
-          };
+          const data = questionData(q, i);
           if (q.id) {
             await tx.eventQuestion.update({ where: { id: q.id }, data });
           } else {

@@ -122,7 +122,10 @@ export type EventQuestionType =
   | 'SHORT_TEXT'
   | 'LONG_TEXT'
   | 'SINGLE_CHOICE'
-  | 'YES_NO';
+  | 'YES_NO'
+  | 'FILE';
+
+export type QuestionFileKind = 'IMAGE' | 'VIDEO' | 'PDF' | 'WORD';
 
 export interface EventQuestion {
   id: string;
@@ -130,6 +133,8 @@ export interface EventQuestion {
   type: EventQuestionType;
   required: boolean;
   options: string[];
+  fileKinds?: QuestionFileKind[];
+  maxFiles?: number;
   order: number;
 }
 
@@ -371,6 +376,8 @@ export interface EventQuestionInput {
   type: EventQuestionType;
   required?: boolean;
   options?: string[];
+  fileKinds?: QuestionFileKind[];
+  maxFiles?: number;
   order?: number;
 }
 

@@ -7,11 +7,13 @@ import { QRCodeSVG } from 'qrcode.react';
 import {
   fice,
   mediaUrl,
+  type AnswerFile,
   type BotUserProfile,
   type CheckInItem,
   type EventItem,
   type MyEventRegistration,
   type PublicVoting,
+  type RegistrationAnswer,
   type RegistrationPayment,
 } from '@/lib/api';
 import { renderRichInline } from '@/lib/richText';
@@ -30,10 +32,12 @@ import {
 } from '@/lib/registrationConfig';
 import { ANY_AMOUNT_TITLE, ANY_AMOUNT_VALUE, feeInfo } from '@/lib/fees';
 import { FeeRequisites } from '@/components/ui/FeeRequisites';
+import { AnswerFileLinks, FileAnswerField } from '@/components/ui/FileAnswerField';
 import {
   MAX_UPLOAD_MB,
   PHOTO_ACCEPT,
   RECEIPT_ACCEPT,
+  parseFileAnswer,
   uploadProblem,
 } from '@/lib/uploads';
 
@@ -200,6 +204,9 @@ function MiniAppContent() {
   const [regReceiptUrl, setRegReceiptUrl] = useState<string | null>(null);
   const [regUploading, setRegUploading] = useState(false);
   const [regAnswers, setRegAnswers] = useState<Record<string, string>>({});
+  const [regFiles, setRegFiles] = useState<Record<string, AnswerFile[]>>({});
+  const [regBusyFiles, setRegBusyFiles] = useState<Record<string, boolean>>({});
+  const regFilesUploading = Object.values(regBusyFiles).some(Boolean);
   const [regSaveProfile, setRegSaveProfile] = useState(true);
   const [regConsent, setRegConsent] = useState(false);
   const [regErrors, setRegErrors] = useState<Record<string, string>>({});
@@ -849,7 +856,9 @@ function MiniAppContent() {
 
     const questions = selectedEvent.questions ?? [];
     for (const q of questions) {
-      if (q.required && !(regAnswers[q.id] ?? '').trim()) {
+      if (q.type === 'FILE') {
+        if (q.required && !regFiles[q.id]?.length) errs[`q_${q.id}`] = 'Додай файл';
+      } else if (q.required && !(regAnswers[q.id] ?? '').trim()) {
         errs[`q_${q.id}`] = 'Обовʼязкове поле';
       }
     }
@@ -882,12 +891,14 @@ function MiniAppContent() {
           telegramUserId: tgId,
           phoneNumber: (askPhone && regPhone.trim()) || undefined,
           saveProfile: regSaveProfile,
-          answers: questions
-            .map((q) => ({
-              questionId: q.id,
-              value: (regAnswers[q.id] ?? '').trim(),
-            }))
-            .filter((a) => a.value.length > 0),
+          answers: questions.flatMap<RegistrationAnswer>((q) => {
+            if (q.type === 'FILE') {
+              const attached = regFiles[q.id] ?? [];
+              return attached.length ? [{ questionId: q.id, files: attached }] : [];
+            }
+            const value = (regAnswers[q.id] ?? '').trim();
+            return value ? [{ questionId: q.id, value }] : [];
+          }),
         },
         initData,
       );
@@ -2461,19 +2472,26 @@ function MiniAppContent() {
                           <span className="text-muted font-bold block text-[11px] uppercase tracking-wider">
                             Відповіді:
                           </span>
-                          {existingReg.answers.map((a) => (
-                            <div
-                              key={a.id}
-                              className="bg-bg/60 rounded-xl p-2 text-[11px]"
-                            >
-                              <span className="text-muted block">
-                                {a.question?.label || 'Питання'}:
-                              </span>
-                              <span className="text-fg font-medium">
-                                {a.value}
-                              </span>
-                            </div>
-                          ))}
+                          {existingReg.answers.map((a) => {
+                            const answerFiles = parseFileAnswer(a.value);
+                            return (
+                              <div
+                                key={a.id}
+                                className="bg-bg/60 rounded-xl p-2 text-[11px]"
+                              >
+                                <span className="text-muted block">
+                                  {a.question?.label || 'Питання'}:
+                                </span>
+                                {answerFiles ? (
+                                  <AnswerFileLinks files={answerFiles} className="pt-0.5" />
+                                ) : (
+                                  <span className="text-fg font-medium">
+                                    {a.value}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
@@ -2650,7 +2668,24 @@ function MiniAppContent() {
                 {/* Custom event questions */}
                 {(selectedEvent.questions ?? []).map((q) => (
                   <div key={q.id}>
-                    {choiceOptions(q) ? (
+                    {q.type === 'FILE' ? (
+                      <FileAnswerField
+                        question={q}
+                        label={`${q.label}${q.required ? ' *' : ''}`}
+                        files={regFiles[q.id] ?? []}
+                        onChange={(update) =>
+                          setRegFiles((prev) => ({
+                            ...prev,
+                            [q.id]: update(prev[q.id] ?? []),
+                          }))
+                        }
+                        onBusyChange={(busy) =>
+                          setRegBusyFiles((prev) => ({ ...prev, [q.id]: busy }))
+                        }
+                        onResult={(ok) => hapticNotify(ok ? 'success' : 'error')}
+                        error={regErrors[`q_${q.id}`]}
+                      />
+                    ) : choiceOptions(q) ? (
                       <div className="space-y-1.5">
                         <label className="text-sm font-semibold text-muted">
                           {q.label}
@@ -2873,10 +2908,14 @@ function MiniAppContent() {
 
                 <Button
                   type="submit"
-                  disabled={regSubmitting || regUploading}
+                  disabled={regSubmitting || regUploading || regFilesUploading}
                   className="w-full text-sm font-black py-3.5 mt-3 rounded-2xl shadow-glow-cyan"
                 >
-                  {regSubmitting ? 'Реєстрація…' : 'Зареєструватися'}
+                  {regSubmitting
+                    ? 'Реєстрація…'
+                    : regFilesUploading
+                      ? 'Файли ще завантажуються…'
+                      : 'Зареєструватися'}
                 </Button>
               </form>
             )}
