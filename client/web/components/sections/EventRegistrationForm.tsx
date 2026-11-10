@@ -527,8 +527,8 @@ export function EventRegistrationForm({ event }: { event: EventItem }) {
               </div>
             </div>
 
-            {/* Birth Date & Phone */}
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            {/* Birth Date & Phone: a lone field takes the whole row */}
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:[&>*:only-child]:col-span-2 empty:hidden">
               {baseConfig.birthDate?.enabled !== false && (
                 <Input
                   label={baseConfig.birthDate?.label || 'Дата народження'}

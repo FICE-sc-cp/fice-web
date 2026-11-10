@@ -2641,7 +2641,7 @@ function MiniAppContent() {
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-2.5">
+                <div className="grid grid-cols-2 gap-2.5 [&>*:only-child]:col-span-2 empty:hidden">
                   {baseQuestionsOf(selectedEvent).birthDate?.enabled !== false && (
                     <Input
                       label={baseQuestionsOf(selectedEvent).birthDate?.label || 'Дата народження'}
