@@ -459,6 +459,14 @@ export function EventForm({
       ...q,
       { label: '', type: 'SHORT_TEXT', required: false, optionsText: '' },
     ]);
+  // Swaps a question with its neighbour; the saved order follows the list.
+  const moveQuestion = (i: number, to: number) =>
+    setQuestionItems((q) => {
+      if (to < 0 || to >= q.length) return q;
+      const next = [...q];
+      [next[i], next[to]] = [next[to], next[i]];
+      return next;
+    });
   const removeQuestion = (i: number) =>
     setQuestionItems((q) => q.filter((_, idx) => idx !== i));
   const updateQuestion = (i: number, patch: Partial<QuestionItem>) =>
@@ -967,6 +975,21 @@ export function EventForm({
                         }}
                       />
                     </div>
+                    {[
+                      [i - 1, '↑', 'Перемістити питання вище'],
+                      [i + 1, '↓', 'Перемістити питання нижче'],
+                    ].map(([to, arrow, label]) => (
+                      <button
+                        key={arrow}
+                        type="button"
+                        onClick={() => moveQuestion(i, to as number)}
+                        disabled={(to as number) < 0 || (to as number) >= questionItems.length}
+                        className="mb-1 shrink-0 rounded-lg border border-border px-3 py-2.5 text-sm font-bold text-fg disabled:opacity-30"
+                        aria-label={label as string}
+                      >
+                        {arrow}
+                      </button>
+                    ))}
                     <button
                       type="button"
                       onClick={() => removeQuestion(i)}
