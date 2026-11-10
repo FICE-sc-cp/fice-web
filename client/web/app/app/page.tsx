@@ -2600,7 +2600,9 @@ function MiniAppContent() {
                   />
                 )}
 
-                <div className="grid grid-cols-2 gap-2.5">
+                {/* Group, Telegram, birth date and phone share one grid, so the
+                    fields an event keeps pair up; an odd last one takes the row. */}
+                <div className="grid grid-cols-2 gap-2.5 [&>*:last-child:nth-child(odd)]:col-span-2">
                   {baseQuestionsOf(selectedEvent).group?.enabled !== false && (
                     <div className="flex flex-col gap-2">
                       <Input
@@ -2639,9 +2641,6 @@ function MiniAppContent() {
                     error={regErrors.telegram}
                     required
                   />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2.5 [&>*:only-child]:col-span-2 empty:hidden">
                   {baseQuestionsOf(selectedEvent).birthDate?.enabled !== false && (
                     <Input
                       label={baseQuestionsOf(selectedEvent).birthDate?.label || 'Дата народження'}
