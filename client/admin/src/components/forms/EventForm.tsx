@@ -447,6 +447,8 @@ export function EventForm({
   };
 
   const addProgram = () => setProgramItems((p) => [...p, { time: '', title: '' }]);
+  const moveProgram = (i: number, to: number) =>
+    setProgramItems((p) => swap(p, i, to));
   const removeProgram = (i: number) =>
     setProgramItems((p) => p.filter((_, idx) => idx !== i));
   const updateProgram = (i: number, field: 'time' | 'title', value: string) =>
@@ -459,14 +461,8 @@ export function EventForm({
       ...q,
       { label: '', type: 'SHORT_TEXT', required: false, optionsText: '' },
     ]);
-  // Swaps a question with its neighbour; the saved order follows the list.
   const moveQuestion = (i: number, to: number) =>
-    setQuestionItems((q) => {
-      if (to < 0 || to >= q.length) return q;
-      const next = [...q];
-      [next[i], next[to]] = [next[to], next[i]];
-      return next;
-    });
+    setQuestionItems((q) => swap(q, i, to));
   const removeQuestion = (i: number) =>
     setQuestionItems((q) => q.filter((_, idx) => idx !== i));
   const updateQuestion = (i: number, patch: Partial<QuestionItem>) =>
@@ -759,6 +755,12 @@ export function EventForm({
                   }}
                 />
               </div>
+              <MoveButtons
+                index={i}
+                count={programItems.length}
+                onMove={moveProgram}
+                what="пункт"
+              />
               <button
                 type="button"
                 onClick={() => removeProgram(i)}
@@ -975,21 +977,12 @@ export function EventForm({
                         }}
                       />
                     </div>
-                    {[
-                      [i - 1, '↑', 'Перемістити питання вище'],
-                      [i + 1, '↓', 'Перемістити питання нижче'],
-                    ].map(([to, arrow, label]) => (
-                      <button
-                        key={arrow}
-                        type="button"
-                        onClick={() => moveQuestion(i, to as number)}
-                        disabled={(to as number) < 0 || (to as number) >= questionItems.length}
-                        className="mb-1 shrink-0 rounded-lg border border-border px-3 py-2.5 text-sm font-bold text-fg disabled:opacity-30"
-                        aria-label={label as string}
-                      >
-                        {arrow}
-                      </button>
-                    ))}
+                    <MoveButtons
+                      index={i}
+                      count={questionItems.length}
+                      onMove={moveQuestion}
+                      what="питання"
+                    />
                     <button
                       type="button"
                       onClick={() => removeQuestion(i)}
@@ -1367,5 +1360,45 @@ export function EventForm({
         {submitting ? 'Збереження…' : submitLabel}
       </Button>
     </form>
+  );
+}
+
+// Swaps an item with its neighbour; the saved order follows the list.
+function swap<T>(items: T[], i: number, to: number): T[] {
+  if (to < 0 || to >= items.length) return items;
+  const next = [...items];
+  [next[i], next[to]] = [next[to], next[i]];
+  return next;
+}
+
+function MoveButtons({
+  index,
+  count,
+  onMove,
+  what,
+}: {
+  index: number;
+  count: number;
+  onMove: (i: number, to: number) => void;
+  what: string;
+}) {
+  return (
+    <>
+      {[
+        [index - 1, '↑', `Перемістити ${what} вище`],
+        [index + 1, '↓', `Перемістити ${what} нижче`],
+      ].map(([to, arrow, label]) => (
+        <button
+          key={arrow}
+          type="button"
+          onClick={() => onMove(index, to as number)}
+          disabled={(to as number) < 0 || (to as number) >= count}
+          className="mb-1 shrink-0 rounded-lg border border-border px-3 py-2.5 text-sm font-bold text-fg disabled:opacity-30"
+          aria-label={label as string}
+        >
+          {arrow}
+        </button>
+      ))}
+    </>
   );
 }
