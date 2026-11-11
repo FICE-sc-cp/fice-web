@@ -66,7 +66,7 @@ describe('ChannelService', () => {
 
     expect(postToChannel).toHaveBeenCalledWith({
       text: 'Прийди на захід',
-      photoUrl: '/uploads/cover.jpg', // falls back to the event cover
+      photoUrl: undefined, // no image from the composer: no event cover either
       button: {
         text: 'Зареєструватися',
         url: `${WEB}/events/evt-1#register`,

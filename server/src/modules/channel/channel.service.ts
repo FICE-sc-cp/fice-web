@@ -115,6 +115,8 @@ export class ChannelService implements OnModuleInit, OnModuleDestroy {
 
   /** The admin panel composer: publishes now, or at publishAt when it is in the future. */
   async post(dto: CreateChannelPostDto, author?: string) {
+    // Only the image the composer sent: it shows the event cover when an event
+    // is picked, and a removed cover must stay removed.
     let photoUrl = dto.imageUrl;
     let button: LinkButton | undefined;
     let buttons: LinkButton[] | undefined;
@@ -122,15 +124,10 @@ export class ChannelService implements OnModuleInit, OnModuleDestroy {
     if (dto.eventId) {
       const event = await this.prisma.event.findUnique({
         where: { id: dto.eventId },
-        select: { id: true, photoUrl: true },
+        select: { id: true },
       });
       if (!event) {
         throw new NotFoundException(`Event ${dto.eventId} not found`);
-      }
-      // Fall back to the event cover if the composer didn't set an image and
-      // the text fits a caption.
-      if (!photoUrl && plainText(dto.text).length <= CAPTION_LIMIT) {
-        photoUrl = event.photoUrl ?? undefined;
       }
     }
 
