@@ -225,7 +225,7 @@ function SharaCard({
 }
 
 /** Certificates rendered by the site (the same for everyone), then shared or downloaded. */
-function CertificatesButton({
+export function CertificatesButton({
   awards,
   label,
   api,
@@ -233,7 +233,8 @@ function CertificatesButton({
 }: {
   awards: Issued[];
   label: string;
-  api: StaffApi;
+  /** A starosta's or, for elective shari, a teacher's. */
+  api: Pick<StaffApi, 'certificate'>;
   /** Narrow screens show just the icon, leaving room for the name. */
   iconOnPhones?: boolean;
 }) {

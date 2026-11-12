@@ -269,6 +269,17 @@ export function parseElectives(rows: string[][]) {
   return { students: [...students.values()], skipped, otherSemesters };
 }
 
+/**
+ * A recipient a teacher writes for an elective shara: "Іваненко Іван Іванович
+ * ІП-41" as picked from the list, or typed in any order. Null without a name
+ * or a FICE group.
+ */
+export function recipientOf(line: string) {
+  const parsed = parseGroupLine(line);
+  const fullName = plain(parsed?.value).slice(0, 120);
+  return parsed && fullName ? { fullName, group: parsed.group } : null;
+}
+
 /** A (discipline, group) pair of the electives list. */
 export const electivePair = (discipline: string, group: string) =>
   `${disciplineKey(discipline)}\n${group}`;

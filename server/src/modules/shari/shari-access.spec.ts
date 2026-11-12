@@ -1,4 +1,9 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import type { BotService } from '../../bot/bot.service';
 import type { PrismaService } from '../../database/prisma.service';
@@ -158,5 +163,122 @@ describe('a shara for a whole elective', () => {
       group: 'ІП-41',
       studentName: 'Іваненко Іван Іванович',
     });
+  });
+});
+
+describe('a teacher link and elective shari', () => {
+  const serviceWith = (prisma: object) =>
+    new ShariService(
+      prisma as unknown as PrismaService,
+      { get: () => undefined } as unknown as ConfigService,
+      {} as BotService,
+    );
+  const LINUX = { discipline: 'Основи Linux', groups: ['ІП-41', 'ІП-42'] };
+
+  it('reaches only the recipients of its own elective shari', async () => {
+    const shari = [
+      { id: 'elective', teacherId: 't1', group: null, awards: [] },
+      { id: 'group', teacherId: 't1', group: 'ІП-41', awards: [] },
+      { id: 'other', teacherId: 't2', group: null, awards: [] },
+    ];
+    const award = (sharaId: string) => {
+      const s = shari.find((x) => x.id === sharaId)!;
+      return {
+        id: `a-${sharaId}`,
+        studentName: 'Іваненко Іван Іванович',
+        group: s.group ? null : 'ІП-41',
+        shara: {
+          teacherId: s.teacherId,
+          group: s.group,
+          discipline: LINUX.discipline,
+          bonus: '+5 балів',
+          condition: null,
+          teacher: { fullName: 'Петренко Петро Петрович' },
+        },
+      };
+    };
+    type Where = { id: string; teacherId?: string; group?: null };
+    const service = serviceWith({
+      shariTeacher: {
+        findUnique: ({ where }: { where: { token: string } }) =>
+          Promise.resolve(where.token === 'link' ? { id: 't1' } : null),
+      },
+      shara: {
+        findFirst: ({ where }: { where: Where }) =>
+          Promise.resolve(
+            shari.find(
+              (s) =>
+                s.id === where.id &&
+                s.teacherId === where.teacherId &&
+                (!('group' in where) || s.group === where.group),
+            ) ?? null,
+          ),
+      },
+      shariAward: {
+        findUnique: ({ where }: { where: { id: string } }) =>
+          Promise.resolve(award(where.id.slice(2))),
+      },
+      siteSetting: { findMany: () => Promise.resolve([]) },
+    });
+
+    for (const id of ['other', 'group']) {
+      await expect(
+        service.setTeacherAwards('link', id, []),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      await expect(
+        service.teacherCertificate('link', `a-${id}`),
+      ).rejects.toBeInstanceOf(NotFoundException);
+    }
+    await expect(
+      service.teacherCertificate('link', 'a-elective'),
+    ).resolves.toMatchObject({ group: 'ІП-41' });
+    await expect(
+      service.teacherCertificate('stolen?', 'a-elective'),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('gives an elective for the whole discipline, never per group', async () => {
+    const created: unknown[] = [];
+    const service = serviceWith({
+      shariTeacher: {
+        findUnique: () =>
+          Promise.resolve({
+            id: 't1',
+            courses: [LINUX, { discipline: 'Мережі', groups: ['ІП-41'] }],
+          }),
+      },
+      shariElectiveStudent: {
+        findMany: () =>
+          Promise.resolve([{ discipline: LINUX.discipline, group: 'ІП-41' }]),
+      },
+      shara: {
+        create: ({ data }: { data: unknown }) => {
+          created.push(data);
+          return Promise.resolve(data);
+        },
+      },
+      siteSetting: { findMany: () => Promise.resolve([]) },
+    });
+    jest.spyOn(service, 'teacherView').mockResolvedValue({} as never);
+    const dto = { discipline: 'Основи  Linux', bonus: '+5 балів', quantity: 3 };
+
+    await expect(
+      service.addShari('link', { ...dto, groups: ['ІП-41'] }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await service.addShari('link', { ...dto, groups: [] });
+    expect(created).toEqual([
+      {
+        teacherId: 't1',
+        discipline: LINUX.discipline,
+        group: null,
+        bonus: '+5 балів',
+        condition: null,
+        quantity: 3,
+      },
+    ]);
+    // Not an elective: a shara still needs its groups.
+    await expect(
+      service.addShari('link', { ...dto, discipline: 'Мережі', groups: [] }),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 });

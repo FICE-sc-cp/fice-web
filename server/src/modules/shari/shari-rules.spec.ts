@@ -8,6 +8,7 @@ import {
   parseStarostas,
   parseStudents,
   parseTeachersCsv,
+  recipientOf,
   teachesGroup,
 } from './shari-rules';
 
@@ -203,5 +204,18 @@ describe('isElective', () => {
     expect(isElective(course('Розробка під Android', 'ІП-41'), listed)).toBe(
       false,
     );
+  });
+});
+
+describe('recipientOf', () => {
+  it('reads a picked or typed name with its group', () => {
+    const recipient = {
+      fullName: "Ткач Мар'яна Іванівна",
+      group: 'ІП-41',
+    };
+    expect(recipientOf('Ткач Мар`яна  Іванівна ІП-41')).toEqual(recipient);
+    expect(recipientOf('іп-41 Ткач Мар’яна Іванівна')).toEqual(recipient);
+    expect(recipientOf('Ткач Марʼяна Іванівна')).toBeNull();
+    expect(recipientOf('ІП-41')).toBeNull();
   });
 });

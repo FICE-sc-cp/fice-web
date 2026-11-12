@@ -1,6 +1,5 @@
 import {
   ArrayMaxSize,
-  ArrayMinSize,
   IsArray,
   IsBoolean,
   IsInt,
@@ -43,7 +42,7 @@ export class UpdateSharaDto {
   quantity: number;
 }
 
-/** The same shara for each of the chosen groups. */
+/** The same shara for each of the chosen groups; none for an elective discipline. */
 export class CreateShariDto extends UpdateSharaDto {
   @IsString()
   @IsNotEmpty()
@@ -51,7 +50,6 @@ export class CreateShariDto extends UpdateSharaDto {
   discipline: string;
 
   @IsArray()
-  @ArrayMinSize(1)
   @ArrayMaxSize(100)
   @IsString({ each: true })
   @MaxLength(20, { each: true })

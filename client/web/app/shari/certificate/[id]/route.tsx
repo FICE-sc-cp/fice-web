@@ -55,16 +55,22 @@ function fontSize(c: Certificate): number {
   return 12 * PX_PER_PT;
 }
 
-/** The certificate of one award, for its group's starosta or the presidium (the API checks). */
+/**
+ * The certificate of one award, for its group's starosta or the presidium, or
+ * for the teacher of an elective shara by their link (the API checks).
+ */
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const token = req.headers.get('x-shari-token');
   const login = req.headers.get('x-telegram-login');
   let c: Certificate;
   try {
     // The search part carries the dev identity the API accepts only with AUTH_DISABLED.
     c = await request<Certificate>(
-      `/shari/awards/${encodeURIComponent(id)}/certificate${new URL(req.url).search}`,
-      { headers: login ? { 'x-telegram-login': login } : {} },
+      token
+        ? `/shari/teacher/awards/${encodeURIComponent(id)}/certificate`
+        : `/shari/awards/${encodeURIComponent(id)}/certificate${new URL(req.url).search}`,
+      { headers: token ? { 'x-shari-token': token } : login ? { 'x-telegram-login': login } : {} },
     );
   } catch (err) {
     return Response.json(

@@ -361,7 +361,11 @@ discipline, group and full name. The workbook names no teachers: a discipline
 of a teacher's schedule is an elective for them when students of their own
 groups chose it. The import reports how the list meets the schedule (electives
 nobody teaches, shari already given on them per group), and the Excel lists
-each teacher's electives.
+each teacher's electives. On an elective the teacher gives shari for the whole
+discipline and writes the recipients on their own page, name and group,
+suggested from the students of their groups (and of groups no teacher of it
+has by the schedule); the certificates are ready at once. Starostas don't see
+these shari: their certificates are the teacher's and the admins' to download.
 
 Certificates are PNGs rendered by the web app (`/shari/certificate/<award id>`,
 `next/og`: satori and resvg in WebAssembly, so not dependent on sharp or the

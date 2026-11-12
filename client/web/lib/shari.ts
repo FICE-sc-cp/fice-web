@@ -5,10 +5,13 @@ export type Course = { discipline: string; groups: string[] };
 export interface TeacherShara {
   id: string;
   discipline: string;
-  group: string;
+  /** null: a shara for a whole elective discipline, the teacher writes its recipients. */
+  group: string | null;
   bonus: string;
   condition: string | null;
   quantity: number;
+  /** Recipients of an elective shara; empty for a group's (those are the starosta's). */
+  awards: (Award & { group: string })[];
 }
 
 export interface TeacherView {
@@ -18,8 +21,12 @@ export interface TeacherView {
   courses: Course[];
   /** Every FICE group, for "another group". */
   groups: string[];
+  /** The teacher's elective disciplines → "ПІБ ГРУПА" of the students to suggest. */
+  electives: Record<string, string[]>;
   shari: TeacherShara[];
   open: boolean;
+  /** Recipients of elective shari can be written (either stage is open). */
+  canAward: boolean;
 }
 
 export interface SharaFields {
@@ -166,6 +173,11 @@ export function teacherApi(token: string) {
       call('POST', '/shari', body),
     update: (id: string, body: SharaFields) => call('PATCH', `/shari/${id}`, body),
     remove: (id: string) => call('DELETE', `/shari/${id}`),
+    /** `names[i]`: "ПІБ ГРУПА" of place i of an elective shara ("" = free). */
+    setAwards: (id: string, names: string[]) => call('PUT', `/shari/${id}/awards`, { names }),
+    /** The PNG the site renders for a recipient of the teacher's elective shara. */
+    certificate: (awardId: string, fileName: string) =>
+      fetchFile(`/shari/certificate/${awardId}`, auth, `${fileName}.png`),
   };
 }
 

@@ -37,6 +37,7 @@ import {
   parseStarostas,
   parseStudents,
   parseTeachersCsv,
+  recipientOf,
   teachesGroup,
 } from './shari-rules';
 
@@ -147,7 +148,8 @@ export class ShariService {
         data: { openedAt: new Date() },
       });
     }
-    const [shari, groups, settings] = await Promise.all([
+    const courses = teacher.courses as Course[];
+    const [shari, groups, settings, electives] = await Promise.all([
       this.prisma.shara.findMany({
         where: { teacherId: teacher.id },
         select: {
@@ -157,23 +159,77 @@ export class ShariService {
           bonus: true,
           condition: true,
           quantity: true,
+          awards: {
+            select: { id: true, slot: true, studentName: true, group: true },
+            orderBy: { slot: 'asc' },
+          },
         },
       }),
       this.knownGroups(),
       this.settings(),
+      this.electivesOf(courses),
     ]);
     return {
       fullName: teacher.fullName,
       email: teacher.email,
       telegram: teacher.telegram,
-      courses: teacher.courses as Course[],
+      courses,
       groups,
-      shari: shari.sort(
-        (a, b) =>
-          byName(a.discipline, b.discipline) || compareGroups(a.group, b.group),
-      ),
+      electives,
+      shari: shari
+        // Recipients of an elective shara are the teacher's own; who got a
+        // group's shara stays with its starosta.
+        .map((s) => ({ ...s, awards: s.group === null ? s.awards : [] }))
+        .sort(
+          (a, b) =>
+            byName(a.discipline, b.discipline) ||
+            compareGroups(a.group, b.group),
+        ),
       open: settings.teachersOpen,
+      canAward: settings.teachersOpen || settings.starostasOpen,
     };
+  }
+
+  /**
+   * The teacher's electives and whom to suggest for each: the students of
+   * their own groups, and of groups no teacher of the discipline has by the
+   * schedule (the workbook and the schedule don't match exactly).
+   */
+  private async electivesOf(
+    courses: Course[],
+  ): Promise<Record<string, string[]>> {
+    const listed = await this.electivePairs();
+    const electives = courses.filter((c) => isElective(c, listed));
+    if (!electives.length) return {};
+    const [rows, teachers] = await Promise.all([
+      this.prisma.shariElectiveStudent.findMany({
+        where: {
+          discipline: { in: electives.map((c) => disciplineKey(c.discipline)) },
+        },
+      }),
+      this.prisma.shariTeacher.findMany({ select: { courses: true } }),
+    ]);
+    const taught = new Set(
+      teachers.flatMap((t) =>
+        (t.courses as Course[]).flatMap((c) =>
+          c.groups.map((g) => electivePair(c.discipline, g)),
+        ),
+      ),
+    );
+    return Object.fromEntries(
+      electives.map((c) => [
+        c.discipline,
+        rows
+          .filter(
+            (r) =>
+              r.discipline === disciplineKey(c.discipline) &&
+              (c.groups.includes(r.group) ||
+                !taught.has(electivePair(r.discipline, r.group))),
+          )
+          .map((r) => `${r.fullName} ${r.group}`)
+          .sort(byName),
+      ]),
+    );
   }
 
   async setContacts(token: string | undefined, dto: TeacherContactsDto) {
@@ -211,13 +267,42 @@ export class ShariService {
     await this.requireTeachersOpen();
     const discipline = oneLine(dto.discipline);
     if (!discipline) throw new BadRequestException('Вкажіть дисципліну');
+    const fields = this.sharaFields(dto);
+
+    // An elective is given for the whole discipline, and its teacher writes
+    // the recipients. Decided here from the schedule, never by the page.
+    const listed = await this.electivePairs();
+    const elective = (teacher.courses as Course[]).find(
+      (c) =>
+        disciplineKey(c.discipline) === disciplineKey(discipline) &&
+        isElective(c, listed),
+    );
+    if (elective) {
+      if (dto.groups.length) {
+        throw new BadRequestException(
+          'Це вибіркова дисципліна: шари на неї даруються на всю дисципліну, а отримувачів ви вписуєте самі. Оновіть сторінку.',
+        );
+      }
+      await this.prisma.shara.create({
+        data: {
+          teacherId: teacher.id,
+          discipline: elective.discipline,
+          group: null,
+          ...fields,
+        },
+      });
+      return this.teacherView(token);
+    }
+
+    if (!dto.groups.length) {
+      throw new BadRequestException('Оберіть хоча б одну групу');
+    }
     const known = new Set(await this.knownGroups());
     const groups = [...new Set(dto.groups.map((g) => normalizeGroup(g) ?? g))];
     const unknown = groups.filter((group) => !known.has(group));
     if (unknown.length) {
       throw new BadRequestException(`Невідома група: ${unknown.join(', ')}`);
     }
-    const fields = this.sharaFields(dto);
     await this.prisma.shara.createMany({
       data: groups.map((group) => ({
         teacherId: teacher.id,
@@ -229,15 +314,17 @@ export class ShariService {
     return this.teacherView(token);
   }
 
-  /** The teacher's shara and the highest slot a starosta has filled (-1 if none). */
+  /** The teacher's shara and the highest slot filled so far (-1 if none). */
   private async ownShara(teacherId: string, id: string) {
     const shara = await this.prisma.shara.findFirst({
       where: { id, teacherId },
-      select: { id: true, awards: { select: { slot: true } } },
+      select: { id: true, group: true, awards: { select: { slot: true } } },
     });
     if (!shara) throw new NotFoundException('Шару не знайдено');
     return {
       id: shara.id,
+      // An elective's recipients are the teacher's to clear, not a starosta's.
+      elective: shara.group === null,
       lastSlot: Math.max(-1, ...shara.awards.map((a) => a.slot)),
     };
   }
@@ -249,10 +336,10 @@ export class ShariService {
   ) {
     const teacher = await this.teacherOf(token);
     await this.requireTeachersOpen();
-    const { lastSlot } = await this.ownShara(teacher.id, id);
+    const { lastSlot, elective } = await this.ownShara(teacher.id, id);
     if (dto.quantity <= lastSlot) {
       throw new BadRequestException(
-        `Отримувача шари №${lastSlot + 1} уже вписано, тому шар не може бути менше ${lastSlot + 1}. Якщо треба змінити — напишіть нам.`,
+        `Отримувача шари №${lastSlot + 1} уже вписано, тому шар не може бути менше ${lastSlot + 1}. ${elective ? 'Спершу приберіть цього отримувача.' : 'Якщо треба змінити — напишіть нам.'}`,
       );
     }
     await this.prisma.shara.update({
@@ -265,13 +352,93 @@ export class ShariService {
   async deleteShara(token: string | undefined, id: string) {
     const teacher = await this.teacherOf(token);
     await this.requireTeachersOpen();
-    if ((await this.ownShara(teacher.id, id)).lastSlot >= 0) {
+    const { lastSlot, elective } = await this.ownShara(teacher.id, id);
+    if (lastSlot >= 0) {
       throw new BadRequestException(
-        'Отримувачів цієї шари вже вписано. Якщо її треба скасувати — напишіть нам.',
+        elective
+          ? 'Спершу приберіть отримувачів цієї шари.'
+          : 'Отримувачів цієї шари вже вписано. Якщо її треба скасувати — напишіть нам.',
       );
     }
     await this.prisma.shara.delete({ where: { id } });
     return this.teacherView(token);
+  }
+
+  /**
+   * `lines[i]` is "ПІБ ГРУПА" of whoever gets place i of the teacher's elective
+   * shara ("" = nobody yet). Names outside the list are allowed: the workbook
+   * misses whole groups.
+   */
+  async setTeacherAwards(
+    token: string | undefined,
+    id: string,
+    lines: string[],
+  ) {
+    const teacher = await this.teacherOf(token);
+    const shara = await this.prisma.shara.findFirst({
+      where: { id, teacherId: teacher.id, group: null },
+      include: { awards: true },
+    });
+    if (!shara) throw new NotFoundException('Шару не знайдено');
+    const { teachersOpen, starostasOpen } = await this.settings();
+    if (!teachersOpen && !starostasOpen) {
+      throw new ForbiddenException(
+        `${STAROSTAS_CLOSED}. Якщо треба щось змінити — напишіть нам.`,
+      );
+    }
+    if (lines.length > shara.quantity) {
+      throw new BadRequestException(
+        `Цих шар лише ${shara.quantity}, а отримувачів — ${lines.length}`,
+      );
+    }
+    const known = new Set(await this.knownGroups());
+    const recipients = lines.map((line, slot) => {
+      if (!oneLine(line)) return null;
+      const recipient = recipientOf(line);
+      if (!recipient) {
+        throw new BadRequestException(
+          `Шара №${slot + 1}: вкажіть ПІБ і групу студента, наприклад: Іваненко Іван Іванович ІП-41`,
+        );
+      }
+      if (!known.has(recipient.group)) {
+        throw new BadRequestException(
+          `Шара №${slot + 1}: невідома група ${recipient.group}`,
+        );
+      }
+      return recipient;
+    });
+    // A place keeps its award (and certificate) while both name and group stay.
+    const { remove, create } = diffSlots(
+      shara.awards.map((a) => ({
+        ...a,
+        studentName: `${a.studentName} ${a.group}`,
+      })),
+      recipients.map((r) => (r ? `${r.fullName} ${r.group}` : '')),
+    );
+    await this.prisma.$transaction([
+      this.prisma.shariAward.deleteMany({ where: { id: { in: remove } } }),
+      this.prisma.shariAward.createMany({
+        // The certificate QR checks this id: it must come from a CSPRNG.
+        data: create.map(({ slot }) => ({
+          id: randomUUID(),
+          sharaId: id,
+          slot,
+          studentName: recipients[slot]!.fullName,
+          group: recipients[slot]!.group,
+        })),
+      }),
+    ]);
+    return this.teacherView(token);
+  }
+
+  /** A certificate of the teacher's own elective shara. */
+  async teacherCertificate(token: string | undefined, id: string) {
+    const teacher = await this.teacherOf(token);
+    const award = await this.award(id);
+    if (award.sharaGroup !== null || award.teacherId !== teacher.id) {
+      throw new NotFoundException('Такої шари немає');
+    }
+    return this.withQr(id, award.view);
   }
 
   // ---- Starostas & presidium: Telegram Login Widget -------------------------
@@ -434,7 +601,7 @@ export class ShariService {
     return this.groupView(user, shara.group);
   }
 
-  /** An award, its shara's group and what its certificate shows. */
+  /** An award, whose shara it is and what its certificate shows. */
   private async award(id: string) {
     const award = await this.prisma.shariAward.findUnique({
       where: { id },
@@ -443,6 +610,7 @@ export class ShariService {
     if (!award) throw new NotFoundException('Такої шари немає');
     return {
       sharaGroup: award.shara.group,
+      teacherId: award.shara.teacherId,
       view: {
         studentName: award.studentName,
         // A shara for a whole elective has no group: the student's is on the award.
@@ -467,6 +635,10 @@ export class ShariService {
     // whole elective is no starosta's.
     if (sharaGroup) await this.requireGroup(user, sharaGroup);
     else await this.requireAdmin(user);
+    return this.withQr(id, view);
+  }
+
+  private async withQr<T>(id: string, view: T) {
     return {
       ...view,
       checkUrl: this.checkUrl(id),

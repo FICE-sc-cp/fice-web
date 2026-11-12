@@ -116,6 +116,29 @@ export class ShariController {
     return this.shari.deleteShara(this.token(req), id);
   }
 
+  @Put('teacher/shari/:id/awards')
+  @ApiOperation({
+    summary: 'Write who gets each place of own elective shara ("ПІБ ГРУПА")',
+  })
+  setTeacherAwards(
+    @Req() req: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: AwardsDto,
+  ) {
+    return this.shari.setTeacherAwards(this.token(req), id, dto.names);
+  }
+
+  @Get('teacher/awards/:id/certificate')
+  @ApiOperation({
+    summary: 'What a certificate of own elective shara shows, with its QR code',
+  })
+  teacherCertificate(
+    @Req() req: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+  ) {
+    return this.shari.teacherCertificate(this.token(req), id);
+  }
+
   // ---- Starosta & presidium ------------------------------------------------
 
   @Get('me')

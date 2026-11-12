@@ -1,11 +1,12 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { GradientText } from '@/components/ui/GradientText';
 import {
   COUNCIL_EMAIL,
   SHARI_WORDS,
+  certificateName,
   errorText,
   teacherApi,
   type TeacherShara,
@@ -13,6 +14,7 @@ import {
 } from '@/lib/shari';
 import { cn, plural } from '@/lib/utils';
 import { SPHERES, Sphere, Ticket, confetti, sharaColor, type SphereColor } from '../../decor';
+import { CertificatesButton } from '../../GroupPanel';
 import {
   Banner,
   Chip,
@@ -57,6 +59,16 @@ const STEPS: { color: SphereColor; title: string; text: string }[] = [
     text: 'Студент отримає сертифікат із QR-кодом. Скануйте його: справжній відкриє сторінку Студради з даними шари.',
   },
 ];
+// For teachers whose every discipline is an elective: no groups, no starostas.
+const ELECTIVE_STEPS: typeof STEPS = [
+  { color: 'green', title: 'Оберіть дисципліну', text: 'Вибіркову: шари на неї даруються на всю дисципліну, а не на групи.' },
+  { color: 'cyan', title: 'Опишіть шару', text: 'Що отримає студент і скільки таких шар. Можна дати кілька різних.' },
+  {
+    color: 'purple',
+    title: 'Впишіть отримувачів',
+    text: 'Сертифікат із QR-кодом зʼявиться одразу. Скануйте його: справжній відкриє сторінку Студради з даними шари.',
+  },
+];
 
 /** "Коваленко Петро Іванович" → "Петро Іванович". */
 const addressOf = (fullName: string) => {
@@ -94,6 +106,8 @@ export function TeacherApp({ token }: { token: string }) {
 
   const props = { view, api, onChange: setView };
   const total = view.shari.reduce((n, s) => n + s.quantity, 0);
+  const hasElectives = Object.keys(view.electives).length > 0;
+  const onlyElectives = hasElectives && view.courses.every((c) => c.discipline in view.electives);
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -108,7 +122,7 @@ export function TeacherApp({ token }: { token: string }) {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-3">
-        {STEPS.map((step, i) => (
+        {(onlyElectives ? ELECTIVE_STEPS : STEPS).map((step, i) => (
           <div key={step.title} className="rounded-3xl border border-white/10 bg-white/[0.035] p-5 backdrop-blur-sm">
             <Sphere color={step.color} size={40} className="text-base">
               {i + 1}
@@ -118,6 +132,14 @@ export function TeacherApp({ token }: { token: string }) {
           </div>
         ))}
       </div>
+
+      {hasElectives && !onlyElectives && (
+        <Banner>
+          На вибіркових дисциплінах шари даруються на всю дисципліну, а не на групи: отримувачів ви
+          вписуєте самі, і сертифікати зʼявляються одразу. На решті дисциплін шари, як і раніше,
+          розіграють старости груп.
+        </Banner>
+      )}
 
       <p className="flex gap-3 rounded-2xl border border-white/10 bg-white/[0.03] px-5 py-4 text-sm leading-relaxed text-muted">
         <span aria-hidden>🔒</span>
@@ -156,6 +178,8 @@ function AddShari({ view, api, onChange }: Props) {
   const submitRef = useRef<HTMLButtonElement>(null);
   const { busy, error, setError, run } = useAction();
 
+  // An elective is given for the whole discipline: the teacher writes the recipients.
+  const elective = discipline !== OTHER && discipline in view.electives;
   const courseGroups = view.courses.find((c) => c.discipline === discipline)?.groups ?? [];
   const shown = [...courseGroups, ...extraGroups.filter((g) => !courseGroups.includes(g))];
   const allChosen = shown.length > 0 && shown.every((g) => chosen.includes(g));
@@ -184,13 +208,17 @@ function AddShari({ view, api, onChange }: Props) {
     setDone(null);
     const title = discipline === OTHER ? otherDiscipline.trim() : discipline;
     if (!title) return setError('Вкажіть дисципліну');
-    if (!chosen.length) return setError('Оберіть хоча б одну групу');
+    if (!elective && !chosen.length) return setError('Оберіть хоча б одну групу');
     if (!bonus.trim()) return setError('Опишіть шару');
     run(async () => {
-      onChange(await api.add({ discipline: title, groups: chosen, bonus, condition, quantity }));
+      onChange(
+        await api.add({ discipline: title, groups: elective ? [] : chosen, bonus, condition, quantity }),
+      );
       confetti(submitRef.current);
       setDone(
-        `Додано: ${plural(quantity, SHARI_WORDS)} «${bonus.trim()}» на кожну з обраних груп (${chosen.length}).`,
+        elective
+          ? `Додано: ${plural(quantity, SHARI_WORDS)} «${bonus.trim()}» на всю дисципліну. Тепер впишіть отримувачів нижче, у «Ваші шари».`
+          : `Додано: ${plural(quantity, SHARI_WORDS)} «${bonus.trim()}» на кожну з обраних груп (${chosen.length}).`,
       );
       setBonus('');
       setCondition('');
@@ -225,7 +253,10 @@ function AddShari({ view, api, onChange }: Props) {
                   onChange={() => pickDiscipline(d)}
                   className="size-4 shrink-0 accent-brand-cyan"
                 />
-                {d === OTHER ? 'Інша дисципліна…' : d}
+                <span>
+                  {d === OTHER ? 'Інша дисципліна…' : d}
+                  {d in view.electives && <span className="font-normal text-subtle"> · вибіркова</span>}
+                </span>
               </label>
             ))}
           </fieldset>
@@ -243,51 +274,60 @@ function AddShari({ view, api, onChange }: Props) {
 
         <div className="flex flex-col gap-3">
           <Step n={2} color="cyan">
-            Групи
+            {elective ? 'Отримувачі' : 'Групи'}
           </Step>
-          {shown.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {shown.map((group) => (
-                <Chip key={group} active={chosen.includes(group)} onClick={() => toggle(group)}>
-                  {chosen.includes(group) && '✓ '}
-                  {group}
-                </Chip>
-              ))}
-              {shown.length > 1 && (
-                <Chip className="border-dashed" onClick={() => setChosen(allChosen ? [] : shown)}>
-                  {allChosen ? 'Зняти всі' : 'Обрати всі'}
-                </Chip>
-              )}
-            </div>
-          ) : (
-            <p className="text-sm text-subtle">
-              За розкладом у вас немає груп з цієї дисципліни — додайте групу нижче.
+          {elective ? (
+            <p className="text-sm leading-relaxed text-muted">
+              Це вибіркова дисципліна, тож шари даруються на всю дисципліну, а не на групи. Отримувачів ви
+              впишете самі одразу після збереження, у «Ваші шари» нижче, і там же зʼявляться сертифікати.
             </p>
+          ) : (
+            <>
+              {shown.length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {shown.map((group) => (
+                    <Chip key={group} active={chosen.includes(group)} onClick={() => toggle(group)}>
+                      {chosen.includes(group) && '✓ '}
+                      {group}
+                    </Chip>
+                  ))}
+                  {shown.length > 1 && (
+                    <Chip className="border-dashed" onClick={() => setChosen(allChosen ? [] : shown)}>
+                      {allChosen ? 'Зняти всі' : 'Обрати всі'}
+                    </Chip>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-subtle">
+                  За розкладом у вас немає груп з цієї дисципліни — додайте групу нижче.
+                </p>
+              )}
+              <div className="flex gap-2">
+                <input
+                  className={inputClass}
+                  value={extra}
+                  onChange={(e) => setExtra(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addExtra();
+                    }
+                  }}
+                  list="shari-all-groups"
+                  placeholder="Інша група, наприклад ІП-61"
+                  aria-label="Інша група"
+                />
+                <datalist id="shari-all-groups">
+                  {view.groups.map((g) => (
+                    <option key={g} value={g} />
+                  ))}
+                </datalist>
+                <Button type="button" variant="outline" onClick={addExtra} disabled={!extra.trim()}>
+                  Додати
+                </Button>
+              </div>
+            </>
           )}
-          <div className="flex gap-2">
-            <input
-              className={inputClass}
-              value={extra}
-              onChange={(e) => setExtra(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  addExtra();
-                }
-              }}
-              list="shari-all-groups"
-              placeholder="Інша група, наприклад ІП-61"
-              aria-label="Інша група"
-            />
-            <datalist id="shari-all-groups">
-              {view.groups.map((g) => (
-                <option key={g} value={g} />
-              ))}
-            </datalist>
-            <Button type="button" variant="outline" onClick={addExtra} disabled={!extra.trim()}>
-              Додати
-            </Button>
-          </div>
         </div>
 
         <div className="flex flex-col gap-3">
@@ -316,7 +356,9 @@ function AddShari({ view, api, onChange }: Props) {
           </div>
           <div className="mt-2 grid gap-4 sm:grid-cols-[auto_1fr] sm:items-end">
             <div className="flex flex-col gap-2">
-              <span className="text-sm font-semibold text-muted">Скільки на кожну групу</span>
+              <span className="text-sm font-semibold text-muted">
+                {elective ? 'Скільки на всю дисципліну' : 'Скільки на кожну групу'}
+              </span>
               <QuantityStepper value={quantity} onChange={setQuantity} />
             </div>
             <label className="flex flex-col gap-2 text-sm font-semibold text-muted">
@@ -364,7 +406,15 @@ function MyShari({ view, api, onChange }: Props) {
             <div key={discipline} className="flex flex-col gap-3">
               <h3 className="text-xs font-extrabold uppercase tracking-[0.16em] text-subtle">{discipline}</h3>
               {list.map((shara) => (
-                <SharaTicket key={shara.id} shara={shara} open={view.open} api={api} onChange={onChange} />
+                <SharaTicket
+                  key={shara.id}
+                  shara={shara}
+                  open={view.open}
+                  canAward={view.canAward}
+                  suggestions={view.electives[shara.discipline] ?? []}
+                  api={api}
+                  onChange={onChange}
+                />
               ))}
             </div>
           ))}
@@ -377,11 +427,15 @@ function MyShari({ view, api, onChange }: Props) {
 function SharaTicket({
   shara,
   open,
+  canAward,
+  suggestions,
   api,
   onChange,
 }: {
   shara: TeacherShara;
   open: boolean;
+  canAward: boolean;
+  suggestions: string[];
   api: Api;
   onChange: (view: TeacherView) => void;
 }) {
@@ -399,17 +453,17 @@ function SharaTicket({
     });
   };
   const remove = () => {
-    if (!window.confirm(`Видалити шари «${shara.bonus}» для ${shara.group}?`)) return;
+    if (!window.confirm(`Видалити шари «${shara.bonus}» для ${shara.group ?? 'всієї дисципліни'}?`)) return;
     run(async () => onChange(await api.remove(shara.id)));
   };
 
-  return (
+  const ticket = (
     <Ticket
       color={sharaColor(editing ? bonus : shara.bonus)}
       stub={
         <>
           <span className="text-3xl font-black leading-none">×{editing ? quantity : shara.quantity}</span>
-          <span className="text-[0.6rem] font-extrabold uppercase tracking-[0.18em]">{shara.group}</span>
+          <span className="text-[0.6rem] font-extrabold uppercase tracking-[0.18em]">{shara.group ?? 'вибіркова'}</span>
         </>
       }
     >
@@ -459,6 +513,135 @@ function SharaTicket({
         </div>
       )}
     </Ticket>
+  );
+  if (shara.group !== null) return ticket;
+  // Under the ticket, full width: "ПІБ ГРУПА" doesn't fit its text column on a phone.
+  return (
+    <div className="flex flex-col gap-3">
+      {ticket}
+      <Recipients
+        // Remount when saved, keeping unsaved names of the other shari.
+        key={`${shara.quantity}:${shara.awards.map((a) => a.id).join()}`}
+        shara={shara}
+        suggestions={suggestions}
+        canAward={canAward}
+        api={api}
+        onChange={onChange}
+      />
+    </div>
+  );
+}
+
+/** Who gets each place of an elective shara: the teacher writes them, the certificates are ready at once. */
+function Recipients({
+  shara,
+  suggestions,
+  canAward,
+  api,
+  onChange,
+}: {
+  shara: TeacherShara;
+  /** "ПІБ ГРУПА" of the students who chose the discipline in the teacher's groups. */
+  suggestions: string[];
+  canAward: boolean;
+  api: Api;
+  onChange: (view: TeacherView) => void;
+}) {
+  const line = (award: { studentName: string; group: string }) => `${award.studentName} ${award.group}`;
+  const saved = Array.from({ length: shara.quantity }, (_, slot) => {
+    const award = shara.awards.find((a) => a.slot === slot);
+    return award ? line(award) : '';
+  });
+  const [names, setNames] = useState(saved);
+  const listId = useId();
+  const saveRef = useRef<HTMLButtonElement>(null);
+  const { busy, error, run } = useAction();
+  const dirty = names.some((name, slot) => name.trim() !== saved[slot]);
+  const issued = shara.awards.map((a) => ({ id: a.id, name: certificateName(line(a), shara.discipline) }));
+  const color = sharaColor(shara.bonus);
+
+  const save = () =>
+    run(async () => {
+      const next = await api.setAwards(shara.id, names);
+      if (names.some((name) => name.trim())) confetti(saveRef.current);
+      onChange(next);
+    });
+
+  return (
+    <div className="flex flex-col gap-3 rounded-3xl border border-white/10 bg-white/[0.03] p-4 sm:p-5">
+      <p className="text-sm leading-relaxed text-subtle">
+        Впишіть, хто отримає кожну шару: почніть вводити прізвище й оберіть студента зі списку. Кого немає у
+        списку, впишіть як ПІБ і групу, наприклад: Іваненко Іван Іванович ІП-41.
+      </p>
+      <ol className="flex flex-col gap-2">
+        {names.map((name, slot) => {
+          const award = shara.awards.find((a) => a.slot === slot);
+          const value = name.trim();
+          const done = award && line(award) === value;
+          const unknown = value && suggestions.length > 0 && !suggestions.includes(value);
+          return (
+            <li key={slot} className="flex flex-col gap-1">
+              <div className="flex items-center gap-2">
+                <Sphere color={color} size={26} className="text-[0.7rem]">
+                  {slot + 1}
+                </Sphere>
+                <input
+                  className={cn(inputClass, done && 'border-brand-green/50 bg-brand-green/[0.06]')}
+                  list={listId}
+                  value={name}
+                  onChange={(e) => setNames((list) => list.map((n, i) => (i === slot ? e.target.value : n)))}
+                  disabled={!canAward || busy}
+                  placeholder="ПІБ і група студента"
+                  maxLength={120}
+                  aria-label={`Отримувач шари ${slot + 1}`}
+                />
+                {done && (
+                  <CertificatesButton
+                    awards={[{ id: award.id, name: certificateName(value, shara.discipline) }]}
+                    label="Сертифікат"
+                    api={api}
+                    iconOnPhones
+                  />
+                )}
+              </div>
+              {unknown && (
+                <span className="pl-9 text-xs font-semibold text-amber-300">
+                  Немає серед ваших студентів цієї дисципліни — перевірте ПІБ і групу
+                </span>
+              )}
+            </li>
+          );
+        })}
+      </ol>
+      <datalist id={listId}>
+        {suggestions.map((s) => (
+          <option key={s} value={s} />
+        ))}
+      </datalist>
+      <div className="flex flex-wrap items-center gap-2">
+        {canAward && (
+          <Button ref={saveRef} onClick={save} disabled={!dirty || busy}>
+            Зберегти
+          </Button>
+        )}
+        {dirty && (
+          <Button variant="ghost" onClick={() => setNames(saved)} disabled={busy}>
+            Скасувати
+          </Button>
+        )}
+        {issued.length > 1 && (
+          <CertificatesButton awards={issued} label={`Усі сертифікати (${issued.length})`} api={api} />
+        )}
+      </div>
+      <ErrorText>{error}</ErrorText>
+      {!canAward && <p className="text-sm text-subtle">Розподіл шар завершено — отримувачів уже не змінити.</p>}
+      {issued.length > 0 && (
+        <p className="text-xs leading-relaxed text-subtle">
+          Надішліть сертифікат студентові. Якщо змінити ПІБ чи групу, попередній сертифікат перестане проходити
+          перевірку.
+        </p>
+      )}
+    </div>
   );
 }
 
