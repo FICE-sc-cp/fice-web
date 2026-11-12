@@ -192,7 +192,7 @@ export class ShariService {
     const teacher = await this.teacherOf(token);
     await this.requireTeachersOpen();
     const discipline = oneLine(dto.discipline);
-    if (!discipline) throw new BadRequestException('Вкажіть предмет');
+    if (!discipline) throw new BadRequestException('Вкажіть дисципліну');
     const known = new Set(await this.knownGroups());
     const groups = [...new Set(dto.groups.map((g) => normalizeGroup(g) ?? g))];
     const unknown = groups.filter((group) => !known.has(group));
@@ -763,7 +763,7 @@ export class ShariService {
 
     const offers = sheet('Шари', [
       ['Група', 12],
-      ['Предмет', 40],
+      ['Дисципліна', 40],
       ['Викладач', 32],
       ['Шара', 40],
       ['Умова', 30],
@@ -774,7 +774,7 @@ export class ShariService {
     const awards = sheet('Сертифікати', [
       ['Група', 12],
       ['Студент', 34],
-      ['Предмет', 40],
+      ['Дисципліна', 40],
       ['Шара', 40],
       ['Умова', 30],
       ['Викладач', 32],
@@ -826,7 +826,7 @@ ${a.studentName}`;
       ['Група', 12],
       ['Студент', 34],
       ['Шар', 8],
-      ['Предмети', 70],
+      ['Дисципліни', 70],
     ]);
     for (const row of [...perStudent.values()].sort(
       (a, b) =>

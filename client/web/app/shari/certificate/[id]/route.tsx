@@ -109,7 +109,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             <span style={{ marginRight: px * 0.28 }}>Група:</span>
             <span style={value}>{c.group}</span>
           </div>
-          <span>Предмет:</span>
+          <span>Дисципліна:</span>
           <span style={value}>{c.discipline}</span>
           <span>Бонус:</span>
           <span style={value}>{c.bonus}</span>

@@ -228,7 +228,7 @@ async function fetchFile(url: string, headers: Record<string, string>, name: str
   return new File([blob], name, { type: blob.type });
 }
 
-/** "ПІБ — предмет", safe as a file name and not cut mid-word. */
+/** "ПІБ — дисципліна", safe as a file name and not cut mid-word. */
 export function certificateName(studentName: string, discipline: string) {
   const name = `${studentName} — ${discipline}`
     .replace(/[\\/:*?"<>|]+/g, ' ')

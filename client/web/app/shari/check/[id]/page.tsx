@@ -80,7 +80,7 @@ export default async function CheckPage({ params }: { params: Promise<{ id: stri
                 [
                   ['Студент', result.studentName],
                   ['Група', result.group],
-                  ['Предмет', result.discipline],
+                  ['Дисципліна', result.discipline],
                   ['Бонус', result.bonus],
                   ['Умова', result.condition],
                   ['Викладач', result.teacher],

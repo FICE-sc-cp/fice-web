@@ -531,7 +531,7 @@ function Imports({ api, reload }: { api: StaffApi; reload: Reload }) {
       <ImportBox
         title="Викладачі з кампусу"
         color="cyan"
-        hint="CSV з колонками Викладач, Дисципліна, Роль, Групи, Telegram, Пошта (вигрузка fiot_teachers.py). Нових викладачів додає, у наявних оновлює предмети й групи; уже вказаних контактів не чіпає."
+        hint="CSV з колонками Викладач, Дисципліна, Роль, Групи, Telegram, Пошта (вигрузка fiot_teachers.py). Нових викладачів додає, у наявних оновлює дисципліни й групи; уже вказаних контактів не чіпає."
         accept=".csv,text/csv"
         send={api.importTeachers}
         reload={reload}

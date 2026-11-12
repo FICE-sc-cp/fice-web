@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/Button';
 import { GradientText } from '@/components/ui/GradientText';
-import { ChevronIcon } from '@/components/ui/icons';
 import {
   COUNCIL_EMAIL,
   SHARI_WORDS,
@@ -46,7 +45,7 @@ const PRESETS = [
 ];
 
 const STEPS: { color: SphereColor; title: string; text: string }[] = [
-  { color: 'green', title: 'Оберіть групи', text: 'Предмет і групи, яким даруєте шари.' },
+  { color: 'green', title: 'Оберіть групи', text: 'Дисципліна й групи, яким даруєте шари.' },
   {
     color: 'cyan',
     title: 'Опишіть шару',
@@ -184,7 +183,7 @@ function AddShari({ view, api, onChange }: Props) {
     e.preventDefault();
     setDone(null);
     const title = discipline === OTHER ? otherDiscipline.trim() : discipline;
-    if (!title) return setError('Вкажіть предмет');
+    if (!title) return setError('Вкажіть дисципліну');
     if (!chosen.length) return setError('Оберіть хоча б одну групу');
     if (!bonus.trim()) return setError('Опишіть шару');
     run(async () => {
@@ -204,34 +203,40 @@ function AddShari({ view, api, onChange }: Props) {
       <form onSubmit={submit} className="flex flex-col gap-8">
         <div className="flex flex-col gap-3">
           <Step n={1} color="green">
-            Предмет
+            Дисципліна
           </Step>
-          <div className="relative">
-            <select
-              className={cn(inputClass, 'appearance-none pr-11')}
-              value={discipline}
-              onChange={(e) => pickDiscipline(e.target.value)}
-              aria-label="Предмет"
-            >
-              {disciplines.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-              <option value={OTHER}>Інший предмет…</option>
-            </select>
-            <span className="pointer-events-none absolute right-4 top-1/2 size-4 -translate-y-1/2 text-subtle">
-              <ChevronIcon />
-            </span>
-          </div>
+          {/* Every subject in sight: a closed dropdown showed only the first one. */}
+          <fieldset className="flex flex-col gap-2">
+            <legend className="sr-only">Дисципліна</legend>
+            {[...disciplines, OTHER].map((d) => (
+              <label
+                key={d}
+                className={cn(
+                  'flex cursor-pointer items-center gap-3 rounded-2xl border px-4 py-3 font-semibold transition has-[:focus-visible]:ring-4 has-[:focus-visible]:ring-brand-cyan/20',
+                  discipline === d
+                    ? 'border-brand-cyan/70 bg-brand-cyan/10 text-fg'
+                    : 'border-white/10 bg-white/[0.04] text-muted hover:border-white/30 hover:text-fg',
+                )}
+              >
+                <input
+                  type="radio"
+                  name="discipline"
+                  checked={discipline === d}
+                  onChange={() => pickDiscipline(d)}
+                  className="size-4 shrink-0 accent-brand-cyan"
+                />
+                {d === OTHER ? 'Інша дисципліна…' : d}
+              </label>
+            ))}
+          </fieldset>
           {discipline === OTHER && (
             <input
               className={inputClass}
               value={otherDiscipline}
               onChange={(e) => setOtherDiscipline(e.target.value)}
-              placeholder="Назва предмета"
+              placeholder="Назва дисципліни"
               maxLength={255}
-              aria-label="Назва предмета"
+              aria-label="Назва дисципліни"
             />
           )}
         </div>
@@ -256,7 +261,7 @@ function AddShari({ view, api, onChange }: Props) {
             </div>
           ) : (
             <p className="text-sm text-subtle">
-              За розкладом у вас немає груп з цього предмета — додайте групу нижче.
+              За розкладом у вас немає груп з цієї дисципліни — додайте групу нижче.
             </p>
           )}
           <div className="flex gap-2">
