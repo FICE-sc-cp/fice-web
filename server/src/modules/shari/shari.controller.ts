@@ -233,6 +233,20 @@ export class ShariController {
     return this.shari.importStudents(this.user(req), text(file));
   }
 
+  @Post('admin/electives')
+  @ApiConsumes('multipart/form-data')
+  @TextFile()
+  @ApiOperation({
+    summary: "Replace the elective choices from the dean's workbook (.xlsx)",
+  })
+  importElectives(
+    @Req() req: Request,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    if (!file) throw new BadRequestException('Додай файл .xlsx (поле "file")');
+    return this.shari.importElectives(this.user(req), file.buffer);
+  }
+
   @Delete('admin/shari/:id')
   @ApiOperation({ summary: 'Delete any shara with its recipients (presidium)' })
   removeShara(@Req() req: Request, @Param('id', ParseUUIDPipe) id: string) {

@@ -354,6 +354,15 @@ Teachers come from the campus CSV (`fiot_teachers.py`), starostas and student
 lists are pasted as "група ⇥ @тег" / "група ⇥ ПІБ" rows on the Імпорт tab.
 That is personal data: it lives only in the database, never in the repository.
 
+Elective disciplines come from the dean's office workbook of choices (.xlsx
+with the columns Course, Semestr, Group, Student), uploaded as it is on the
+same tab. Only odd (autumn) semesters are kept, and of each choice only the
+discipline, group and full name. The workbook names no teachers: a discipline
+of a teacher's schedule is an elective for them when students of their own
+groups chose it. The import reports how the list meets the schedule (electives
+nobody teaches, shari already given on them per group), and the Excel lists
+each teacher's electives.
+
 Certificates are PNGs rendered by the web app (`/shari/certificate/<award id>`,
 `next/og`: satori and resvg in WebAssembly, so not dependent on sharp or the
 CPU) from `client/web/assets/shari/`: the council's template background

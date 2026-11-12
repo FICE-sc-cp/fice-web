@@ -1049,7 +1049,9 @@ model Shara {
   id         String   @id @default(uuid()) @db.Uuid
   teacherId  String   @db.Uuid
   discipline String   @db.VarChar(255)
-  group      String   @db.VarChar(20)
+  // null = a shara for a whole elective discipline: its teacher writes the
+  // recipients, each with their own group (ShariAward.group).
+  group      String?  @db.VarChar(20)
   bonus      String   @db.VarChar(300)
   condition  String?  @db.VarChar(300)
   quantity   Int
@@ -1068,11 +1070,23 @@ model ShariAward {
   // Position among the shara's `quantity` places, as the starosta fills them.
   slot        Int
   studentName String   @db.VarChar(120)
+  // The student's own group on a shara without one; null = the shara's group.
+  group       String?  @db.VarChar(20)
   createdAt   DateTime @default(now())
 
   shara Shara @relation(fields: [sharaId], references: [id], onDelete: Cascade)
 
   @@unique([sharaId, slot])
+}
+
+/// Who chose which elective this autumn: the dean's office workbook, replaced
+/// as a whole on import. `discipline` is disciplineKey() of the course name.
+model ShariElectiveStudent {
+  discipline String @db.VarChar(255)
+  group      String @db.VarChar(20)
+  fullName   String @db.VarChar(120)
+
+  @@id([discipline, group, fullName])
 }
 
 model ShariStarosta {

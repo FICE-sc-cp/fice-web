@@ -555,6 +555,14 @@ function Imports({ api, reload }: { api: StaffApi; reload: Reload }) {
         reload={reload}
         paste
       />
+      <ImportBox
+        title="Вибіркові дисципліни"
+        color="green"
+        hint="Файл деканату .xlsx з вибором студентів, як є (колонки Course, Semestr, Group, Student). Беруться лише осінні (непарні) семестри, а зберігаються тільки дисципліна, група й ПІБ. Новий файл повністю замінює список. Дисципліна вибіркова для викладача, якщо її обрали студенти груп, які він веде за розкладом."
+        accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        send={api.importElectives}
+        reload={reload}
+      />
     </>
   );
 }
@@ -575,13 +583,13 @@ function ImportBox({
   placeholder?: string;
   accept?: string;
   paste?: boolean;
-  send: (text: string) => Promise<ImportResult>;
+  send: (body: string | Blob) => Promise<ImportResult>;
   reload: Reload;
 }) {
   const [text, setText] = useState('');
   const [result, setResult] = useState<ImportResult | null>(null);
   const { busy, error, run } = useAction();
-  const upload = (value: string) =>
+  const upload = (value: string | Blob) =>
     run(async () => {
       setResult(null);
       setResult(await send(value));
@@ -617,10 +625,10 @@ function ImportBox({
               onChange={async (e) => {
                 const file = e.target.files?.[0];
                 e.target.value = '';
-                if (file) upload(await file.text());
+                if (file) upload(file);
               }}
             />
-            {paste ? 'Або завантажити файл' : 'Завантажити CSV'}
+            {paste ? 'Або завантажити файл' : 'Завантажити файл'}
           </label>
         )}
         {busy && <span className="text-sm text-subtle">Зберігаю…</span>}

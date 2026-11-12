@@ -28,8 +28,12 @@ import {
   ImportedTeacher,
   compareGroups,
   diffSlots,
+  disciplineKey,
+  electivePair,
+  isElective,
   normalizeGroup,
   oneLine,
+  parseElectives,
   parseStarostas,
   parseStudents,
   parseTeachersCsv,
@@ -54,6 +58,20 @@ const TEACHER_SCHEDULE = { select: { fullName: true, courses: true } };
 const newToken = () => randomBytes(24).toString('base64url');
 const sum = (values: number[]) => values.reduce((a, b) => a + b, 0);
 const byName = (a: string, b: string) => a.localeCompare(b, 'uk');
+
+/** Cell texts of a workbook's first sheet; rows[n - 1] is sheet row n. */
+async function sheetRows(file: Buffer): Promise<string[][]> {
+  const workbook = new ExcelJS.Workbook();
+  // exceljs types its argument as an ArrayBuffer; it reads a Node Buffer as is.
+  await workbook.xlsx.load(file as unknown as ArrayBuffer);
+  const rows: string[][] = [];
+  workbook.worksheets[0]?.eachRow((row, n) => {
+    const cells: string[] = [];
+    row.eachCell((cell, col) => (cells[col - 1] = cell.text));
+    rows[n - 1] = cells;
+  });
+  return Array.from(rows, (cells) => Array.from(cells ?? [], (t) => t ?? ''));
+}
 
 @Injectable()
 export class ShariService {
@@ -91,7 +109,7 @@ export class ShariService {
         select: { group: true },
       }),
     ]);
-    const groups = new Set(lists.flat().map((row) => row.group));
+    const groups = new Set(lists.flat().flatMap((row) => row.group ?? []));
     for (const teacher of teachers) {
       for (const course of teacher.courses as Course[]) {
         for (const group of course.groups) groups.add(group);
@@ -394,7 +412,8 @@ export class ShariService {
       where: { id: sharaId },
       include: { awards: true },
     });
-    if (!shara) throw new NotFoundException('Шару не знайдено');
+    // A shara for a whole elective is filled by its teacher, not a starosta.
+    if (!shara?.group) throw new NotFoundException('Шару не знайдено');
     const { isAdmin } = await this.requireGroup(user, shara.group);
     if (!isAdmin && !(await this.settings()).starostasOpen) {
       throw new ForbiddenException(STAROSTAS_CLOSED);
@@ -415,29 +434,41 @@ export class ShariService {
     return this.groupView(user, shara.group);
   }
 
-  /** Public: what a certificate's QR code leads to. */
-  async check(id: string) {
+  /** An award, its shara's group and what its certificate shows. */
+  private async award(id: string) {
     const award = await this.prisma.shariAward.findUnique({
       where: { id },
       include: { shara: { include: { teacher: TEACHER_NAME } } },
     });
     if (!award) throw new NotFoundException('Такої шари немає');
     return {
-      studentName: award.studentName,
-      group: award.shara.group,
-      discipline: award.shara.discipline,
-      bonus: award.shara.bonus,
-      condition: award.shara.condition,
-      teacher: award.shara.teacher.fullName,
+      sharaGroup: award.shara.group,
+      view: {
+        studentName: award.studentName,
+        // A shara for a whole elective has no group: the student's is on the award.
+        group: award.group ?? award.shara.group ?? '',
+        discipline: award.shara.discipline,
+        bonus: award.shara.bonus,
+        condition: award.shara.condition,
+        teacher: award.shara.teacher.fullName,
+      },
     };
+  }
+
+  /** Public: what a certificate's QR code leads to. */
+  async check(id: string) {
+    return (await this.award(id)).view;
   }
 
   /** What the certificate image shows (rendered by the web app), for the group's starosta or the presidium. */
   async certificate(user: User, id: string) {
-    const award = await this.check(id);
-    await this.requireGroup(user, award.group);
+    const { sharaGroup, view } = await this.award(id);
+    // Access follows the shara's group, never the printed one: a shara for a
+    // whole elective is no starosta's.
+    if (sharaGroup) await this.requireGroup(user, sharaGroup);
+    else await this.requireAdmin(user);
     return {
-      ...award,
+      ...view,
       checkUrl: this.checkUrl(id),
       qr: await QRCode.toDataURL(this.checkUrl(id), {
         margin: 1,
@@ -502,6 +533,8 @@ export class ShariService {
     }
     for (const s of students) rows.get(s.group)!.students = s._count._all;
     for (const s of shari) {
+      // A shara for a whole elective belongs to no group's progress.
+      if (s.group === null) continue;
       const row = rows.get(s.group)!;
       row.shari += s.quantity;
       row.awarded += s._count.awards;
@@ -728,6 +761,90 @@ export class ShariService {
     };
   }
 
+  /** The (discipline, group) pairs of the electives list. */
+  private async electivePairs(): Promise<Set<string>> {
+    const rows = await this.prisma.shariElectiveStudent.findMany({
+      distinct: ['discipline', 'group'],
+      select: { discipline: true, group: true },
+    });
+    return new Set(rows.map((r) => electivePair(r.discipline, r.group)));
+  }
+
+  /** Replaces the list of who chose which elective with the autumn rows of the dean's workbook. */
+  async importElectives(user: User, file: Buffer) {
+    await this.requireAdmin(user);
+    let rows: string[][];
+    try {
+      rows = await sheetRows(file);
+    } catch {
+      throw new BadRequestException(
+        'Не вдалося прочитати файл: потрібен .xlsx',
+      );
+    }
+    let parsed: ReturnType<typeof parseElectives>;
+    try {
+      parsed = parseElectives(rows);
+    } catch (err) {
+      throw new BadRequestException(
+        err instanceof Error ? err.message : 'Не вдалося прочитати таблицю',
+      );
+    }
+    const { students, skipped, otherSemesters } = parsed;
+    // A wrong file must not wipe the list.
+    if (!students.length) {
+      throw new BadRequestException(
+        'У файлі немає вибору на осінній семестр (непарний Semestr), список не змінено',
+      );
+    }
+    await this.prisma.$transaction([
+      this.prisma.shariElectiveStudent.deleteMany(),
+      this.prisma.shariElectiveStudent.createMany({ data: students }),
+    ]);
+
+    // How the list meets the schedule, before teachers see anything of it.
+    const listed = new Set(
+      students.map((s) => electivePair(s.discipline, s.group)),
+    );
+    const [teachers, perGroup] = await Promise.all([
+      this.prisma.shariTeacher.findMany({ select: { courses: true } }),
+      this.prisma.shara.findMany({
+        where: { group: { not: null } },
+        select: {
+          teacherId: true,
+          discipline: true,
+          group: true,
+          quantity: true,
+        },
+      }),
+    ]);
+    const taught = new Set<string>();
+    let withElectives = 0;
+    for (const t of teachers) {
+      const electives = (t.courses as Course[]).filter((c) =>
+        isElective(c, listed),
+      );
+      if (electives.length) withElectives++;
+      for (const c of electives) taught.add(disciplineKey(c.discipline));
+    }
+    const disciplines = [...new Set(students.map((s) => s.discipline))];
+    const untaught = disciplines.filter((d) => !taught.has(d)).sort(byName);
+    const onElectives = perGroup.filter(
+      (s) => s.group && listed.has(electivePair(s.discipline, s.group)),
+    );
+    const people = new Set(students.map((s) => `${s.group}\n${s.fullName}`));
+    return {
+      message: [
+        `Вибіркових дисциплін: ${disciplines.length}, студентів: ${people.size}, записів: ${students.length} (рядків інших семестрів: ${otherSemesters}).`,
+        `Викладачів із вибірковими за розкладом: ${withElectives}.`,
+        untaught.length
+          ? `Без викладача за розкладом: ${untaught.map((d) => `«${d}»`).join(', ')}.`
+          : 'Кожна дисципліна є в розкладі викладачів.',
+        `Шар, уже внесених на ці дисципліни по групах: ${sum(onElectives.map((s) => s.quantity))} (викладачів: ${new Set(onElectives.map((s) => s.teacherId)).size}).`,
+      ].join(' '),
+      skipped,
+    };
+  }
+
   async removeShara(user: User, id: string) {
     await this.requireAdmin(user);
     await this.prisma.shara.delete({ where: { id } });
@@ -736,7 +853,7 @@ export class ShariService {
 
   async exportXlsx(user: User): Promise<Buffer> {
     await this.requireAdmin(user);
-    const [shari, teachers, starostas] = await Promise.all([
+    const [shari, teachers, starostas, listed] = await Promise.all([
       this.prisma.shara.findMany({
         include: {
           teacher: TEACHER_SCHEDULE,
@@ -747,6 +864,7 @@ export class ShariService {
         include: { shari: { select: { quantity: true } } },
       }),
       this.prisma.shariStarosta.findMany(),
+      this.electivePairs(),
     ]);
     shari.sort(
       (a, b) =>
@@ -782,18 +900,24 @@ export class ShariService {
     ]);
     for (const s of shari) {
       offers.addRow([
-        s.group,
+        s.group ?? 'вибіркова',
         s.discipline,
         s.teacher.fullName,
         s.bonus,
         s.condition ?? '',
         s.quantity,
-        s.awards.map((a) => a.studentName).join(', '),
-        teachesGroup(s.teacher.courses as Course[], s.group) ? '' : 'так',
+        s.awards
+          .map((a) =>
+            a.group ? `${a.studentName} (${a.group})` : a.studentName,
+          )
+          .join(', '),
+        s.group === null || teachesGroup(s.teacher.courses as Course[], s.group)
+          ? ''
+          : 'так',
       ]);
       for (const a of s.awards) {
         awards.addRow([
-          s.group,
+          a.group ?? s.group,
           a.studentName,
           s.discipline,
           s.bonus,
@@ -811,10 +935,11 @@ export class ShariService {
     >();
     for (const s of shari) {
       for (const a of s.awards) {
-        const key = `${s.group}
+        const group = a.group ?? s.group ?? '';
+        const key = `${group}
 ${a.studentName}`;
         const row = perStudent.get(key) ?? {
-          group: s.group,
+          group,
           name: a.studentName,
           disciplines: [],
         };
@@ -848,6 +973,7 @@ ${a.studentName}`;
       ['Особисте посилання', 70],
       ['Посилання відкрито', 18],
       ['Шар внесено', 12],
+      ['Вибіркові дисципліни', 60],
     ]);
     for (const t of teachers.sort((a, b) => byName(a.fullName, b.fullName))) {
       teacherSheet.addRow([
@@ -857,6 +983,10 @@ ${a.studentName}`;
         `${this.webUrl()}/shari/t/${t.token}`,
         t.openedAt ? 'так' : 'ні',
         sum(t.shari.map((s) => s.quantity)),
+        (t.courses as Course[])
+          .filter((c) => isElective(c, listed))
+          .map((c) => c.discipline)
+          .join('; '),
       ]);
     }
 

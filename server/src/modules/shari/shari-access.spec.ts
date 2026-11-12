@@ -1,4 +1,4 @@
-import { ForbiddenException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import type { BotService } from '../../bot/bot.service';
 import type { PrismaService } from '../../database/prisma.service';
@@ -96,5 +96,67 @@ describe('shari access', () => {
     });
     await service.addAdmin(boss, 'https://t.me/Another');
     expect(admins.map((a) => a.telegramTag)).toEqual(['@helper', '@another']);
+  });
+});
+
+describe('a shara for a whole elective', () => {
+  it('is no starosta’s, even the student’s own one', async () => {
+    const prisma = {
+      departmentMember: {
+        findMany: () => Promise.resolve([{ telegramTag: '@boss' }]),
+      },
+      // Whoever signs in is the starosta of the student's group.
+      shariStarosta: {
+        findFirst: () =>
+          Promise.resolve({
+            group: 'ІП-41',
+            telegramTag: '@starosta',
+            telegramId: 7n,
+          }),
+      },
+      shariAdmin: { findFirst: () => Promise.resolve(null) },
+      shara: {
+        findUnique: () =>
+          Promise.resolve({ id: 's1', group: null, quantity: 2, awards: [] }),
+      },
+      shariAward: {
+        findUnique: () =>
+          Promise.resolve({
+            id: 'a1',
+            studentName: 'Іваненко Іван Іванович',
+            group: 'ІП-41',
+            shara: {
+              group: null,
+              discipline: 'Основи Linux',
+              bonus: '+5 балів',
+              condition: null,
+              teacher: { fullName: 'Петренко Петро Петрович' },
+            },
+          }),
+      },
+      siteSetting: { findMany: () => Promise.resolve([]) },
+    };
+    const service = new ShariService(
+      prisma as unknown as PrismaService,
+      { get: () => undefined } as unknown as ConfigService,
+      {} as BotService,
+    );
+    const starosta = user(7, 'starosta');
+
+    await expect(service.check('a1')).resolves.toMatchObject({
+      group: 'ІП-41',
+    });
+    await expect(service.certificate(starosta, 'a1')).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    await expect(
+      service.setAwards(starosta, 's1', ['Хтось Інший']),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    await expect(
+      service.certificate(user(1, 'boss'), 'a1'),
+    ).resolves.toMatchObject({
+      group: 'ІП-41',
+      studentName: 'Іваненко Іван Іванович',
+    });
   });
 });

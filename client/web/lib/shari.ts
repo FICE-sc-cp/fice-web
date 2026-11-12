@@ -179,9 +179,14 @@ export function staffApi(login: string, dev = '') {
   const auth: Record<string, string> = login ? { 'x-telegram-login': login } : {};
   const call = <T = unknown>(method: string, path: string, body?: unknown) =>
     request<T>(`/shari${path}${dev}`, send(method, auth, body));
-  const upload = (path: string, text: string) => {
+  /** Pasted text, or a chosen file as it is (the server reads text files as UTF-8). */
+  const upload = (path: string, body: string | Blob) => {
     const form = new FormData();
-    form.append('file', new Blob([text], { type: 'text/plain' }), 'import.txt');
+    if (typeof body === 'string') {
+      form.append('file', new Blob([body], { type: 'text/plain' }), 'import.txt');
+    } else {
+      form.append('file', body);
+    }
     return request<ImportResult>(`/shari${path}${dev}`, {
       method: 'POST',
       headers: auth,
@@ -204,14 +209,16 @@ export function staffApi(login: string, dev = '') {
       call<ShariAdminEntry[]>('POST', '/admin/admins', { telegramTag }),
     removeAdmin: (telegramTag: string) =>
       call<ShariAdminEntry[]>('DELETE', `/admin/admins/${encodeURIComponent(telegramTag)}`),
-    importTeachers: (csv: string) => upload('/admin/teachers/import', csv),
+    importTeachers: (csv: string | Blob) => upload('/admin/teachers/import', csv),
     addTeacher: (body: { fullName: string; email: string; telegram: string }) =>
       call<{ id: string; token: string }>('POST', '/admin/teachers', body),
     reissueLink: (id: string) =>
       call<{ id: string; token: string }>('POST', `/admin/teachers/${id}/link`),
     removeTeacher: (id: string) => call('DELETE', `/admin/teachers/${id}`),
-    importStarostas: (text: string) => upload('/admin/starostas', text),
-    importStudents: (text: string) => upload('/admin/students', text),
+    importStarostas: (text: string | Blob) => upload('/admin/starostas', text),
+    importStudents: (text: string | Blob) => upload('/admin/students', text),
+    /** The dean's workbook of elective choices (.xlsx). */
+    importElectives: (file: string | Blob) => upload('/admin/electives', file),
     removeShara: (id: string) => call('DELETE', `/admin/shari/${id}`),
     exportXlsx: async () =>
       saveFile(await fetchFile(`/api-proxy/shari/admin/export${dev}`, auth, 'shari.xlsx')),

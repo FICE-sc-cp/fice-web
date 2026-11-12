@@ -1,7 +1,10 @@
 import {
   diffSlots,
+  electivePair,
+  isElective,
   normalizeGroup,
   parseCsv,
+  parseElectives,
   parseStarostas,
   parseStudents,
   parseTeachersCsv,
@@ -125,5 +128,80 @@ describe('teachesGroup', () => {
     expect(teachesGroup(courses, 'ІМ-41')).toBe(true);
     expect(teachesGroup(courses, 'ІП-61')).toBe(false);
     expect(teachesGroup([], 'ІП-61')).toBe(false);
+  });
+});
+
+describe('parseElectives', () => {
+  it('keeps autumn choices once and reports bad rows by number only', () => {
+    const row = (name: string, group: string, course: string, sem: string) => [
+      'ФІОТ',
+      name,
+      group,
+      course,
+      sem,
+      'Бюджет',
+    ];
+    const name = 'Ткач Мар`яна  Іванівна';
+    expect(
+      parseElectives([
+        ['Fname', 'Student', 'Group', 'Course', 'Semestr', 'Payment'],
+        row(name, 'ІП-41', ' Основи  Linux ', '5'),
+        row("Ткач Мар'яна Іванівна", 'іп 41', 'Основи Linux', '5'),
+        row(name, 'ІП-41', 'Основи Linux', '6'),
+        row(name, 'ІП-41', '', '7'),
+        row(name, 'КВ-31', 'Основи Linux', '3'),
+        [],
+      ]),
+    ).toEqual({
+      students: [
+        {
+          discipline: 'Основи Linux',
+          group: 'ІП-41',
+          fullName: "Ткач Мар'яна Іванівна",
+        },
+      ],
+      skipped: [
+        'рядок 5: немає дисципліни',
+        'рядок 6: група «КВ-31» не з ФІОТ',
+      ],
+      otherSemesters: 2,
+    });
+  });
+
+  it('refuses a sheet without the columns', () => {
+    expect(() => parseElectives([['ПІБ', 'Група']])).toThrow(/колонками/);
+  });
+});
+
+describe('isElective', () => {
+  const listed = new Set([
+    electivePair('Основи Linux', 'ІП-41'),
+    electivePair('Комп’ютерна графіка', 'ІП-41'),
+    electivePair('Розробка для пристроїв', 'ІП-41'),
+    electivePair('Розробка під iOS', 'ІП-41'),
+  ]);
+  const course = (discipline: string, ...groups: string[]) => ({
+    discipline,
+    groups,
+  });
+
+  it('needs the name and one of the teacher’s groups', () => {
+    expect(isElective(course('Основи  Linux', 'ІП-42', 'ІП-41'), listed)).toBe(
+      true,
+    );
+    // The same name taught only where nobody chose it: an ordinary course.
+    expect(isElective(course('Основи Linux', 'ІМ-51мн'), listed)).toBe(false);
+  });
+
+  it('evens out apostrophes and composed letters, nothing fuzzy', () => {
+    expect(isElective(course("Комп'ютерна графіка", 'ІП-41'), listed)).toBe(
+      true,
+    );
+    expect(isElective(course('Розробка для пристроїв', 'ІП-41'), listed)).toBe(
+      true,
+    );
+    expect(isElective(course('Розробка під Android', 'ІП-41'), listed)).toBe(
+      false,
+    );
   });
 });

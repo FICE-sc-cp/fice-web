@@ -46,8 +46,9 @@ export function normalizeGroup(raw: string): string | null {
   return FICE_GROUP.test(group) ? group : null;
 }
 
-export const compareGroups = (a: string, b: string) =>
-  a.localeCompare(b, 'uk', { numeric: true });
+/** A shara for a whole elective has no group (null): it sorts first. */
+export const compareGroups = (a: string | null, b: string | null) =>
+  (a ?? '').localeCompare(b ?? '', 'uk', { numeric: true });
 
 /** Whether the campus schedule has the teacher in this group (any discipline). */
 export const teachesGroup = (courses: Course[], group: string) =>
@@ -202,6 +203,85 @@ export function parseStarostas(text: string) {
   }
   return { starostas: [...starostas.values()], skipped };
 }
+
+/**
+ * Spaces collapsed, one apostrophe and composed letters: the dean's workbook
+ * types apostrophes as backticks, the catalogue mixes ' and ’, and one title
+ * carries «ї» as і + U+0308.
+ */
+const plain = (value?: string | null) =>
+  oneLine(value).normalize('NFC').replace(/[’ʼ`]/g, "'");
+
+/** A discipline name as the workbook and the campus schedule can both spell it. */
+export const disciplineKey = (name?: string | null) =>
+  plain(name).slice(0, 255);
+
+export interface ElectiveStudent {
+  /** disciplineKey() of the course. */
+  discipline: string;
+  group: string;
+  fullName: string;
+}
+
+const ELECTIVE_COLUMNS = ['Course', 'Semestr', 'Group', 'Student'];
+
+/**
+ * The dean's office workbook of elective choices, as cell texts with the
+ * header first (rows[n - 1] = sheet row n). Shari are an autumn event, so only
+ * odd semesters are kept. Skipped rows are reported by number, never by name.
+ * ponytail: autumn is hardcoded; a spring round needs the parity as an argument.
+ */
+export function parseElectives(rows: string[][]) {
+  const [header = [], ...data] = rows;
+  const at = ELECTIVE_COLUMNS.map((name) =>
+    header.findIndex((cell) => cell?.trim() === name),
+  );
+  if (at.some((i) => i < 0)) {
+    throw new Error(
+      `Очікую таблицю з колонками: ${ELECTIVE_COLUMNS.join(', ')} (вибір дисциплін із деканату)`,
+    );
+  }
+  const [course, semester, group, student] = at;
+
+  const students = new Map<string, ElectiveStudent>();
+  const skipped: string[] = [];
+  let otherSemesters = 0;
+  data.forEach((row = [], i) => {
+    if (Number(row[semester]) % 2 !== 1) {
+      otherSemesters++;
+      return;
+    }
+    const line = `рядок ${i + 2}`;
+    const discipline = disciplineKey(row[course]);
+    const code = normalizeGroup(row[group] ?? '');
+    const fullName = plain(row[student]).slice(0, 120);
+    if (!discipline) skipped.push(`${line}: немає дисципліни`);
+    else if (!code)
+      skipped.push(`${line}: група «${oneLine(row[group])}» не з ФІОТ`);
+    else if (!fullName) skipped.push(`${line}: немає ПІБ`);
+    else
+      students.set(`${discipline}\n${code}\n${fullName}`, {
+        discipline,
+        group: code,
+        fullName,
+      });
+  });
+  return { students: [...students.values()], skipped, otherSemesters };
+}
+
+/** A (discipline, group) pair of the electives list. */
+export const electivePair = (discipline: string, group: string) =>
+  `${disciplineKey(discipline)}\n${group}`;
+
+/**
+ * The workbook names no teachers: a discipline of a teacher's schedule is an
+ * elective for them when students of their own groups chose it. A same-named
+ * course given only to groups where nobody chose it stays an ordinary one.
+ */
+export const isElective = (course: Course, listed: Set<string>) =>
+  course.groups.some((group) =>
+    listed.has(electivePair(course.discipline, group)),
+  );
 
 /** "група ⇥ ПІБ" lines → names per group. */
 export function parseStudents(text: string) {
