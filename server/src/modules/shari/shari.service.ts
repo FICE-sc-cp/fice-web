@@ -38,6 +38,7 @@ import {
   parseStudents,
   parseTeachersCsv,
   recipientOf,
+  repeatedName,
   teachesGroup,
 } from './shari-rules';
 
@@ -53,6 +54,10 @@ const BAD_LINK = 'Посилання недійсне. Напишіть нам �
 const TEACHERS_CLOSED =
   'Прийом шар завершено. Якщо треба щось змінити — напишіть нам.';
 const STAROSTAS_CLOSED = 'Розподіл шар завершено';
+const NAME_SAVED =
+  'Збережене ПІБ змінити не можна. Якщо помилився — напиши президії, вона видалить його, і ти впишеш знову.';
+const twiceText = (name: string) =>
+  `«${name}» вписано двічі: одну шару — одному студенту`;
 const TEACHER_NAME = { select: { fullName: true } };
 const TEACHER_SCHEDULE = { select: { fullName: true, courses: true } };
 
@@ -407,13 +412,16 @@ export class ShariService {
       }
       return recipient;
     });
+    const lineOf = recipients.map((r) => (r ? `${r.fullName} ${r.group}` : ''));
+    const twice = repeatedName(lineOf);
+    if (twice) throw new BadRequestException(twiceText(twice));
     // A place keeps its award (and certificate) while both name and group stay.
     const { remove, create } = diffSlots(
       shara.awards.map((a) => ({
         ...a,
         studentName: `${a.studentName} ${a.group}`,
       })),
-      recipients.map((r) => (r ? `${r.fullName} ${r.group}` : '')),
+      lineOf,
     );
     await this.prisma.$transaction([
       this.prisma.shariAward.deleteMany({ where: { id: { in: remove } } }),
@@ -590,7 +598,13 @@ export class ShariService {
         `Цих шар лише ${shara.quantity}, а отримувачів — ${names.length}`,
       );
     }
-    const { remove, create } = diffSlots(shara.awards, names.map(oneLine));
+    const list = names.map(oneLine);
+    const twice = repeatedName(list);
+    if (twice) throw new BadRequestException(twiceText(twice));
+    const { remove, create } = diffSlots(shara.awards, list);
+    // A saved name is final for the starosta: every change would send the
+    // teacher one more certificate to check. The presidium clears mistakes.
+    if (remove.length && !isAdmin) throw new ForbiddenException(NAME_SAVED);
     await this.prisma.$transaction([
       this.prisma.shariAward.deleteMany({ where: { id: { in: remove } } }),
       this.prisma.shariAward.createMany({

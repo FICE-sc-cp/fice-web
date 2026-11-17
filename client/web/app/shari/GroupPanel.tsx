@@ -69,7 +69,8 @@ export function GroupPanel({ api, group }: { api: StaffApi; group: string }) {
         <p className="mt-6 text-sm leading-relaxed text-subtle">
           🎲 Розіграй шари в групі чесно. Щойно ти збережеш ПІБ, зʼявиться
           сертифікат — завантаж його і надішли студенту. Викладач перевірить
-          його за QR-кодом.
+          його за QR-кодом. Перевір ПІБ перед збереженням: змінити його потім
+          зможе лише президія.
         </p>
         {total > 0 && awards.length === total && (
           <div className="mt-4">
@@ -129,6 +130,11 @@ function SharaCard({
       if (names.some((name) => name.trim())) confetti(saveRef.current);
       onChange(next);
     });
+  // The presidium clears a saved name, so the starosta can write it again.
+  const clear = (slot: number) => {
+    if (!window.confirm(`Видалити ПІБ «${saved[slot]}»? Його сертифікат перестане діяти.`)) return;
+    run(async () => onChange(await api.setAwards(shara.id, saved.map((n, i) => (i === slot ? '' : n)))));
+  };
   const remove = () => {
     if (!window.confirm(`Видалити шару «${shara.bonus}» (${shara.teacher}) разом з отримувачами?`)) return;
     run(async () => {
@@ -178,11 +184,24 @@ function SharaCard({
                   onChange={(e) =>
                     setNames((list) => list.map((n, i) => (i === slot ? e.target.value : n)))
                   }
-                  disabled={!view.canEdit || busy}
+                  // A saved name is final for the starosta (the server refuses too).
+                  disabled={!view.canEdit || busy || (!!award && !view.isAdmin)}
                   placeholder="ПІБ студента"
                   maxLength={120}
                   aria-label={`Отримувач шари ${slot + 1}`}
                 />
+                {award && view.isAdmin && (
+                  <Button
+                    variant="ghost"
+                    className="shrink-0 px-3 py-2 text-brand-red"
+                    onClick={() => clear(slot)}
+                    disabled={busy}
+                    aria-label={`Видалити ПІБ ${award.studentName}`}
+                    title="Видалити ПІБ"
+                  >
+                    ×
+                  </Button>
+                )}
                 {issued && (
                   <CertificatesButton
                     awards={[{ id: award.id, name: certificateName(value, shara.discipline) }]}

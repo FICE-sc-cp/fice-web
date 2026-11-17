@@ -9,6 +9,7 @@ import {
   parseStudents,
   parseTeachersCsv,
   recipientOf,
+  repeatedName,
   teachesGroup,
 } from './shari-rules';
 
@@ -99,6 +100,17 @@ describe('pasted rows', () => {
       'ІП-62': ['Сидоренко Петро'],
     });
     expect(skipped).toEqual(['ІП-63']);
+  });
+});
+
+describe('repeatedName', () => {
+  it('finds one student in two places, ignoring case and spaces', () => {
+    expect(
+      repeatedName(['Іваненко Іван', '', 'Петренко Петро']),
+    ).toBeUndefined();
+    expect(repeatedName(['Іваненко  Іван', '', 'іваненко іван'])).toBe(
+      'іваненко іван',
+    );
   });
 });
 

@@ -166,6 +166,79 @@ describe('a shara for a whole elective', () => {
   });
 });
 
+describe('a saved name of a group shara', () => {
+  it('stays for the starosta; the presidium clears it', async () => {
+    let awards = [{ id: 'a1', slot: 0, studentName: 'Іваненко Іван' }];
+    const prisma = {
+      departmentMember: {
+        findMany: () => Promise.resolve([{ telegramTag: '@boss' }]),
+      },
+      shariStarosta: {
+        findFirst: ({ where }: { where: Where }) =>
+          Promise.resolve(
+            where.OR.some((c) => c.telegramId === 7n)
+              ? { group: 'ІП-41', telegramTag: '@starosta', telegramId: 7n }
+              : null,
+          ),
+        findUnique: () => Promise.resolve(null),
+      },
+      shariAdmin: { findFirst: () => Promise.resolve(null) },
+      shariStudent: { findMany: () => Promise.resolve([]) },
+      shara: {
+        findUnique: () =>
+          Promise.resolve({ id: 's1', group: 'ІП-41', quantity: 2, awards }),
+        findMany: () => Promise.resolve([]),
+      },
+      shariAward: {
+        deleteMany: ({ where }: { where: { id: { in: string[] } } }) => {
+          awards = awards.filter((a) => !where.id.in.includes(a.id));
+          return Promise.resolve();
+        },
+        createMany: ({ data }: { data: typeof awards }) => {
+          awards = [...awards, ...data];
+          return Promise.resolve();
+        },
+      },
+      $transaction: (ops: Promise<unknown>[]) => Promise.all(ops),
+      siteSetting: { findMany: () => Promise.resolve([]) },
+    };
+    const service = new ShariService(
+      prisma as unknown as PrismaService,
+      { get: () => undefined } as unknown as ConfigService,
+      {} as BotService,
+    );
+    const starosta = user(7, 'starosta');
+    const boss = user(1, 'boss');
+
+    for (const names of [['Петренко Петро'], ['', 'Петренко Петро'], []]) {
+      await expect(
+        service.setAwards(starosta, 's1', names),
+      ).rejects.toBeInstanceOf(ForbiddenException);
+    }
+    await expect(
+      service.setAwards(starosta, 's1', ['Іваненко Іван', 'іваненко іван']),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    await service.setAwards(starosta, 's1', [
+      'Іваненко Іван',
+      'Петренко Петро',
+    ]);
+    expect(awards.map((a) => a.studentName)).toEqual([
+      'Іваненко Іван',
+      'Петренко Петро',
+    ]);
+
+    await service.setAwards(boss, 's1', ['', 'Петренко Петро']);
+    await service.setAwards(starosta, 's1', [
+      'Сидоренко Сидір',
+      'Петренко Петро',
+    ]);
+    expect(awards.map((a) => a.studentName)).toEqual([
+      'Петренко Петро',
+      'Сидоренко Сидір',
+    ]);
+  });
+});
+
 describe('a teacher link and elective shari', () => {
   const serviceWith = (prisma: object) =>
     new ShariService(

@@ -312,6 +312,18 @@ export function parseStudents(text: string) {
   return { groups, skipped };
 }
 
+/** A name written into two places of one shara, if any: one student, one place. */
+export function repeatedName(names: string[]): string | undefined {
+  const seen = new Set<string>();
+  for (const name of names) {
+    const key = oneLine(name).toLocaleLowerCase('uk');
+    if (!key) continue;
+    if (seen.has(key)) return oneLine(name);
+    seen.add(key);
+  }
+  return undefined;
+}
+
 /**
  * Awards to delete and create when a shara's slots get `names` ("" = free).
  * A slot whose name stays keeps its award, and the certificate already issued
