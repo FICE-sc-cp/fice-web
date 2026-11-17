@@ -996,6 +996,7 @@ export class ShariService {
       this.prisma.shara.findMany({
         where: { group: { not: null } },
         select: {
+          id: true,
           teacherId: true,
           discipline: true,
           group: true,
@@ -1017,6 +1018,20 @@ export class ShariService {
     const onElectives = perGroup.filter(
       (s) => s.group && listed.has(electivePair(s.discipline, s.group)),
     );
+    // Shari given per group on an elective (before elective mode) go to their
+    // teacher: a recipient keeps their award id, so issued certificates stay valid.
+    await this.prisma.$transaction(
+      onElectives.flatMap((s) => [
+        this.prisma.shariAward.updateMany({
+          where: { sharaId: s.id, group: null },
+          data: { group: s.group },
+        }),
+        this.prisma.shara.update({
+          where: { id: s.id },
+          data: { group: null },
+        }),
+      ]),
+    );
     const people = new Set(students.map((s) => `${s.group}\n${s.fullName}`));
     return {
       message: [
@@ -1025,7 +1040,7 @@ export class ShariService {
         untaught.length
           ? `Без викладача за розкладом: ${untaught.map((d) => `«${d}»`).join(', ')}.`
           : 'Кожна дисципліна є в розкладі викладачів.',
-        `Шар, уже внесених на ці дисципліни по групах: ${sum(onElectives.map((s) => s.quantity))} (викладачів: ${new Set(onElectives.map((s) => s.teacherId)).size}).`,
+        `Шар, внесених на ці дисципліни по групах, передано викладачам: ${sum(onElectives.map((s) => s.quantity))} (викладачів: ${new Set(onElectives.map((s) => s.teacherId)).size}) — старости їх більше не бачать, отримувачів вписують викладачі.`,
       ].join(' '),
       skipped,
     };

@@ -7,6 +7,7 @@ import {
 import type { ConfigService } from '@nestjs/config';
 import type { BotService } from '../../bot/bot.service';
 import type { PrismaService } from '../../database/prisma.service';
+import * as ExcelJS from 'exceljs';
 import { ShariService } from './shari.service';
 
 type Row = { telegramTag: string; telegramId: bigint | null };
@@ -353,5 +354,79 @@ describe('a teacher link and elective shari', () => {
     await expect(
       service.addShari('link', { ...dto, discipline: 'Мережі', groups: [] }),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+});
+
+describe('the electives import', () => {
+  it('hands per-group shari on an elective to its teacher, keeping awards', async () => {
+    const workbook = new ExcelJS.Workbook();
+    const ws = workbook.addWorksheet('x');
+    ws.addRow(['Course', 'Semestr', 'Group', 'Student']);
+    ws.addRow(['Основи Linux', '1', 'ІП-41', 'Іваненко Іван Іванович']);
+    const file = Buffer.from(
+      (await workbook.xlsx.writeBuffer()) as ArrayBuffer,
+    );
+    const shari = [
+      {
+        id: 'linux',
+        teacherId: 't1',
+        discipline: 'Основи Linux',
+        group: 'ІП-41',
+        quantity: 2,
+      },
+      {
+        id: 'db',
+        teacherId: 't1',
+        discipline: 'Бази даних',
+        group: 'ІП-41',
+        quantity: 1,
+      },
+    ];
+    const awards = [
+      { sharaId: 'linux', group: null as string | null },
+      { sharaId: 'db', group: null as string | null },
+    ];
+    const prisma = {
+      departmentMember: {
+        findMany: () => Promise.resolve([{ telegramTag: '@boss' }]),
+      },
+      shariStarosta: { findFirst: () => Promise.resolve(null) },
+      shariAdmin: { findFirst: () => Promise.resolve(null) },
+      shariElectiveStudent: {
+        deleteMany: () => Promise.resolve(),
+        createMany: () => Promise.resolve(),
+      },
+      shariTeacher: { findMany: () => Promise.resolve([]) },
+      shara: {
+        findMany: () => Promise.resolve(shari.filter((s) => s.group)),
+        update: ({ where, data }: { where: { id: string }; data: object }) =>
+          Promise.resolve(
+            Object.assign(shari.find((s) => s.id === where.id)!, data),
+          ),
+      },
+      shariAward: {
+        updateMany: ({
+          where,
+          data,
+        }: {
+          where: { sharaId: string };
+          data: { group: string };
+        }) => {
+          for (const a of awards)
+            if (a.sharaId === where.sharaId) a.group = data.group;
+          return Promise.resolve();
+        },
+      },
+      $transaction: (ops: Promise<unknown>[]) => Promise.all(ops),
+    };
+    const service = new ShariService(
+      prisma as unknown as PrismaService,
+      { get: () => undefined } as unknown as ConfigService,
+      {} as BotService,
+    );
+
+    await service.importElectives(user(1, 'boss'), file);
+    expect(shari.map((s) => s.group)).toEqual([null, 'ІП-41']);
+    expect(awards.map((a) => a.group)).toEqual(['ІП-41', null]);
   });
 });
