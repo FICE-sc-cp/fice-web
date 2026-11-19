@@ -6,11 +6,7 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import {
-  PaymentStatus,
-  RegistrationPayment,
-  RegistrationSource,
-} from '@prisma/client';
+import { RegistrationPayment, RegistrationSource } from '@prisma/client';
 import { Bot, CommandContext, Context, GrammyError, InputFile } from 'grammy';
 import { basename, resolve } from 'node:path';
 import * as QRCode from 'qrcode';
@@ -29,6 +25,7 @@ import {
   RegistrationWriteResult,
 } from '../modules/event/registration-writer';
 import {
+  initialPaymentStatus,
   pendingPaymentSubject,
   ticketDonationLine,
 } from '../modules/event/payment-rules';
@@ -294,10 +291,7 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
 
           const payment: RegistrationPayment =
             payload.payment ?? RegistrationPayment.NONE;
-          const paymentStatus =
-            payment === RegistrationPayment.DONATED
-              ? PaymentStatus.PENDING
-              : PaymentStatus.NOT_REQUIRED;
+          const paymentStatus = initialPaymentStatus(pending.event, payment);
 
           let result: RegistrationWriteResult;
           try {

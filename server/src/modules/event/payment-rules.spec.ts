@@ -1,4 +1,5 @@
 import {
+  initialPaymentStatus,
   paymentRuleViolation,
   pendingPaymentSubject,
   ticketDonationLine,
@@ -106,5 +107,16 @@ describe('donation texts for the bot', () => {
     expect(pendingPaymentSubject({ donationAnyAmount: false })).toBe(
       'Твій платіж',
     );
+  });
+});
+
+describe('initialPaymentStatus', () => {
+  it('sends only a required online donation to review', () => {
+    expect(initialPaymentStatus({}, 'DONATED')).toBe('PENDING');
+    expect(initialPaymentStatus({ donationOptional: true }, 'DONATED')).toBe(
+      'NOT_REQUIRED',
+    );
+    expect(initialPaymentStatus({}, 'AT_EVENT')).toBe('NOT_REQUIRED');
+    expect(initialPaymentStatus({}, 'NONE')).toBe('NOT_REQUIRED');
   });
 });

@@ -35,7 +35,11 @@ import {
   withRegistrationState,
 } from './event-timing';
 import { createRegistrationGuarded } from './registration-writer';
-import { paymentRuleViolation, pendingPaymentSubject } from './payment-rules';
+import {
+  initialPaymentStatus,
+  paymentRuleViolation,
+  pendingPaymentSubject,
+} from './payment-rules';
 import { validateAnswers } from './registration-answers';
 import { assertQuestionsConfig, questionData } from './event-questions';
 import { registrationListWhere } from './registration-filters';
@@ -427,10 +431,7 @@ export class EventService {
       },
     });
 
-    const paymentStatus =
-      payment === RegistrationPayment.DONATED
-        ? PaymentStatus.PENDING
-        : PaymentStatus.NOT_REQUIRED;
+    const paymentStatus = initialPaymentStatus(event, payment);
 
     const result = await createRegistrationGuarded(this.prisma, {
       eventId,

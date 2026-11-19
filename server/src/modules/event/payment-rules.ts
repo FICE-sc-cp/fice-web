@@ -1,4 +1,4 @@
-import { RegistrationPayment } from '@prisma/client';
+import { PaymentStatus, RegistrationPayment } from '@prisma/client';
 
 type Amount = { toString(): string } | number | string | null | undefined;
 
@@ -23,6 +23,16 @@ export function ticketDonationLine(event: {
   return event.donationAnyAmount
     ? '💛 <b>Благодійний внесок:</b> довільна сума\n'
     : '';
+}
+
+// An optional donation never holds back the QR code: only a required one waits for review.
+export function initialPaymentStatus(
+  event: { donationOptional?: boolean | null },
+  payment: RegistrationPayment,
+): PaymentStatus {
+  return payment === RegistrationPayment.DONATED && !event.donationOptional
+    ? PaymentStatus.PENDING
+    : PaymentStatus.NOT_REQUIRED;
 }
 
 const isPositive = (value: Amount) =>
