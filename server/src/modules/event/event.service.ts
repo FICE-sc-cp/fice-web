@@ -461,7 +461,7 @@ export class EventService {
       this.userBotService
         .sendMessageToUser(
           telegramUserId,
-          `🧾 <b>Дякуємо за реєстрацію на захід «${escapeHtml(event.name)}»!</b>\n\n${pendingPaymentSubject(event)} надіслано на перевірку адміністраторам. Щойно оплату підтвердять — бот надішле тобі постійний QR-квиток для входу 🎫`,
+          `🧾 <b>Дякуємо за реєстрацію на захід «${escapeHtml(event.name)}»!</b>\n\n${pendingPaymentSubject(event)} надіслано на перевірку адміністраторам. Щойно оплату підтвердять — бот надішле тобі постійний QR-код для входу 🎫`,
           {
             text: 'Мої реєстрації 📱',
             url: `${this.userBotService.getMiniAppUrl()}?tab=my-events`,
@@ -879,7 +879,7 @@ export class EventService {
       );
     if (!isUuid) {
       throw new NotFoundException(
-        'Квиток не знайдено або він належить іншому заходу',
+        'QR-код не знайдено або він належить іншому заходу',
       );
     }
 
@@ -892,7 +892,7 @@ export class EventService {
 
     if (!reg) {
       throw new NotFoundException(
-        'Квиток не знайдено або він належить іншому заходу',
+        'QR-код не знайдено або він належить іншому заходу',
       );
     }
 

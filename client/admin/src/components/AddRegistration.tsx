@@ -102,10 +102,10 @@ export function AddRegistration({ eventId, event }: { eventId: string; event?: E
               <>
                 <p className="rounded-xl border border-brand-green/40 bg-brand-green/10 px-4 py-3 text-sm text-brand-green">
                   {done.ticketSent
-                    ? 'Додано. QR-квиток уже в людини в боті й у міні-аппі.'
+                    ? 'Додано. QR-код уже в людини в боті й у міні-аппі.'
                     : done.waitsForStart
-                      ? 'Додано. Людина ще не відкривала бота: квиток прийде, щойно вона натисне Start, а в міні-аппі він уже є.'
-                      : 'Додано, але бот не зміг надіслати квиток (можливо, людина його заблокувала). У міні-аппі квиток є.'}
+                      ? 'Додано. Людина ще не відкривала бота: QR-код прийде, щойно вона натисне Start, а в міні-аппі він уже є.'
+                      : 'Додано, але бот не зміг надіслати QR-код (можливо, людина його заблокувала). У міні-аппі QR-код є.'}
                 </p>
                 {done.waitsForStart && done.botUrl && (
                   <p className="text-xs text-muted leading-relaxed">
@@ -127,7 +127,7 @@ export function AddRegistration({ eventId, event }: { eventId: string; event?: E
             ) : (
               <>
                 <p className="text-xs text-muted leading-relaxed">
-                  Бот надішле людині QR-квиток. Якщо вона ще не відкривала бота — щойно натисне
+                  Бот надішле людині QR-код. Якщо вона ще не відкривала бота — щойно натисне
                   Start.
                 </p>
                 <Input

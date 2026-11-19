@@ -485,7 +485,7 @@ export default function EventRegistrationsPage() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Пошук за ПІБ, групою, @телеграмом, кодом квитка…"
+              placeholder="Пошук за ПІБ, групою, @телеграмом, кодом з QR…"
               className="w-full rounded-xl border border-border bg-bg-soft px-4 py-2.5 text-sm text-fg placeholder:text-subtle outline-none transition-colors focus:border-brand-cyan"
             />
             {search && (
@@ -732,7 +732,7 @@ export default function EventRegistrationsPage() {
                       </a>
                       {r.ticketCode && (
                         <span className="text-[11px] font-mono text-muted">
-                          Квиток: #{r.ticketCode.slice(0, 8).toUpperCase()}
+                          Код: #{r.ticketCode.slice(0, 8).toUpperCase()}
                         </span>
                       )}
                     </div>
@@ -818,7 +818,7 @@ export default function EventRegistrationsPage() {
                         disabled={confirmMutation.isPending}
                         className="flex-1 py-1.5 text-xs font-bold bg-brand-green text-black hover:bg-brand-green/90"
                       >
-                        ✓ Підтвердити і надіслати квиток
+                        ✓ Підтвердити і надіслати QR-код
                       </Button>
                       <button
                         type="button"
@@ -1024,7 +1024,7 @@ export default function EventRegistrationsPage() {
                               onClick={() => confirmMutation.mutate(r.id)}
                               disabled={confirmMutation.isPending}
                               className="px-2.5 py-1 rounded-lg bg-brand-green text-black hover:bg-brand-green/90 text-xs font-black shadow-sm"
-                              title="Підтвердити оплату та надіслати квиток"
+                              title="Підтвердити оплату та надіслати QR-код"
                             >
                               ✓
                             </button>
@@ -1179,7 +1179,7 @@ export default function EventRegistrationsPage() {
 
             <p className="text-xs text-muted leading-relaxed">
               Ви впевнені, що хочете видалити реєстрацію для{' '}
-              <b className="text-fg">{cancelModal.fullName}</b>? Квиток учасника буде анульовано, а йому в Telegram надійде сповіщення про скасування.
+              <b className="text-fg">{cancelModal.fullName}</b>? Реєстрацію учасника буде анульовано, а йому в Telegram надійде сповіщення про скасування.
             </p>
 
             <div className="space-y-1.5">

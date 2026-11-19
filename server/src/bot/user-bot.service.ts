@@ -353,7 +353,7 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
             await this.sendTicketToUser(telegramId, createdReg, pending.event);
           } else {
             await ctx.reply(
-              `🎉 Чудово, ${from.first_name || 'друже'}! Твою реєстрацію на захід «${pending.event.name}» прийнято.\n\n🧾 ${pendingPaymentSubject(pending.event)} передано на перевірку адміністраторам. Щойно оплату буде підтверджено — бот надішле сюди твій постійний QR-квиток для входу! 🎫`,
+              `🎉 Чудово, ${from.first_name || 'друже'}! Твою реєстрацію на захід «${pending.event.name}» прийнято.\n\n🧾 ${pendingPaymentSubject(pending.event)} передано на перевірку адміністраторам. Щойно оплату буде підтверджено — бот надішле сюди твій постійний QR-код для входу! 🎫`,
               {
                 reply_markup: {
                   inline_keyboard: [
@@ -680,7 +680,7 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
       }).format(new Date(event.date));
 
       const caption =
-        `🎫 <b>ТВІЙ КВИТОК НА ЗАХІД</b>\n\n` +
+        `🎫 <b>ТВІЙ QR-КОД ДЛЯ ВХОДУ</b>\n\n` +
         `🎃 <b>${escapeHtml(event.name)}</b>\n` +
         `📅 <b>Коли:</b> ${escapeHtml(eventDateStr)}\n` +
         (event.location
@@ -690,7 +690,7 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
         `\n` +
         `👤 <b>Гість:</b> ${escapeHtml(reg.fullName)}\n` +
         `👥 <b>Група:</b> ${escapeHtml(reg.group)}\n` +
-        `🎟 <b>Код квитка:</b> <code>${escapeHtml(reg.ticketCode.slice(0, 8))}</code>\n` +
+        `🔢 <b>Код:</b> <code>${escapeHtml(reg.ticketCode.slice(0, 8))}</code>\n` +
         `✅ <b>Оплату/реєстрацію підтверджено</b>\n\n` +
         `⚠️ <b>Збережи це фото в галерею смартфона</b>, щоб показати QR-код волонтеру на вході навіть без інтернету! 🔆 Зроби яскравість екрана вищою.`;
 
@@ -706,7 +706,7 @@ export class UserBotService implements OnModuleInit, OnModuleDestroy {
             inline_keyboard: [
               [
                 {
-                  text: 'Відкрити квиток у додатку 📱',
+                  text: 'Відкрити QR-код у додатку 📱',
                   web_app: { url: `${baseAppUrl}?tab=my-events` },
                 },
               ],

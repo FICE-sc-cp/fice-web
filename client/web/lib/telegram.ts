@@ -170,7 +170,7 @@ export function useTelegram() {
       }
     }
     const manual = window.prompt(
-      'Сканер доступний у додатку Telegram на телефоні.\nВведіть код квитка або ID учасника вручну:',
+      'Сканер доступний у додатку Telegram на телефоні.\nВведіть код з QR або ID учасника вручну:',
     );
     if (manual) onScan(manual.trim());
   };

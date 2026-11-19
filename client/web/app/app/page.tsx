@@ -425,7 +425,7 @@ function MiniAppContent() {
   const handleScanCheckIn = () => {
     if (!selectedEventId) return;
     setScanResult(null);
-    scanQr('Наведіть камеру на QR-код квитка', (code) => {
+    scanQr('Наведіть камеру на QR-код учасника', (code) => {
       (async () => {
         try {
           const tgId = user?.id ? String(user.id) : undefined;
@@ -488,13 +488,13 @@ function MiniAppContent() {
               setScanResult({
                 type: 'error',
                 text: `⛔️ Оплату відхилено: ${regItem?.fullName}`,
-                details: 'Оплату цього квитка було відхилено адміністратором!',
+                details: 'Оплату цього учасника було відхилено адміністратором!',
               });
               setScanModal({
                 open: true,
                 type: 'error',
                 title: '⛔️ ОПЛАТУ ВІДХИЛЕНО',
-                message: 'Оплату цього квитка було відхилено! Перевірте статус оплати на вході.',
+                message: 'Оплату цього учасника було відхилено! Перевірте статус оплати на вході.',
                 registration: enrichedReg,
               });
             } else if (res.isPaymentPending) {
@@ -529,10 +529,10 @@ function MiniAppContent() {
             loadCheckInList();
           } else {
             hapticNotify('error');
-            const errText = res.message || 'Квиток не знайдено або він належить іншому заходу';
+            const errText = res.message || 'QR-код не знайдено або він належить іншому заходу';
             setScanResult({
               type: 'error',
-              text: '❌ Недійсний квиток',
+              text: '❌ Недійсний QR-код',
               details: errText,
             });
             setScanModal({
@@ -1199,7 +1199,7 @@ function MiniAppContent() {
                           📍 Голосують лише присутні на заході
                         </div>
                         <p className="text-xs text-muted leading-relaxed">
-                          Покажіть QR-квиток зі сторінки заходу волонтеру на вході — після відмітки тут зʼявляться кнопки голосування.
+                          Покажіть QR-код зі сторінки заходу волонтеру на вході — після відмітки тут зʼявляться кнопки голосування.
                         </p>
                       </div>
                     )}
@@ -1582,7 +1582,7 @@ function MiniAppContent() {
                 className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-brand-cyan to-brand-green text-black font-black text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-lg shadow-brand-cyan/15 active:scale-98 transition-transform"
               >
                 <span className="text-base leading-none">📷</span>
-                <span>Сканувати QR-код квитка</span>
+                <span>Сканувати QR-код</span>
               </button>
 
               {/* Scan result alert banner */}
@@ -1626,7 +1626,7 @@ function MiniAppContent() {
                   type="text"
                   value={checkInSearch}
                   onChange={(e) => setCheckInSearch(e.target.value)}
-                  placeholder="Швидкий пошук: ПІБ, група, @тег, № квитка..."
+                  placeholder="Швидкий пошук: ПІБ, група, @тег, код з QR..."
                   className="w-full rounded-xl border border-border bg-bg px-3.5 py-2 text-xs text-fg placeholder:text-subtle outline-none transition-colors focus:border-brand-cyan"
                 />
                 {checkInSearch && (
@@ -2359,7 +2359,7 @@ function MiniAppContent() {
                           {existingReg.paymentStatus === 'REJECTED'
                             ? 'Оплату відхилено — реєстрація поки не дійсна для входу'
                             : existingReg.paymentStatus === 'PENDING'
-                              ? 'Оплата на перевірці — квиток прийде після підтвердження'
+                              ? 'Оплата на перевірці — QR-код прийде після підтвердження'
                               : 'Ваша реєстрація дійсна для входу'}
                         </p>
                       </div>
@@ -3158,7 +3158,7 @@ function MiniAppContent() {
                             }`}
                           >
                             {reg.paymentStatus === 'CONFIRMED'
-                              ? 'Квиток дійсний'
+                              ? 'Підтверджено'
                               : reg.payment === 'DONATED'
                               ? 'Оплачено'
                               : reg.payment === 'AT_EVENT'
@@ -3189,7 +3189,7 @@ function MiniAppContent() {
                         }}
                         className="flex-1 text-xs font-bold py-2.5"
                       >
-                        Квиток і деталі заходу
+                        QR-код і деталі заходу
                       </Button>
                     </div>
                   </div>
@@ -3281,7 +3281,7 @@ function MiniAppContent() {
               <div className="space-y-1">
                 <h3 className="text-sm font-black text-fg">Потрібна допомога?</h3>
                 <p className="text-xs text-muted leading-relaxed">
-                  Не виходить зареєструватися, завантажити квитанцію чи знайти квиток? Напишіть у бот зворотного звʼязку Студради — допоможемо.
+                  Не виходить зареєструватися, завантажити квитанцію чи знайти QR-код? Напишіть у бот зворотного звʼязку Студради — допоможемо.
                 </p>
               </div>
               <Button

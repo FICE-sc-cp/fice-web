@@ -724,7 +724,7 @@ export class VotingService {
         }
         if (voting.onlyAttended && !reg.attended) {
           throw new ForbiddenException(
-            'Голосувати можуть лише присутні на заході — покажіть QR-квиток на вході',
+            'Голосувати можуть лише присутні на заході — покажіть QR-код на вході',
           );
         }
         registrationId = reg.id;
