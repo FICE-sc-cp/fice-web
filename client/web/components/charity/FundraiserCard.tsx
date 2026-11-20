@@ -44,6 +44,11 @@ export function FundraiserCard({ fundraiser }: { fundraiser: Fundraiser }) {
           <h3 className="line-clamp-2 text-xl font-bold text-white">
             {fundraiser.name}
           </h3>
+          {fundraiser.location && (
+            <p className="text-sm font-bold uppercase tracking-wide text-subtle">
+              {fundraiser.location}
+            </p>
+          )}
           <p className="line-clamp-3 text-lg font-medium leading-6 text-muted">
             {fundraiser.description}
           </p>

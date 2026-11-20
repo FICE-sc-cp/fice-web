@@ -124,6 +124,14 @@ export default async function CharityDetailsPage({
                         <span className="text-subtle">{period}</span>
                       </>
                     )}
+                    {fundraiser.location && (
+                      <>
+                        <span aria-hidden className="text-border">
+                          /
+                        </span>
+                        <span className="text-subtle">{fundraiser.location}</span>
+                      </>
+                    )}
                   </div>
                   <h1 className="text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl">
                     {fundraiser.name}
