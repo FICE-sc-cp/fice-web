@@ -70,10 +70,13 @@ describe('registrationClosedReason', () => {
   const timed = { ...base, date: new Date('2026-12-10T16:00:00Z') };
   const before = new Date('2026-12-10T15:00:00Z');
 
-  it('closes at the event start when no deadline is set', () => {
+  it('stays open until the end of the Kyiv day when no deadline is set', () => {
     expect(registrationClosedReason(timed, 0, before)).toBeNull();
     expect(
-      registrationClosedReason(timed, 0, new Date('2026-12-10T16:00:00Z')),
+      registrationClosedReason(timed, 0, new Date('2026-12-10T21:59:00Z')),
+    ).toBeNull();
+    expect(
+      registrationClosedReason(timed, 0, new Date('2026-12-10T22:00:00Z')),
     ).toBe('deadline');
   });
 
@@ -133,7 +136,7 @@ describe('withRegistrationState', () => {
     ).toMatchObject({
       isPast: false,
       registrationOpen: false,
-      registrationClosesAt: new Date('2026-12-10T16:00:00Z'),
+      registrationClosesAt: new Date('2026-12-10T22:00:00Z'),
     });
   });
 });

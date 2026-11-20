@@ -103,7 +103,7 @@ export function isEventPast(
 export function registrationDeadline(
   event: Pick<EventTiming, 'date' | 'hasTime' | 'registrationCloseDate'>,
 ): Date {
-  return event.registrationCloseDate ?? upcomingUntil(event);
+  return event.registrationCloseDate ?? endOfKyivDay(event.date);
 }
 
 export function registrationClosedReason(

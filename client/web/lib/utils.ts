@@ -24,9 +24,10 @@ export function eventRegistrationOpen(
   ) {
     return false;
   }
+  // ponytail: browser-local end of day; the API's registrationOpen (Kyiv time) wins when present
   const closeTs = event.registrationCloseDate
     ? new Date(event.registrationCloseDate).getTime()
-    : new Date(event.date).getTime();
+    : new Date(event.date).setHours(24, 0, 0, 0);
   return Date.now() < closeTs;
 }
 
